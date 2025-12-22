@@ -9,6 +9,14 @@
 
 **Data**: Google Photorealistic 3D Tiles
 
+# Milestone 2: Dynamic Capture & Persistence
+**Objective**: Transition from hardcoded signals to a fully dynamic robotic photographer.
+
+### Core Goals
+1.  **Dynamic Inputs**: UI for entering Latitude/Longitude to target any property worldwide.
+2.  **High-Fidelity Persistence**: Save the 5-angle capture sequence (North, East, South, West, Nadir) to disk.
+3.  **Automated Quality Control**: Ensure maximum tile resolution before snapshotting.
+
 ## 🚀 Getting Started
 **API Key**: Create a `.env` file in the root and add: `GOOGLE_API_KEY=your_key_here`
 
