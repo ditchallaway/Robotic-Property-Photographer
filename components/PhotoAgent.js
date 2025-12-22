@@ -1,7 +1,6 @@
 import { generateViewpoints } from '../lib/cameraLogic';
-import * as Cesium from 'cesium';
 
-export default function PhotoAgent({ viewer }) {
+export default function PhotoAgent({ viewer, Cesium }) {
 
     // Pillar 2: High-Fidelity Wait Logic
     const waitForTiles = (viewer) => new Promise(resolve => {
