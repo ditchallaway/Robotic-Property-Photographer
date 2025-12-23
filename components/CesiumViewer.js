@@ -62,10 +62,10 @@ export default function CesiumViewer({ onViewerReady }) {
                                     viewer.scene.primitives.add(tileset);
                                     console.log("CesiumViewer: Tileset added.");
 
-                                    // Fly to a nice default start view (optional, but confirms 3D is working)
-                                    // Transamerica Pyramid, SF
+                                    // Fly to test parcel centroid
+                                    // 33.12-acre vacant land
                                     viewer.camera.setView({
-                                        destination: Cesium.Cartesian3.fromDegrees(-122.4028, 37.7952, 600),
+                                        destination: Cesium.Cartesian3.fromDegrees(-116.6662005004795, 48.26473122909758, 4000),
                                         orientation: {
                                             heading: 0,
                                             pitch: -0.5,
