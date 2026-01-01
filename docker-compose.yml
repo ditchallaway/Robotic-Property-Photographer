@@ -1,10 +1,21 @@
 services:
   moonshot:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     volumes:
+      # 1. Sync project code for hot-reloading (Development only)
       - .:/app
+      # 2. Prevent local node_modules from being overwritten by container (Crucial)
       - /app/node_modules
+      # 3. Prevent Next.js build cache from causing permission issues
+      - /app/.next
+      # 4. Binary Storage: Mount local 'snapshots' folder to container path
+      - ./snapshots:/app/public/snapshots
     env_file:
       - .env
+    environment:
+      - WATCHPACK_POLLING=true # Helps HMR work inside Docker on Windows/WSL
+      - NEXT_TELEMETRY_DISABLED=1
