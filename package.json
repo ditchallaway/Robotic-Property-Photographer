@@ -12,6 +12,7 @@
   "dependencies": {
     "cesium": "^1.114.0",
     "next": "14.1.0",
+    "puppeteer": "^24.34.0",
     "react": "^18",
     "react-dom": "^18"
   },

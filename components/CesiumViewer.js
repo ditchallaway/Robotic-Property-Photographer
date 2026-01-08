@@ -17,85 +17,58 @@ export default function CesiumViewer({ onViewerReady }) {
         if (typeof window !== 'undefined') {
             const initCesium = async () => {
                 try {
-                    // Set base URL for Cesium assets BEFORE import
                     window.CESIUM_BASE_URL = '/cesium';
+                    const Cesium = await import('cesium');
 
-                    console.log("CesiumViewer: Starting init...");
-                    const Cesium = (await import('cesium'));
-                    console.log("CesiumViewer: Cesium imported.");
+                    if (isDestroyed || !containerRef.current) return;
 
-                    if (isDestroyed) {
-                        console.log("CesiumViewer: Component destroyed before Viewer creation.");
-                        return;
+                    // Initialize Viewer with all UI disabled for clean snapshots
+                    // We set imageryProvider to false to bypass Ion requirements
+                    viewer = new Cesium.Viewer(containerRef.current, {
+                        imageryProvider: false,
+                        baseLayerPicker: false,
+                        geocoder: false,
+                        homeButton: false,
+                        infoBox: false,
+                        navigationHelpButton: false,
+                        sceneModePicker: false,
+                        selectionIndicator: false,
+                        timeline: false,
+                        animation: false,
+                        fullscreenButton: false,
+                        scene3DOnly: true,
+                    });
+
+                    // Ensure the globe is visible to act as the base for Google Tiles
+                    viewer.scene.globe.show = true;
+                    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#111111');
+
+                    if (viewer.creditContainer) {
+                        viewer.creditContainer.style.display = 'none';
                     }
 
-                    if (containerRef.current) {
-                        console.log("CesiumViewer: Creating Viewer instance...");
-                        // Initialize raw viewer
-                        viewer = new Cesium.Viewer(containerRef.current, {
-                            animation: false,
-                            baseLayerPicker: false,
-                            fullscreenButton: false,
-                            vrButton: false,
-                            geocoder: false,
-                            homeButton: false,
-                            infoBox: false,
-                            sceneModePicker: false,
-                            selectionIndicator: false,
-                            timeline: false,
-                            navigationHelpButton: false,
-                            navigationInstructionsInitiallyVisible: false,
-                        });
-                        console.log("CesiumViewer: Viewer created.");
+                    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+                    if (apiKey) {
+                        const tileset = await Cesium.Cesium3DTileset.fromUrl(
+                            `https://tile.googleapis.com/v1/3dtiles/root.json?key=${apiKey}`
+                        );
 
-                        // Remove default credit to clean up UI (optional, but good for "Pro" look)
-                        // viewer.cesiumWidget.creditContainer.style.display = 'none';
+                        viewer.scene.primitives.add(tileset);
 
-                        // Load Google Photorealistic 3D Tiles
-                        if (process.env.NEXT_PUBLIC_GOOGLE_API_KEY) {
-                            try {
-                                console.log("CesiumViewer: Loading Google 3D Tiles...");
-                                const tileset = await Cesium.Cesium3DTileset.fromUrl(
-                                    "https://tile.googleapis.com/v1/3dtiles/root.json?key=" + process.env.NEXT_PUBLIC_GOOGLE_API_KEY
-                                );
-                                if (!isDestroyed) {
-                                    viewer.scene.primitives.add(tileset);
-                                    console.log("CesiumViewer: Tileset added.");
-
-                                    // Fly to test parcel centroid
-                                    // 33.12-acre vacant land
-                                    viewer.camera.setView({
-                                        destination: Cesium.Cartesian3.fromDegrees(-116.6662005004795, 48.26473122909758, 4000),
-                                        orientation: {
-                                            heading: 0,
-                                            pitch: -0.5,
-                                            roll: 0
-                                        }
-                                    });
-                                }
-                            } catch (error) {
-                                console.error("Failed to load Google 3D Tiles:", error);
-                            }
-                        } else {
-                            console.warn("CesiumViewer: No Google API Key found!");
-                        }
-
-                        if (onViewerReady && !isDestroyed) {
+                        if (!isDestroyed && onViewerReady) {
                             onViewerReady(viewer, Cesium);
                         }
-                    } else {
-                        console.error("CesiumViewer: No container ref!");
                     }
                 } catch (err) {
-                    console.error("CesiumViewer: Fatal Init Error:", err);
+                    // Silently handle or log to a proper service in production
                 }
-            }
+            };
             initCesium();
         }
 
         return () => {
             isDestroyed = true;
-            if (viewer) {
+            if (viewer && !viewer.isDestroyed()) {
                 viewer.destroy();
             }
         };
@@ -106,7 +79,12 @@ export default function CesiumViewer({ onViewerReady }) {
     return (
         <div
             ref={containerRef}
-            style={{ width: '100%', height: '100vh' }}
+            style={{
+                width: '100%',
+                height: '100vh',
+                backgroundColor: '#000',
+                overflow: 'hidden'
+            }}
         />
     );
 }
