@@ -12,7 +12,7 @@ A headless rendering microservice built on Next.js and CesiumJS, designed to gen
 2. Renderer boots Cesium in headless Chromium  
 3. Boundary is rendered using Cesium materials  
 4. Camera positions are solved and frames captured  
-5. PNGs are written to disk  
+5. PNGs and sidecar JSON files are written to disk  
 6. Renderer returns asset references to n8n
 
 Renderer is **stateless** and **geometry-agnostic**.
@@ -35,7 +35,7 @@ Professional Drone-Scale perspectives using Cesium-native methods for 2026 stand
 * **Auto-Framing**: Use viewer.camera.flyToBoundingSphere() with a range of **0.0**.  
 * **Logic**: This automatically calculates the "fit-to-frame" distance for any parcel size, from 1-acre lots to 1,000-acre ranches.
 
-  ### **Pillar 2: Automated Shot List (Deterministic)**
+### **Pillar 2: Automated Shot List (Deterministic)**
 
 Deterministic camera sequence triggered via `/api/render`.
 
@@ -62,6 +62,13 @@ Deterministic camera sequence triggered via `/api/render`.
 * **Clamped to Ground**: MUST use clampToGround: true for all Polyline/Polygon entities.  
 * **Why**: Clamping ensures lines follow 3D terrain perfectly and prevents lines from "burying" into hills or "floating" over valleys.
 
+
+**Pillar 4: Sidecar Ground-Plane Export (New Feature)**  
+For each rendered PNG, the renderer exports a sidecar JSON file with the same basename. This provides downstream pipelines with deterministic ground-plane and parcel layout data without affecting rendering or camera solving.
+
+* **Rules:** Post-capture only, no additional render passes or terrain sampling.  
+* **Contents:** Ground plane (orthonormal frame), Parcel boundary (plane-local 2D coordinates in meters), and optional camera projection data.
+
 ## **🔌 API Interface (POST /api/render)**
 
 **Config Requirements:**
@@ -86,13 +93,16 @@ Renderer performs **no** terrain sampling or centroid computation.
 
 ## **3\. Renderer Responsibilities**
 
+The renderer functions as a stateless worker.  
+Renderer does:
+
 * Accept HTTP POST JSON  
 * Initialize Cesium Viewer  
 * Convert GeoJSON → Cesium entities  
 * Apply material styling  
 * Solve camera positions  
 * Capture PNG frames  
-* Return file paths or blobs
+* and generate sidecar JSON metadata
 
 Renderer does **not**:
 
@@ -158,7 +168,11 @@ Views:
 
 No manual distance math.
 
----
+## 
+
+## ---
+
+## 
 
 ## **7\. Render Loop & Capture**
 
@@ -184,15 +198,110 @@ No manual distance math.
 | /app/public/snapshots/{order\_id}/{customer\_id}/{view}.png |
 | :---- |
 
-👆Above snapshots folder is a mounted volume  \- ./snapshots:/app/public/snapshots
+👆Above snapshots folder is a mounted volume  \- ./snapshots:/app/public/snapshots  
+---
 
-## **8\. Output Contract (To n8n)**
+## **8\. Sidecar Ground-Plane Export**
+
+Objective
+
+After each PNG capture, export a sidecar JSON file containing ground-plane and parcel layout data.   
+This must be read-only with respect to rendering.
+
+Data You Already Have (Do Not Recompute)
+
+The renderer already has all required data in memory:
+
+**From the request**
+
+* Parcel geometry (GeoJSON, WGS84)  
+* Centroid (lon, lat)  
+* Centroid elevation (meters)
+
+**From Cesium (already instantiated)**
+
+* viewer.scene.globe.ellipsoid  
+* viewer.camera.position  
+* viewer.camera.direction  
+* viewer.camera.up  
+* viewer.camera.right  
+* viewer.camera.viewMatrix  
+* viewer.camera.projectionMatrix  
+* viewer.camera.frustum  
+* scene.canvas.width / height
+
+**From existing render logic**
+
+* Cartesian boundary points (already converted for BoundingSphere and entity creation)  
+* BoundingSphere center (already computed)  
+* Final camera pose per view (after `flyToBoundingSphere` completes)
+
+No new sampling, validation, or geometry modification is required.
+
+What to Compute (Once per View)
+
+1. Ground plane
+
+   * Origin: centroid projected onto ellipsoid or boundary-derived plane  
+   * Normal: ellipsoid surface normal at origin (fallback-safe)  
+   * X axis: camera.right projected onto plane  
+     Y axis: cross(normal, X)
+
+2. Parcel in plane space
+
+   * Project each boundary vertex into plane coordinates (meters)
+
+3. Optional projection context
+
+   * View-projection matrix (`projection * view`)  
+   * Image dimensions
+
+---
+
+Output
+
+Write next to the image:
+
+| {view}.png{view}.json |
+| :---- |
+
+JSON must be sufficient for downstream pipelines to:
+
+* Draw parcel outlines
+
+* Place text aligned to ground
+
+* Measure distances in meters
+
+* Operate without Cesium
+
+---
+
+Hard Rules
+
+* Do not alter render timing
+
+* Do not change camera logic
+
+* Do not add primitives
+
+* Do not sample terrain
+
+* Do not affect pixel output
+
+Sidecar export must be removable without changing rendering behavior.
+
+## 
+
+---
+
+## **9\. Output Contract (To n8n)**
 
 Returns local file paths to keep n8n payloads lightweight.
 
 JSON
 
-| {    "status": "success",    "customer\_id": "uuid-user-string",    "order\_id": "uuid-order-string",    "images": \[     "/app/public/snapshots/123/456/nadir.png",    "/app/public/snapshots/123/456/north.png",    "/app/public/snapshots/123/456/east.png",    "..."  \]} |
+| {    "status": "success",    "customer\_id": "uuid-user-string",    "order\_id": "uuid-order-string",  "images": \[    "/app/public/snapshots/123/456/north.png",    "/app/public/snapshots/123/456/north.json",    "/app/public/snapshots/123/456/nadir.png",    "/app/public/snapshots/123/456/nadir.json"  \]} |
 | :---- |
 
 ## **🤖 The "Director" (Renderer) Workflow**
