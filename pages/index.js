@@ -13,15 +13,16 @@ export default function Home() {
 
         // 2. Get complex params (GeoJSON/Style) injected by Puppeteer
         // @ts-ignore
-        const injectedData = window.__RENDER_DATA__ || {};
+        const injectedData = window.__MISSION_DATA__ || {};
 
         setRenderParams({
             lat: parseFloat(params.get('lat') || '48.2647'),
             lon: parseFloat(params.get('lon') || '-116.6662'),
             acreage: parseFloat(params.get('acreage') || '1.0'),
-            geojson: injectedData.geojson || null,
+            geojson: injectedData.geometry || injectedData.geojson || null,
             style: injectedData.style || { stroke: '#ffff00', width: 3 }
         });
+        console.log("INDEX_MOUNTED Params:", params.toString(), "Injected:", !!injectedData.geometry);
     }, []);
 
     const handleViewerReady = (viewerInstance, cesiumInstance) => {

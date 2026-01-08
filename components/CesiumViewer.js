@@ -37,6 +37,11 @@ export default function CesiumViewer({ onViewerReady }) {
                         animation: false,
                         fullscreenButton: false,
                         scene3DOnly: true,
+                        contextOptions: {
+                            webgl: {
+                                preserveDrawingBuffer: true
+                            }
+                        }
                     });
 
                     // Ensure the globe is visible to act as the base for Google Tiles

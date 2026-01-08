@@ -34,13 +34,16 @@ export default function PhotoAgent({ viewer, Cesium }) {
             { name: 'west', heading: 270, pitch: -24 }
         ];
 
+        // Pillar 1: Set FOV to 100 degrees per user rule
+        viewer.camera.frustum.fov = Cesium.Math.toRadians(100);
+
         for (const shot of shotList) {
             // Pillar 1: Auto-Framing with range 0.0
             viewer.camera.flyToBoundingSphere(boundingSphere, {
                 offset: new Cesium.HeadingPitchRange(
                     Cesium.Math.toRadians(shot.heading),
                     Cesium.Math.toRadians(shot.pitch),
-                    0.0
+                    boundingSphere.radius * 2.0 // Back up to 2.0x radius (vs ~1.3x auto-fit)
                 ),
                 duration: 0 // Headless instant jump
             });
@@ -49,11 +52,20 @@ export default function PhotoAgent({ viewer, Cesium }) {
             viewer.scene.globe.maximumScreenSpaceError = 1.0;
 
             // Wait for tilesLoaded === true (Section 7)
+            // Fix: Add initial delay to ensure requests have started (Cold Start Fix)
+            await new Promise(r => setTimeout(r, 2000));
+
             await new Promise(resolve => {
+                let stableCycles = 0;
                 const check = setInterval(() => {
                     if (viewer.scene.globe.tilesLoaded) {
-                        clearInterval(check);
-                        resolve();
+                        stableCycles++;
+                        if (stableCycles > 2) { // Require 1 second of stability
+                            clearInterval(check);
+                            resolve();
+                        }
+                    } else {
+                        stableCycles = 0; // Reset if loading resumes
                     }
                 }, 500);
             });

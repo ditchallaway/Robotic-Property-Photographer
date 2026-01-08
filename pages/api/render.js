@@ -10,14 +10,22 @@ export default async function handler(req, res) {
     const { customer_id, order_id, centroid, centroid_elevation, geometry } = req.body;
 
     // Define the persistent volume path per Section 7
-    const snapshotDir = `/app/public/snapshots/${order_id}/${customer_id}`;
+    // Use process.cwd() to be safe across Local (Windows) and Docker (/app)
+    const snapshotDir = path.join(process.cwd(), 'public', 'snapshots', order_id, customer_id);
     await fs.mkdir(snapshotDir, { recursive: true });
 
     let browser = null;
     try {
         browser = await puppeteer.launch({
             headless: true,
-            args: ['--no-sandbox', '--disable-gpu', '--font-render-hinting=none']
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--enable-webgl',
+                '--ignore-gpu-blocklist',
+                '--use-gl=angle',
+                '--font-render-hinting=none'
+            ]
         });
 
         const page = await browser.newPage();
@@ -42,10 +50,14 @@ export default async function handler(req, res) {
                 await fs.writeFile(filePath, buffer);
                 imagePaths.push(filePath);
                 console.log(`[RENDERER] Captured: ${filePath}`);
+            } else {
+                console.log(`[BROWSER] ${text}`);
             }
         });
 
-        const targetUrl = `http://127.0.0.1:3000/`;
+        const protocol = req.headers['x-forwarded-proto'] || 'http';
+        const host = req.headers.host; // Includes port
+        const targetUrl = `${protocol}://${host}/`;
         await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
 
         // Wait for Mission Complete
