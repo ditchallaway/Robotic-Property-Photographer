@@ -38,36 +38,51 @@ export default async function handler(req, res) {
         }, { centroid, centroid_elevation, geometry });
 
         const imagePaths = [];
+        const pendingCaptures = new Set();
 
         // Listen for the Capture Signal
         page.on('console', async (msg) => {
             const args = msg.args();
             if (args.length >= 3) {
-                try {
-                    const token = await args[0].jsonValue();
-                    if (token === 'SIDECAR_DATA') {
-                        const viewName = await args[1].jsonValue();
-                        const data = await args[2].jsonValue();
-                        const filePath = path.join(snapshotDir, `${viewName}.json`);
-                        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
-                        imagePaths.push(filePath);
-                        console.log(`[RENDERER] Saved Sidecar: ${filePath}`);
-                        return; // Done handling this message
+                const capturePromise = (async () => {
+                    try {
+                        const token = await args[0].jsonValue();
+                        if (token === 'SIDECAR_DATA') {
+                            const viewName = await args[1].jsonValue();
+                            const data = await args[2].jsonValue();
+                            const filePath = path.join(snapshotDir, `${viewName}.json`);
+                            await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+                            imagePaths.push(filePath);
+                            console.log(`[RENDERER] Saved Sidecar: ${filePath}`);
+                        }
+                    } catch (err) {
+                        console.error('[RENDERER] Sidecar Error:', err);
                     }
-                } catch (err) {
-                    console.error('[RENDERER] Sidecar Error:', err);
-                }
+                })();
+
+                pendingCaptures.add(capturePromise);
+                capturePromise.finally(() => pendingCaptures.delete(capturePromise));
+                return;
             }
 
             const text = msg.text();
             if (text.startsWith('CAPTURE_FRAME:')) {
-                const viewName = text.split(':')[1];
-                const filePath = path.join(snapshotDir, `${viewName}.png`);
+                const capturePromise = (async () => {
+                    try {
+                        const viewName = text.split(':')[1];
+                        const filePath = path.join(snapshotDir, `${viewName}.png`);
 
-                const buffer = await page.screenshot({ type: 'png' });
-                await fs.writeFile(filePath, buffer);
-                imagePaths.push(filePath);
-                console.log(`[RENDERER] Captured: ${filePath}`);
+                        const buffer = await page.screenshot({ type: 'png' });
+                        await fs.writeFile(filePath, buffer);
+                        imagePaths.push(filePath);
+                        console.log(`[RENDERER] Captured: ${filePath}`);
+                    } catch (err) {
+                        console.error('[RENDERER] Capture Error:', err);
+                    }
+                })();
+
+                pendingCaptures.add(capturePromise);
+                capturePromise.finally(() => pendingCaptures.delete(capturePromise));
             } else {
                 console.log(`[BROWSER] ${text}`);
             }
@@ -88,6 +103,10 @@ export default async function handler(req, res) {
                 }
             });
         });
+
+        // Final safety: Wait for all pending captures to finish
+        // even after MISSION_COMPLETE signal
+        await Promise.all(pendingCaptures);
 
         // Section 8: Return local file paths
         res.status(200).json({
