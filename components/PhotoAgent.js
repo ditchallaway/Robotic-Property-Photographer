@@ -73,6 +73,52 @@ export default function PhotoAgent({ viewer, Cesium }) {
             // Brief settle for the preserveDrawingBuffer
             await new Promise(r => setTimeout(r, 500));
 
+            // Pillar 4: Sidecar Ground-Plane Export
+            try {
+                const origin = Cesium.Cartesian3.fromDegrees(data.centroid[0], data.centroid[1], data.centroid_elevation);
+                const enu = Cesium.Transforms.eastNorthUpToFixedFrame(origin);
+                const invEnu = Cesium.Matrix4.inverse(enu, new Cesium.Matrix4());
+
+                const boundary_2d = data.geometry.coordinates[0].map(coord => {
+                    const world = Cesium.Cartesian3.fromDegrees(coord[0], coord[1]);
+                    const local = Cesium.Matrix4.multiplyByPoint(invEnu, world, new Cesium.Cartesian3());
+                    return [local.x, local.y];
+                });
+
+                const camera = viewer.camera;
+                const sidecar = {
+                    viewName: shot.name,
+                    origin: { x: origin.x, y: origin.y, z: origin.z },
+                    enu_axes: {
+                        east: { x: enu[0], y: enu[1], z: enu[2] },
+                        north: { x: enu[4], y: enu[5], z: enu[6] },
+                        up: { x: enu[8], y: enu[9], z: enu[10] }
+                    },
+                    boundary_2d,
+                    camera: {
+                        position: { x: camera.positionWC.x, y: camera.positionWC.y, z: camera.positionWC.z },
+                        direction: { x: camera.directionWC.x, y: camera.directionWC.y, z: camera.directionWC.z },
+                        up: { x: camera.upWC.x, y: camera.upWC.y, z: camera.upWC.z },
+                        right: { x: camera.rightWC.x, y: camera.rightWC.y, z: camera.rightWC.z }
+                    },
+                    matrices: {
+                        view: Array.from(camera.viewMatrix),
+                        projection: Array.from(camera.frustum.projectionMatrix)
+                    },
+                    viewport: {
+                        width: viewer.scene.canvas.width,
+                        height: viewer.scene.canvas.height
+                    }
+                };
+
+                // Emit SIDECAR_DATA as separate console arguments for Puppeteer msg.args()
+                // Explicitly stringify and parse to ensure clean serialization
+                const serializedSidecar = JSON.parse(JSON.stringify(sidecar));
+                console.log('SIDECAR_DATA', shot.name, serializedSidecar);
+            } catch (err) {
+                console.error('Sidecar Error:', err);
+            }
+
             console.log(`CAPTURE_FRAME:${shot.name}`);
             await new Promise(r => setTimeout(r, 1000)); // Buffer for Puppeteer screenshot
         }

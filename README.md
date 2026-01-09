@@ -201,7 +201,70 @@ No manual distance math.
 👆Above snapshots folder is a mounted volume  \- ./snapshots:/app/public/snapshots  
 ---
 
-## **8\. Sidecar Ground-Plane Export**
+## **8\. Sidecar Ground-Plane**
+
+## **Ground Plane Metadata**
+
+Each rendered PNG **MUST** emit a sidecar JSON file with the same basename, enabling downstream compositing without Cesium.
+
+### **Purpose**
+
+Decouple rendering from post-processing by exporting a stable, world-aligned ground plane and parcel layout in local meter coordinates.
+
+### **Generation Rules**
+
+* Sidecar JSON is generated **per view** at capture time.
+
+* Computation occurs **in browser scope** using Cesium runtime state.
+
+* Ground plane is **world-stable** (ENU), not camera-relative.
+
+### **Ground Plane Definition**
+
+* **Origin**: Parcel centroid in ECEF (Cartesian3).
+
+* **Normal**: Ellipsoid geodetic surface normal at centroid.
+
+* **Axes**: East–North–Up (ENU) frame via  
+   `Cesium.Transforms.eastNorthUpToFixedFrame(origin)`.
+
+### **Boundary Projection**
+
+* Convert boundary vertices (lon/lat) → Cartesian3.
+
+* Transform to local ENU using inverse ENU matrix.
+
+* Drop Z; store `[x, y]` in **meters**.
+
+### **Exported Schema (v1)**
+
+`{`  
+  `"origin": [x, y, z],`  
+  `"enu_axes": {`  
+    `"east": [x, y, z],`  
+    `"north": [x, y, z],`  
+    `"up": [x, y, z]`  
+  `},`  
+  `"boundary_2d": [[x, y], ...],`  
+  `"camera": {`  
+    `"position": [x, y, z],`  
+    `"direction": [x, y, z],`  
+    `"up": [x, y, z],`  
+    `"right": [x, y, z]`  
+  `},`  
+  `"matrices": {`  
+    `"view": [16],`  
+    `"projection": [16]`  
+  `},`  
+  `"viewport": { "width": 2048, "height": 1536 }`  
+`}`
+
+### **Output Contract**
+
+For every `{view}.png`, write `{view}.json` to the same snapshot directory.  
+ API response returns both asset paths.
+
+### **Export**
 
 Objective
 

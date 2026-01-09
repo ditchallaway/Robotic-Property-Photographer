@@ -41,6 +41,24 @@ export default async function handler(req, res) {
 
         // Listen for the Capture Signal
         page.on('console', async (msg) => {
+            const args = msg.args();
+            if (args.length >= 3) {
+                try {
+                    const token = await args[0].jsonValue();
+                    if (token === 'SIDECAR_DATA') {
+                        const viewName = await args[1].jsonValue();
+                        const data = await args[2].jsonValue();
+                        const filePath = path.join(snapshotDir, `${viewName}.json`);
+                        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+                        imagePaths.push(filePath);
+                        console.log(`[RENDERER] Saved Sidecar: ${filePath}`);
+                        return; // Done handling this message
+                    }
+                } catch (err) {
+                    console.error('[RENDERER] Sidecar Error:', err);
+                }
+            }
+
             const text = msg.text();
             if (text.startsWith('CAPTURE_FRAME:')) {
                 const viewName = text.split(':')[1];
