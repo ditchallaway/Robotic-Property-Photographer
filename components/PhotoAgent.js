@@ -53,19 +53,30 @@ export default function PhotoAgent({ viewer, Cesium }) {
 
             // Wait for tilesLoaded === true (Section 7)
             // Fix: Add initial delay to ensure requests have started (Cold Start Fix)
-            await new Promise(r => setTimeout(r, 2000));
+            await new Promise(r => setTimeout(r, 500));
 
             await new Promise(resolve => {
                 let stableCycles = 0;
+                let totalWait = 0;
                 const check = setInterval(() => {
-                    if (viewer.scene.globe.tilesLoaded) {
+                    const loaded = viewer.scene.globe.tilesLoaded;
+                    totalWait += 500;
+                    console.log(`[BROWSER] Stability Check (${shot.name}): tilesLoaded=${loaded}, stableCycles=${stableCycles}, wait=${totalWait}ms`);
+                    if (loaded) {
                         stableCycles++;
-                        if (stableCycles > 2) { // Require 1 second of stability
+                        if (stableCycles > 2) {
                             clearInterval(check);
                             resolve();
                         }
                     } else {
-                        stableCycles = 0; // Reset if loading resumes
+                        stableCycles = 0;
+                    }
+
+                    // Safety Cap: 60 seconds per view
+                    if (totalWait > 60000) {
+                        console.warn(`[BROWSER] Safety Timeout reached for ${shot.name}. Capturing anyway.`);
+                        clearInterval(check);
+                        resolve();
                     }
                 }, 500);
             });

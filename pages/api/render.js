@@ -95,7 +95,7 @@ export default async function handler(req, res) {
 
         // Wait for Mission Complete
         await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Render timeout')), 120000);
+            const timeout = setTimeout(() => reject(new Error('Render timeout')), 600000);
             page.on('console', (msg) => {
                 if (msg.text() === 'MISSION_COMPLETE') {
                     clearTimeout(timeout);

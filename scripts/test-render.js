@@ -17,7 +17,7 @@ const data = {
     }
 };
 
-fetch('http://localhost:3001/api/render', {
+fetch('http://localhost:3000/api/render', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)

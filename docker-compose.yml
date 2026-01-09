@@ -15,7 +15,7 @@ services:
       - /app/public/cesium
 
       # 3. Persistent data
-      - ./snapshots:/app/public/snapshots
+      - ./public/snapshots:/app/public/snapshots
     environment:
       - WATCHPACK_POLLING=true
       - NODE_ENV=development
