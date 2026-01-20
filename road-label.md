@@ -1,118 +1,176 @@
-# Road Label Generation (Spec)
+# Road Label Generation — Deterministic Export-Only Spec
 
-## Purpose
-Generate deterministic, human-readable road labels for rendered property images.  
-Labels must reflect real road geometry, be visible in-frame, and remain readable across nadir and oblique camera views.  
-All label data is exported only (sidecar-driven); no dependency on Cesium at consumption time.
+## NON-NEGOTIABLE CONSTRAINTS (READ FIRST)
+
+1. **EXPORT ONLY**
+   - No labels are rendered in Cesium.
+   - No quads, textures, billboards, or primitives are created.
+   - Output is sidecar JSON only.
+
+2. **NO SERVERS**
+   - Do NOT start `next dev`, `npm run dev`, or any background server.
+   - Do NOT bind ports.
+   - Execution is driven only by the existing render/test pipeline.
+
+3. **STRICT PROCESS BOUNDARY**
+   - Server: fetches and prepares road data only.
+   - Browser (Cesium): performs visibility + math only.
+   - Puppeteer: captures console output only.
+   - No logic may cross these boundaries.
+
+4. **EXACT CONSOLE PROTOCOL**
+   - The ONLY valid emission format is:
+     ```
+     console.log('SIDECAR_DATA', viewName, labelArray)
+     ```
+   - No colons, no JSON prefix, no extra arguments, no wrapping.
+
+Violation of any item above is a spec failure.
 
 ---
 
-## Data Source
-**Google Vector Map Tiles** — Road layer only.
+## Purpose
+Generate deterministic, human-readable road labels for rendered property images.
 
+Labels:
+- Must correspond to real road geometry
+- Must be visible in-frame
+- Must be readable in nadir and oblique views
+- Must be fully reconstructable from sidecar JSON alone
+
+---
+
+## Data Source (SERVER ONLY)
+**Google Vector Map Tiles API** — Road layer only.
+
+Allowed:
 - Raw vector geometry (LineString / MultiLineString)
-- Road classification (highway, major, local)
-- Human-readable road names
-- Fetched server-side prior to rendering
+- Road name (human-readable)
+- Road kind/class
 
-No tile introspection, feature picking, or runtime scraping.
+Forbidden:
+- Tile feature picking
+- Cesium tileset introspection
+- Client-side tile fetching
+
+Server output = plain road geometry + attributes.
 
 ---
 
 ## Coordinate Space
-All computations occur in **ENU (East-North-Up)** space derived from:
+All math is performed in **ENU (East-North-Up)** space derived from:
 - Parcel centroid
 - Ground plane definition
-- Camera extrinsics
+- Cesium camera matrices (browser only)
+
+Server code must NOT assume ENU.
 
 ---
 
 ## Road Classification
-Roads are categorized into three logical classes:
-- `highway` (motorway, trunk)
-- `major` (primary, secondary)
-- `local`
+Map Google kinds into exactly three classes:
 
-Classification influences selection priority and search radius.
+- `highway` → motorway, trunk
+- `major` → primary, secondary
+- `local` → everything else
 
----
-
-## Road Graph & Backbone Resolution
-A lightweight road graph is constructed from vector geometry.
-
-### Anchor highway resolution:
-1. Select nearest **visible highway** (projects into any camera frustum).
-2. If none qualify:
-   - Traverse connected roads outward from parcel-adjacent roads.
-   - Promote the largest connected `major` road.
-   - Repeat recursively until a backbone road is identified.
-
-This guarantees a meaningful “destination” road for labeling.
+Classification affects priority only, never visibility.
 
 ---
 
-## Visibility Rules (Hard Gate)
-A road is eligible for a given view **only if**:
-- At least one segment projects inside the image viewport.
-- Segment depth > 0 (in front of camera).
-- Projected screen-space length exceeds a minimum threshold.
+## Road Graph & Backbone Resolution (SERVER)
 
-Distance alone is never sufficient.  
+1. Build a lightweight graph from road geometry.
+2. Identify **property-adjacent roads** (intersect parcel buffer).
+3. Resolve a single **anchor highway**:
+   - Prefer nearest highway connected to property roads.
+   - If none:
+     - Traverse outward through connected majors.
+     - Promote the largest connected major.
+     - Repeat until a backbone exists.
+
+Server output includes:
+- Road geometry
+- Road class
+- Connectivity metadata
+
+No visibility decisions here.
+
+---
+
+## Visibility Rules (BROWSER — HARD GATE)
+
+A road exists for a given view **only if**:
+
+1. At least one segment projects inside the camera viewport
+2. Projected depth > 0 (in front of camera)
+3. Projected screen-space length ≥ minimum threshold
+
+Distance alone is irrelevant.
 If it cannot be seen, it does not exist.
 
 ---
 
-## Per-View Selection Logic
-Executed independently for each image (north, south, east, west, nadir).
+## Per-View Selection Logic (BROWSER)
+
+Executed independently for:
+`north`, `south`, `east`, `west`, `nadir`
 
 Selection order:
-1. **Property access road** (if visible) → always included
-2. **Anchor highway** (if visible or near-visible)
+1. Property access road (if visible) — always included
+2. Anchor highway (if visible or near-visible)
 3. Remaining visible roads:
-   - Sort by distance to parcel centroid (ENU)
-   - Include closest until cap is reached
+   - Sort by ENU distance to parcel centroid
+   - Include closest until cap reached
 
-### Limits
-- Maximum: **3 roads + 1 highway** per image
-- Allow **zero labels** if nothing qualifies
+Limits:
+- Max **3 non-highway roads + 1 highway**
+- Zero labels is valid
 
 ---
 
-## Anchor Point Resolution
+## Anchor Point Resolution (BROWSER)
+
 For each selected road:
-- Compute closest visible point on polyline to parcel centroid
-- Offset slightly perpendicular to road bearing (avoid overlap)
-- Apply small +Z lift (anti z-fighting)
+- Find closest visible point on polyline to parcel centroid
+- Offset slightly perpendicular to road bearing
+- Apply small +Z lift to avoid z-fighting
 
 ---
 
-## Label Orientation
+## Label Orientation (BROWSER — NO BILLBOARDS)
 
-### Nadir View
-- Plane: **ground**
+### Nadir
+- Plane: `ground`
 - Normal: ground plane normal
 - Rotation: road bearing (ENU)
-- Appears flat, sticker-like
 
-### Oblique Views (N/E/S/W)
-- Plane: **vertical**
-- Up vector: ENU up
-- Facing direction: camera forward vector projected onto ground plane
-- Text baseline aligned to projected road bearing
+### Oblique (N/E/S/W)
+- Plane: `vertical`
+- Up: ENU up
+- Facing: camera forward projected onto ground plane
+- Baseline aligned to projected road bearing
 
-No billboarding. Orientation is fixed and deterministic.
-
----
-
-## Rendering Assumptions
-- Labels are rendered as textured quads
-- Depth test enabled, depth write disabled
-- No runtime camera-relative behavior
+Orientation is fixed and deterministic.
 
 ---
 
-## Output (Sidecar Schema)
-Labels are exported with sufficient data to recreate the image exactly.
+## Rendering
+❌ No rendering occurs in this system.
+
+This spec explicitly forbids:
+- Cesium label primitives
+- Textured quads
+- Canvas textures
+- Screen-space scaling
+
+Rendering is a downstream concern.
+
+---
+
+## Output (SIDE-ONLY)
+
+The browser emits exactly one payload per view:
 
 ```json
 {
@@ -123,7 +181,8 @@ Labels are exported with sufficient data to recreate the image exactly.
       "anchor_enu": [x, y, z],
       "bearing": radians,
       "plane": "vertical",
-      "view": "north"
+      "view": "north",
+      "label_width_m": 32
     }
   ]
 }
