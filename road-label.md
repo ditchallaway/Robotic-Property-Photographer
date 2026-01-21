@@ -41,7 +41,9 @@ Labels:
 ---
 
 ## Data Source (SERVER ONLY)
-**Google Vector Map Tiles API** — Road layer only.
+Authoritative Vector Road Tiles (MVT/PBF)
+Data source must expose raw road geometry (LineString/MultiLineString).
+Provider is implementation-defined and approved separately.
 
 Allowed:
 - Raw vector geometry (LineString / MultiLineString)
