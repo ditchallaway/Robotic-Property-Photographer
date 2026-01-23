@@ -2,6 +2,7 @@
   "name": "moonshot",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "node scripts/copy-assets.js && next dev",
     "build": "node scripts/copy-assets.js && next build",
