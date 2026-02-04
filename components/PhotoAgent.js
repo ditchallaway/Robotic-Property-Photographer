@@ -90,27 +90,54 @@ export default function PhotoAgent({ viewer, Cesium }) {
                 const enu = Cesium.Transforms.eastNorthUpToFixedFrame(origin);
                 const invEnu = Cesium.Matrix4.inverse(enu, new Cesium.Matrix4());
 
-                const boundary_2d = data.geometry.coordinates[0].map(coord => {
-                    const world = Cesium.Cartesian3.fromDegrees(coord[0], coord[1]);
+                const camera = viewer.camera;
+                const rotEnu = Cesium.Matrix4.getMatrix3(enu, new Cesium.Matrix3());
+                const invRotEnu = Cesium.Matrix3.transpose(rotEnu, new Cesium.Matrix3());
+
+                const boundary_3d = data.geometry.coordinates[0].map(coord => {
+                    const world = Cesium.Cartesian3.fromDegrees(coord[0], coord[1], coord[2] || 0);
                     const local = Cesium.Matrix4.multiplyByPoint(invEnu, world, new Cesium.Cartesian3());
-                    return [local.x, local.y];
+                    return [local.x, local.y, local.z];
                 });
 
-                const camera = viewer.camera;
+                const camPosLocal = Cesium.Matrix4.multiplyByPoint(invEnu, camera.positionWC, new Cesium.Cartesian3());
+                const camDirLocal = Cesium.Matrix3.multiplyByVector(invRotEnu, camera.directionWC, new Cesium.Cartesian3());
+                const camUpLocal = Cesium.Matrix3.multiplyByVector(invRotEnu, camera.upWC, new Cesium.Cartesian3());
+                const camRightLocal = Cesium.Matrix3.multiplyByVector(invRotEnu, camera.rightWC, new Cesium.Cartesian3());
+
                 const sidecar = {
                     viewName: shot.name,
+                    metadata: {
+                        coordinate_system: "ENU (East-North-Up)",
+                        up_axis: "Z",
+                        units: "meters",
+                        origin_wgs84: {
+                            longitude: data.centroid[0],
+                            latitude: data.centroid[1],
+                            elevation_meters: data.centroid_elevation
+                        },
+                        cesium_version: Cesium.VERSION
+                    },
                     origin: { x: origin.x, y: origin.y, z: origin.z },
                     enu_axes: {
                         east: { x: enu[0], y: enu[1], z: enu[2] },
                         north: { x: enu[4], y: enu[5], z: enu[6] },
                         up: { x: enu[8], y: enu[9], z: enu[10] }
                     },
-                    boundary_2d,
+                    boundary_3d,
                     camera: {
-                        position: { x: camera.positionWC.x, y: camera.positionWC.y, z: camera.positionWC.z },
-                        direction: { x: camera.directionWC.x, y: camera.directionWC.y, z: camera.directionWC.z },
-                        up: { x: camera.upWC.x, y: camera.upWC.y, z: camera.upWC.z },
-                        right: { x: camera.rightWC.x, y: camera.rightWC.y, z: camera.rightWC.z }
+                        world: {
+                            position: { x: camera.positionWC.x, y: camera.positionWC.y, z: camera.positionWC.z },
+                            direction: { x: camera.directionWC.x, y: camera.directionWC.y, z: camera.directionWC.z },
+                            up: { x: camera.upWC.x, y: camera.upWC.y, z: camera.upWC.z },
+                            right: { x: camera.rightWC.x, y: camera.rightWC.y, z: camera.rightWC.z }
+                        },
+                        local_enu: {
+                            position: { x: camPosLocal.x, y: camPosLocal.y, z: camPosLocal.z },
+                            direction: { x: camDirLocal.x, y: camDirLocal.y, z: camDirLocal.z },
+                            up: { x: camUpLocal.x, y: camUpLocal.y, z: camUpLocal.z },
+                            right: { x: camRightLocal.x, y: camRightLocal.y, z: camRightLocal.z }
+                        }
                     },
                     matrices: {
                         view: Array.from(camera.viewMatrix),

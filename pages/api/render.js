@@ -21,10 +21,8 @@ export default async function handler(req, res) {
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
-                '--enable-webgl',
-                '--ignore-gpu-blocklist',
-                '--use-gl=angle',
-                '--font-render-hinting=none'
+                '--disable-dev-shm-usage',
+                '--ignore-gpu-blocklist'
             ]
         });
 
