@@ -3,6 +3,51 @@ import { useEffect, useRef } from 'react';
 export default function PhotoAgent({ viewer, Cesium }) {
     const isRunning = useRef(false);
 
+    // Helper: Filter street labels visible in camera frustum
+    function filterVisibleLabels(viewer, allLabels, camera) {
+        if (!allLabels || allLabels.length === 0) return [];
+
+        const frustum = camera.frustum;
+        const cullingVolume = frustum.computeCullingVolume(
+            camera.positionWC,
+            camera.directionWC,
+            camera.upWC
+        );
+
+        return allLabels.filter(label => {
+            const position = Cesium.Cartesian3.fromDegrees(
+                parseFloat(label.longitude),
+                parseFloat(label.latitude),
+                0
+            );
+
+            // 1. Check if in camera frustum
+            const visibility = cullingVolume.computeVisibility(
+                new Cesium.BoundingSphere(position, 1.0)
+            );
+            if (visibility === Cesium.Intersect.OUTSIDE) return false;
+
+            // 2. Distance check (readable threshold - e.g. 500m)
+            const distance = Cesium.Cartesian3.distance(position, camera.positionWC);
+            if (distance > 500) return false;
+
+            // 3. Behind-camera check (screen space projection)
+            const screenPos = Cesium.SceneTransforms.wgs84ToWindowCoordinates(
+                viewer.scene, position
+            );
+            // If undefined, it's behind the camera or off-screen
+            if (!screenPos) return false;
+
+            // 4. Check if strictly within viewport bounds (0,0 to width,height)
+            const { width, height } = viewer.scene.canvas;
+            if (screenPos.x < 0 || screenPos.x > width || screenPos.y < 0 || screenPos.y > height) {
+                return false;
+            }
+
+            return true;
+        });
+    }
+
     const runMission = async () => {
         if (!viewer || isRunning.current) return;
         const data = window.__MISSION_DATA__;
@@ -24,10 +69,20 @@ export default function PhotoAgent({ viewer, Cesium }) {
 
         // Create BoundingSphere for Auto-Framing (Section 6)
         const boundingSphere = Cesium.BoundingSphere.fromPoints(positions);
-        boundingSphere.center = Cesium.Cartesian3.fromDegrees(data.centroid[0], data.centroid[1], data.centroid_elevation);
+        // Fix: Sample terrain height for accurate centroid/label placement
+        const centroidCarto = Cesium.Cartographic.fromDegrees(data.centroid[0], data.centroid[1]);
+        const terrainHeight = viewer.scene.globe.getHeight(centroidCarto);
+        const effectiveHeight = (terrainHeight !== undefined) ? terrainHeight : data.centroid_elevation;
+
+        // Define origin using the BEST available height
+        const origin = Cesium.Cartesian3.fromDegrees(data.centroid[0], data.centroid[1], effectiveHeight);
+
+        // Update BoundingSphere center to use this effective height for better framing
+        boundingSphere.center = origin;
 
         const shotList = [
-            { name: 'nadir', heading: 0, pitch: -90 },
+            // Fix: Use -89.9 to avoid gimbal lock/ambiguous heading at -90
+            { name: 'nadir', heading: 0, pitch: -89.9 },
             { name: 'north', heading: 0, pitch: -24 },
             { name: 'east', heading: 90, pitch: -24 },
             { name: 'south', heading: 180, pitch: -24 },
@@ -86,7 +141,7 @@ export default function PhotoAgent({ viewer, Cesium }) {
 
             // Pillar 4: Sidecar Ground-Plane Export
             try {
-                const origin = Cesium.Cartesian3.fromDegrees(data.centroid[0], data.centroid[1], data.centroid_elevation);
+                // Origin and ENU frame are already defined above using effectiveHeight
                 const enu = Cesium.Transforms.eastNorthUpToFixedFrame(origin);
                 const invEnu = Cesium.Matrix4.inverse(enu, new Cesium.Matrix4());
 
@@ -111,6 +166,9 @@ export default function PhotoAgent({ viewer, Cesium }) {
                         coordinate_system: "ENU (East-North-Up)",
                         up_axis: "Z",
                         units: "meters",
+                        acres: data.acres || "N/A",  // Real acreage from n8n
+                        customer_id: data.customer_id,
+                        order_id: data.order_id,
                         origin_wgs84: {
                             longitude: data.centroid[0],
                             latitude: data.centroid[1],
@@ -125,6 +183,21 @@ export default function PhotoAgent({ viewer, Cesium }) {
                         up: { x: enu[8], y: enu[9], z: enu[10] }
                     },
                     boundary_3d,
+                    labels: filterVisibleLabels(viewer, data.streetLabels || [], camera).map(lbl => {
+                        // Transform label WGS84 -> World -> Local ENU position
+                        // Fix: Sample terrain height for labels too
+                        const lblCarto = Cesium.Cartographic.fromDegrees(lbl.longitude, lbl.latitude);
+                        const lblHeight = viewer.scene.globe.getHeight(lblCarto);
+                        const effectiveLblHeight = (lblHeight !== undefined) ? lblHeight : 0;
+
+                        const posWorld = Cesium.Cartesian3.fromDegrees(lbl.longitude, lbl.latitude, effectiveLblHeight);
+                        const posLocal = Cesium.Matrix4.multiplyByPoint(invEnu, posWorld, new Cesium.Cartesian3());
+
+                        return {
+                            text: lbl.label_text || lbl.street_name,
+                            anchor_3d: [posLocal.x, posLocal.y, posLocal.z]
+                        };
+                    }),
                     camera: {
                         world: {
                             position: { x: camera.positionWC.x, y: camera.positionWC.y, z: camera.positionWC.z },

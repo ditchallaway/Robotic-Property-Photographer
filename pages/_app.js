@@ -1,4 +1,5 @@
 import 'cesium/Build/Cesium/Widgets/widgets.css';
+import '../styles/globals.css';
 
 
 if (typeof window !== 'undefined') {

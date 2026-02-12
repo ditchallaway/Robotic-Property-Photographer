@@ -7,7 +7,15 @@ export const config = { api: { responseLimit: false } };
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const { customer_id, order_id, centroid, centroid_elevation, geometry } = req.body;
+    const {
+        customer_id,
+        order_id,
+        centroid,
+        centroid_elevation,
+        geometry,
+        ll_gisacre,      // Real acreage from n8n
+        labels = []      // Street labels from OSM (optional)
+    } = req.body;
 
     // Define the persistent volume path per Section 7
     // Use process.cwd() to be safe across Local (Windows) and Docker (/app)
@@ -30,10 +38,18 @@ export default async function handler(req, res) {
         // Section 6.1: 2048 x 1536 (4:3 aspect ratio)
         await page.setViewport({ width: 2048, height: 1536 });
 
-        // Ingest data into browser scope
+        // Ingest data into browser scope (expanded payload)
         await page.evaluateOnNewDocument((data) => {
             window.__MISSION_DATA__ = data;
-        }, { centroid, centroid_elevation, geometry });
+        }, {
+            centroid,
+            centroid_elevation,
+            geometry,
+            acres: ll_gisacre,           // Renamed for clarity
+            streetLabels: labels,        // Full OSM dataset
+            customer_id,
+            order_id
+        });
 
         const imagePaths = [];
         const pendingCaptures = new Set();
