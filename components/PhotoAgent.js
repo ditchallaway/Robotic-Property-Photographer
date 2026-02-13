@@ -48,6 +48,40 @@ export default function PhotoAgent({ viewer, Cesium }) {
         });
     }
 
+    // New Helper: Check if the frame is valid (not blank/black)
+    const checkFrameValidity = (viewer) => {
+        const gl = viewer.scene.context._gl;
+        const width = gl.drawingBufferWidth;
+        const height = gl.drawingBufferHeight;
+
+        // Read a 5x5 pixel sample from the center
+        const sampleSize = 5;
+        const pixels = new Uint8Array(sampleSize * sampleSize * 4);
+        const x = Math.floor((width - sampleSize) / 2);
+        const y = Math.floor((height - sampleSize) / 2);
+
+        gl.readPixels(x, y, sampleSize, sampleSize, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+        let nonBlackCount = 0;
+        for (let i = 0; i < pixels.length; i += 4) {
+            // Check if pixel is NOT (0,0,0,255) typically
+            // Also check for transparency just in case
+            const r = pixels[i];
+            const g = pixels[i + 1];
+            const b = pixels[i + 2];
+            const a = pixels[i + 3];
+
+            if (a === 0) continue; // Transparent
+            if (r > 10 || g > 10 || b > 10) { // Slight tolerance for "not black"
+                nonBlackCount++;
+            }
+        }
+
+        // If more than 50% of sampled pixels are non-black, we consider it valid-ish
+        return nonBlackCount > (pixels.length / 4) * 0.5;
+    };
+
+
     const runMission = async () => {
         if (!viewer || isRunning.current) return;
         const data = window.__MISSION_DATA__;
@@ -58,12 +92,13 @@ export default function PhotoAgent({ viewer, Cesium }) {
         const coords = data.geometry.coordinates[0].flat();
         const positions = Cesium.Cartesian3.fromDegreesArray(coords);
 
+        // Visual Upgrade: Yellow Boundary
         viewer.entities.add({
             polyline: {
                 positions: positions,
-                width: 3,
+                width: 5, // Thicker for visibility
                 clampToGround: true,
-                material: Cesium.Color.YELLOW
+                material: Cesium.Color.YELLOW // As requested
             }
         });
 
@@ -81,8 +116,8 @@ export default function PhotoAgent({ viewer, Cesium }) {
         boundingSphere.center = origin;
 
         const shotList = [
-            // Fix: Use -89.9 to avoid gimbal lock/ambiguous heading at -90
-            { name: 'nadir', heading: 0, pitch: -89.9 },
+            // Fix: Restore Birds-Eye View (Nadir) per user request
+            { name: 'nadir', heading: 0, pitch: -90 },
             { name: 'north', heading: 0, pitch: -24 },
             { name: 'east', heading: 90, pitch: -24 },
             { name: 'south', heading: 180, pitch: -24 },
@@ -106,38 +141,47 @@ export default function PhotoAgent({ viewer, Cesium }) {
             // Section 7: Force Max Detail
             viewer.scene.globe.maximumScreenSpaceError = 1.0;
 
-            // Wait for tilesLoaded === true (Section 7)
-            // Fix: Add initial delay to ensure requests have started (Cold Start Fix)
-            await new Promise(r => setTimeout(r, 500));
+            // Quality Control Loop
+            let attempts = 0;
+            const MAX_ATTEMPTS = 5;
+            let captured = false;
 
-            await new Promise(resolve => {
-                let stableCycles = 0;
-                let totalWait = 0;
-                const check = setInterval(() => {
-                    const loaded = viewer.scene.globe.tilesLoaded;
-                    totalWait += 500;
-                    console.log(`[BROWSER] Stability Check (${shot.name}): tilesLoaded=${loaded}, stableCycles=${stableCycles}, wait=${totalWait}ms`);
-                    if (loaded) {
-                        stableCycles++;
-                        if (stableCycles > 2) {
-                            clearInterval(check);
-                            resolve();
+            while (attempts < MAX_ATTEMPTS && !captured) {
+                // Wait for loading
+                await new Promise(r => setTimeout(r, 500 + (attempts * 500))); // Backoff
+
+                // Wait for tiles to load
+                await new Promise(resolve => {
+                    let stableCycles = 0;
+                    const check = setInterval(() => {
+                        if (viewer.scene.globe.tilesLoaded) {
+                            stableCycles++;
+                            if (stableCycles > 2) { clearInterval(check); resolve(); }
+                        } else {
+                            stableCycles = 0;
                         }
-                    } else {
-                        stableCycles = 0;
-                    }
+                    }, 200);
+                    // Safety timeout for this check
+                    setTimeout(() => { clearInterval(check); resolve(); }, 10000);
+                });
 
-                    // Safety Cap: 60 seconds per view
-                    if (totalWait > 60000) {
-                        console.warn(`[BROWSER] Safety Timeout reached for ${shot.name}. Capturing anyway.`);
-                        clearInterval(check);
-                        resolve();
-                    }
-                }, 500);
-            });
+                // Render Check
+                viewer.scene.render();
+                const isValid = checkFrameValidity(viewer);
 
-            // Brief settle for the preserveDrawingBuffer
-            await new Promise(r => setTimeout(r, 500));
+                if (isValid) {
+                    captured = true;
+                    console.log(`[BROWSER] QC Passed for ${shot.name}`);
+                } else {
+                    console.warn(`[BROWSER] QC Failed for ${shot.name} (Attempt ${attempts + 1}/${MAX_ATTEMPTS}). Retrying...`);
+                    attempts++;
+                    viewer.scene.requestRender();
+                }
+            }
+
+            if (!captured) {
+                console.error(`[BROWSER] CRITICAL: Failed to generate valid frame for ${shot.name} after ${MAX_ATTEMPTS} attempts.`);
+            }
 
             // Pillar 4: Sidecar Ground-Plane Export
             try {
@@ -193,8 +237,13 @@ export default function PhotoAgent({ viewer, Cesium }) {
                         const posWorld = Cesium.Cartesian3.fromDegrees(lbl.longitude, lbl.latitude, effectiveLblHeight);
                         const posLocal = Cesium.Matrix4.multiplyByPoint(invEnu, posWorld, new Cesium.Cartesian3());
 
+                        // Visual Upgrade: Geometos font for Sidecar consumers (if they use it)
+                        // This JSON is for downstream, but we also style entities in-viewer if we were rendering them directly.
+                        // Since this code *exports* data for n8n/Post-processing, the font choice here is metadata.
+                        // However, if we draw labels IN Cesium for the screenshot:
                         return {
                             text: lbl.label_text || lbl.street_name,
+                            style: "Geometos",
                             anchor_3d: [posLocal.x, posLocal.y, posLocal.z]
                         };
                     }),

@@ -20,7 +20,15 @@ export default async function handler(req, res) {
     // Define the persistent volume path per Section 7
     // Use process.cwd() to be safe across Local (Windows) and Docker (/app)
     const snapshotDir = path.join(process.cwd(), 'public', 'snapshots', order_id, customer_id);
+    const logFile = path.join(process.cwd(), 'public', 'render.log');
     await fs.mkdir(snapshotDir, { recursive: true });
+
+    const logToFile = async (msg) => {
+        const timestamp = new Date().toISOString();
+        const logLine = `[${timestamp}] ${msg}\n`;
+        await fs.appendFile(logFile, logLine).catch(() => { });
+        console.log(msg); // Keep stdout
+    };
 
     let browser = null;
     try {
@@ -67,10 +75,10 @@ export default async function handler(req, res) {
                             const filePath = path.join(snapshotDir, `${viewName}.json`);
                             await fs.writeFile(filePath, JSON.stringify(data, null, 2));
                             imagePaths.push(filePath);
-                            console.log(`[RENDERER] Saved Sidecar: ${filePath}`);
+                            await logToFile(`[RENDERER] Saved Sidecar: ${filePath}`);
                         }
                     } catch (err) {
-                        console.error('[RENDERER] Sidecar Error:', err);
+                        await logToFile(`[RENDERER] Sidecar Error: ${err.message}`);
                     }
                 })();
 
@@ -86,19 +94,28 @@ export default async function handler(req, res) {
                         const viewName = text.split(':')[1];
                         const filePath = path.join(snapshotDir, `${viewName}.png`);
 
+
                         const buffer = await page.screenshot({ type: 'png' });
                         await fs.writeFile(filePath, buffer);
+
+                        // Safety Check: Verify file size
+                        // Safety Check: Verify file size
+                        const stats = await fs.stat(filePath);
+                        if (stats.size < 50 * 1024) {
+                            await logToFile(`[RENDERER] WARNING: Suspiciously small image detected (${stats.size} bytes): ${filePath}`);
+                        }
+
                         imagePaths.push(filePath);
-                        console.log(`[RENDERER] Captured: ${filePath}`);
+                        await logToFile(`[RENDERER] Captured: ${filePath} (${(stats.size / 1024).toFixed(1)} KB)`);
                     } catch (err) {
-                        console.error('[RENDERER] Capture Error:', err);
+                        await logToFile(`[RENDERER] Capture Error: ${err.message}`);
                     }
                 })();
 
                 pendingCaptures.add(capturePromise);
                 capturePromise.finally(() => pendingCaptures.delete(capturePromise));
             } else {
-                console.log(`[BROWSER] ${text}`);
+                await logToFile(`[BROWSER] ${text}`);
             }
         });
 
