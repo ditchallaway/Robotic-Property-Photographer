@@ -39,11 +39,11 @@
 * **Headings:** True North aligned: 0°, 90°, 180°, 270°.
 * **Oblique pitch:** -24 degrees.
 * **Nadir pitch:** -90 degrees.
-* **Framing:** Use `viewer.camera.flyToBoundingSphere()` with `range: 0` for auto-framing.
+* **Framing:** Use `viewer.camera.flyToBoundingSphere()` with `boundingSphere.radius * 2.0` for framing.
 
 ## 6. Terrain & Geometry Rules
-* Use `clampToGround: true` for all Polylines/Polygons.
-* Ground plane normal derived from ellipsoid geodetic surface normal via ENU frame (not terrain triangles).
+* Use `clampToGround: true` for all Polylines/Polygons (do not use centroid height).
+* Use `viewer.camera.flyToBoundingSphere()` with `boundingSphere.radius * 2.0` for framing.
 
 ## 7. Road Label Rules
 * Road data MUST be sourced from OSM `way[highway]` only.
@@ -52,6 +52,6 @@
 * Label text taken strictly from tags: `name → ref → alt_name`.
 * Missing name = road excluded.
 
-## 8. Sidecar Independence
-* PSD composition must not alter render logic, camera logic, Cesium scene state, or pixel output.
-* PSD composition must be removable without changing rendering behavior.
+## 8. Overlay Independence
+* Overlay layers (boundary, labels, acreage) must not alter the base map render pass.
+* Each overlay must be independently removable from the PSD without affecting other layers.
