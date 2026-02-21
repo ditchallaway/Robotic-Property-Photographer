@@ -1,6 +1,10 @@
 import puppeteer from 'puppeteer';
 import fs from 'fs/promises';
 import path from 'path';
+import { fetchOsmRoads } from '../../lib/osmRoads.js';
+import { computeAcreageLabel } from '../../lib/acreageLabel.js';
+import { removeChromaKey } from '../../lib/chromaKey.js';
+import { composePsd } from '../../lib/psdComposer.js';
 
 export const config = { api: { responseLimit: false } };
 
@@ -13,23 +17,43 @@ export default async function handler(req, res) {
         centroid,
         centroid_elevation,
         geometry,
-        ll_gisacre,      // Real acreage from n8n
-        labels = []      // Street labels from OSM (optional)
+        ll_gisacre
     } = req.body;
 
-    // Define the persistent volume path per Section 7
-    // Use process.cwd() to be safe across Local (Windows) and Docker (/app)
     const snapshotDir = path.join(process.cwd(), 'public', 'snapshots', order_id, customer_id);
-    const logFile = path.join(process.cwd(), 'public', 'render.log');
+    const logFile = path.join(snapshotDir, `${new Date().toISOString().split('T')[0]}.log`);
     await fs.mkdir(snapshotDir, { recursive: true });
 
     const logToFile = async (msg) => {
         const timestamp = new Date().toISOString();
-        const logLine = `[${timestamp}] ${msg}\n`;
-        await fs.appendFile(logFile, logLine).catch(() => { });
-        console.log(msg); // Keep stdout
+        await fs.appendFile(logFile, `[${timestamp}] ${msg}\n`).catch(() => { });
+        console.log(msg);
     };
 
+    // ── Server-side data preparation ───────────────────────────────
+    let roads = [];
+    try {
+        const lat = Array.isArray(centroid) ? centroid[1] : centroid.lat;
+        const lon = Array.isArray(centroid) ? centroid[0] : centroid.lon;
+        const boundaryCoords = geometry?.coordinates?.[0] || [];
+        roads = await fetchOsmRoads(lat, lon, boundaryCoords);
+        await logToFile(`[RENDERER] Fetched ${roads.length} roads from OSM`);
+    } catch (err) {
+        await logToFile(`[RENDERER] OSM road fetch failed (non-fatal): ${err.message}`);
+    }
+
+    let acreageAnchor = null;
+    try {
+        const boundaryCoords = geometry?.coordinates?.[0] || [];
+        if (ll_gisacre && boundaryCoords.length >= 3) {
+            acreageAnchor = computeAcreageLabel(ll_gisacre, boundaryCoords);
+            await logToFile(`[RENDERER] Acreage label: "${acreageAnchor.text}" at [${acreageAnchor.lon.toFixed(6)}, ${acreageAnchor.lat.toFixed(6)}]`);
+        }
+    } catch (err) {
+        await logToFile(`[RENDERER] Acreage label computation failed (non-fatal): ${err.message}`);
+    }
+
+    // ── Puppeteer session ──────────────────────────────────────────
     let browser = null;
     try {
         browser = await puppeteer.launch({
@@ -43,88 +67,97 @@ export default async function handler(req, res) {
         });
 
         const page = await browser.newPage();
-        // Section 6.1: 2048 x 1536 (4:3 aspect ratio)
         await page.setViewport({ width: 2048, height: 1536 });
 
-        // Ingest data into browser scope (expanded payload)
+        // Per-shot pass buffers
+        const shotPasses = {};
+        const outputPaths = [];
+
+        // ── Expose capture function to browser ─────────────────────
+        // This is the KEY fix: PhotoAgent awaits this function,
+        // so the scene state is frozen while the screenshot is taken.
+        await page.exposeFunction('capturePass', async (shotName, passName) => {
+            try {
+                const buffer = await page.screenshot({ type: 'png' });
+                if (!shotPasses[shotName]) shotPasses[shotName] = {};
+                shotPasses[shotName][passName] = buffer;
+                await logToFile(`[RENDERER] Captured pass: ${shotName}/${passName} (${(buffer.length / 1024).toFixed(1)} KB)`);
+                return true;
+            } catch (err) {
+                await logToFile(`[RENDERER] Pass capture error: ${err.message}`);
+                return false;
+            }
+        });
+
+        // ── Expose compose function to browser ─────────────────────
+        await page.exposeFunction('composeShot', async (shotName) => {
+            try {
+                const passes = shotPasses[shotName];
+                if (!passes || !passes.map) {
+                    await logToFile(`[RENDERER] WARNING: Missing map pass for ${shotName}`);
+                    return false;
+                }
+
+                const layers = [
+                    { name: 'Map', buffer: passes.map }
+                ];
+
+                if (passes.boundary) {
+                    const keyed = await removeChromaKey(passes.boundary);
+                    layers.push({ name: 'Boundary', buffer: keyed });
+                }
+                if (passes.labels) {
+                    const keyed = await removeChromaKey(passes.labels);
+                    layers.push({ name: 'Street Labels', buffer: keyed });
+                }
+                if (passes.acreage) {
+                    const keyed = await removeChromaKey(passes.acreage);
+                    layers.push({ name: 'Acreage', buffer: keyed });
+                }
+
+                const psdBuffer = await composePsd(layers);
+                const psdPath = path.join(snapshotDir, `${shotName}.psd`);
+                await fs.writeFile(psdPath, psdBuffer);
+
+                const pngPath = path.join(snapshotDir, `${shotName}.png`);
+                await fs.writeFile(pngPath, passes.map);
+
+                outputPaths.push(psdPath, pngPath);
+                await logToFile(`[RENDERER] Composed PSD: ${psdPath} (${(psdBuffer.length / 1024).toFixed(1)} KB)`);
+                return true;
+            } catch (err) {
+                await logToFile(`[RENDERER] PSD composition error: ${err.message}`);
+                return false;
+            }
+        });
+
+        // Inject mission data
         await page.evaluateOnNewDocument((data) => {
             window.__MISSION_DATA__ = data;
         }, {
             centroid,
             centroid_elevation,
             geometry,
-            acres: ll_gisacre,           // Renamed for clarity
-            streetLabels: labels,        // Full OSM dataset
+            acres: ll_gisacre,
+            roads,
+            acreageAnchor,
             customer_id,
             order_id
         });
 
-        const imagePaths = [];
-        const pendingCaptures = new Set();
-
-        // Listen for the Capture Signal
+        // Forward browser console to server logs
         page.on('console', async (msg) => {
-            const args = msg.args();
-            if (args.length >= 3) {
-                const capturePromise = (async () => {
-                    try {
-                        const token = await args[0].jsonValue();
-                        if (token === 'SIDECAR_DATA') {
-                            const viewName = await args[1].jsonValue();
-                            const data = await args[2].jsonValue();
-                            const filePath = path.join(snapshotDir, `${viewName}.json`);
-                            await fs.writeFile(filePath, JSON.stringify(data, null, 2));
-                            imagePaths.push(filePath);
-                            await logToFile(`[RENDERER] Saved Sidecar: ${filePath}`);
-                        }
-                    } catch (err) {
-                        await logToFile(`[RENDERER] Sidecar Error: ${err.message}`);
-                    }
-                })();
-
-                pendingCaptures.add(capturePromise);
-                capturePromise.finally(() => pendingCaptures.delete(capturePromise));
-                return;
-            }
-
             const text = msg.text();
-            if (text.startsWith('CAPTURE_FRAME:')) {
-                const capturePromise = (async () => {
-                    try {
-                        const viewName = text.split(':')[1];
-                        const filePath = path.join(snapshotDir, `${viewName}.png`);
-
-
-                        const buffer = await page.screenshot({ type: 'png' });
-                        await fs.writeFile(filePath, buffer);
-
-                        // Safety Check: Verify file size
-                        // Safety Check: Verify file size
-                        const stats = await fs.stat(filePath);
-                        if (stats.size < 50 * 1024) {
-                            await logToFile(`[RENDERER] WARNING: Suspiciously small image detected (${stats.size} bytes): ${filePath}`);
-                        }
-
-                        imagePaths.push(filePath);
-                        await logToFile(`[RENDERER] Captured: ${filePath} (${(stats.size / 1024).toFixed(1)} KB)`);
-                    } catch (err) {
-                        await logToFile(`[RENDERER] Capture Error: ${err.message}`);
-                    }
-                })();
-
-                pendingCaptures.add(capturePromise);
-                capturePromise.finally(() => pendingCaptures.delete(capturePromise));
-            } else {
-                await logToFile(`[BROWSER] ${text}`);
-            }
+            if (!text.startsWith('[BROWSER]')) return;
+            await logToFile(`[BROWSER] ${text}`);
         });
 
         const protocol = req.headers['x-forwarded-proto'] || 'http';
-        const host = req.headers.host; // Includes port
+        const host = req.headers.host;
         const targetUrl = `${protocol}://${host}/`;
         await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
 
-        // Wait for Mission Complete
+        // Wait for MISSION_COMPLETE
         await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => reject(new Error('Render timeout')), 600000);
             page.on('console', (msg) => {
@@ -135,19 +168,15 @@ export default async function handler(req, res) {
             });
         });
 
-        // Final safety: Wait for all pending captures to finish
-        // even after MISSION_COMPLETE signal
-        await Promise.all(pendingCaptures);
-
-        // Section 8: Return local file paths
         res.status(200).json({
             status: "success",
             customer_id,
             order_id,
-            images: imagePaths
+            images: outputPaths
         });
 
     } catch (err) {
+        await logToFile(`[RENDERER] Fatal error: ${err.message}`);
         res.status(500).json({ status: "error", message: err.message });
     } finally {
         if (browser) await browser.close();

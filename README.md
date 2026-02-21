@@ -4,16 +4,19 @@ A headless rendering microservice built on Next.js and CesiumJS, designed to gen
 
 ## **1\. System Overview**
 
-**Goal:** Render deterministic aerial images of a property boundary using CesiumJS, returning PNG assets to n8n.
+**Goal:** Render deterministic aerial property images with layered PSD output using CesiumJS.
 
 **High-level flow**
 
-1. n8n sends JSON payload (centroid \+ elevation \+ GeoJSON)  
-2. Renderer boots Cesium in headless Chromium  
-3. Boundary is rendered using Cesium materials  
-4. Camera positions are solved and frames captured  
-5. PNGs and sidecar JSON files are written to disk  
-6. Renderer returns asset references to n8n
+1. n8n sends JSON payload (centroid + elevation + GeoJSON + acreage)
+2. Renderer fetches road geometry from OSM Overpass API (`way[highway]`)
+3. Renderer computes acreage label placement via Turf.js
+4. Renderer boots Cesium in headless Chromium
+5. For each shot, 4 passes are captured: Map, Boundary, Street Labels, Acreage
+6. Overlay passes use a magenta chroma-key tile, which is removed server-side
+7. All passes are composed into a layered PSD file via ag-psd
+8. PSD + preview PNG files are written to disk
+9. Renderer returns asset references to n8n
 
 Renderer is **stateless** and **geometry-agnostic**.
 
@@ -63,11 +66,19 @@ Deterministic camera sequence triggered via `/api/render`.
 * **Why**: Clamping ensures lines follow 3D terrain perfectly and prevents lines from "burying" into hills or "floating" over valleys.
 
 
-**Pillar 4: Sidecar Ground-Plane Export (New Feature)**  
-For each rendered PNG, the renderer exports a sidecar JSON file with the same basename. This provides downstream pipelines with deterministic ground-plane and parcel layout data without affecting rendering or camera solving.
+**Pillar 4: Multi-Pass PSD Compositing**
+For each shot, the renderer captures 4 separate passes and composes them into a layered PSD file:
 
-* **Rules:** Post-capture only, no additional render passes or terrain sampling.  
-* **Contents:** Ground plane (orthonormal frame), Parcel boundary (plane-local 2D coordinates in meters), and optional camera projection data.
+| Pass | Imagery | Entities | Result |
+|------|---------|----------|--------|
+| Map | Satellite tiles | None | Opaque base layer |
+| Boundary | Chroma magenta | Yellow polyline | Transparent overlay |
+| Labels | Chroma magenta | Cesium LabelCollection | Transparent overlay |
+| Acreage | Chroma magenta | Turf-positioned text | Transparent overlay |
+
+* **Chroma-key:** 1×1 magenta tile via `SingleTileImageryProvider`, removed by `sharp` post-capture.
+* **Composition:** `ag-psd` stacks passes as named layers in a `.psd` file.
+* **Preview:** A flat `.png` of the map pass is saved alongside for quick reference.
 
 ## **🔌 API Interface (POST /api/render)**
 
@@ -102,7 +113,10 @@ Renderer does:
 * Apply material styling  
 * Solve camera positions  
 * Capture PNG frames  
-* and generate sidecar JSON metadata
+* Fetch road data from OSM Overpass (`way[highway]`)
+* Compute acreage label anchor via Turf.js
+* Execute multi-pass capture (map, boundary, labels, acreage) per shot
+* Chroma-key overlay passes and compose into layered PSD via ag-psd
 
 Renderer does **not**:
 
@@ -201,160 +215,33 @@ No manual distance math.
 👆Above snapshots folder is a mounted volume  \- ./snapshots:/app/public/snapshots  
 ---
 
-## **8\. Sidecar Ground-Plane**
 
-## **Ground Plane Metadata**
+## **8\. Multi-Pass PSD Output**
 
-Each rendered PNG **MUST** emit a sidecar JSON file with the same basename, enabling downstream compositing without Cesium.
+For each shot, the renderer captures 4 separate passes that are composed into a layered PSD file:
 
-### **Purpose**
+### **Pass Sequence**
 
-Decouple rendering from post-processing by exporting a stable, world-aligned ground plane and parcel layout in local meter coordinates.
+1. **Map** — Satellite imagery, opaque, all overlays hidden
+2. **Boundary** — Yellow property polyline on chroma-key background
+3. **Street Labels** — Cesium `LabelCollection` from OSM data on chroma-key background
+4. **Acreage** — Turf.js-positioned acreage text on chroma-key background
 
-### **Generation Rules**
+### **Chroma-Key Process**
 
-* Sidecar JSON is generated **per view** at capture time.
+* Overlay passes swap satellite imagery for a 1×1 magenta (`#FF00FF`) tile via `SingleTileImageryProvider`
+* Sky, sun, moon, and atmosphere are hidden during overlay passes
+* After capture, `sharp` removes the magenta background with configurable tolerance
+* `ag-psd` composes all passes into a PSD with named layers
 
-* Computation occurs **in browser scope** using Cesium runtime state.
+### **Output Files**
 
-* Ground plane is **world-stable** (ENU), not camera-relative.
+For each shot (nadir, north, east, south, west):
 
-### **Ground Plane Definition**
-
-* **Origin**: Parcel centroid in ECEF (Cartesian3).
-
-* **Normal**: Ellipsoid geodetic surface normal at centroid.
-
-* **Axes**: East–North–Up (ENU) frame via  
-   `Cesium.Transforms.eastNorthUpToFixedFrame(origin)`.
-
-### **Boundary Projection**
-
-* Convert boundary vertices (lon/lat) → Cartesian3.
-
-* Transform to local ENU using inverse ENU matrix.
-
-* Drop Z; store `[x, y]` in **meters**.
-
-### **Exported Schema (v1)**
-
-`{`  
-  `"origin": [x, y, z],`  
-  `"enu_axes": {`  
-    `"east": [x, y, z],`  
-    `"north": [x, y, z],`  
-    `"up": [x, y, z]`  
-  `},`  
-  `"boundary_2d": [[x, y], ...],`  
-  `"camera": {`  
-    `"position": [x, y, z],`  
-    `"direction": [x, y, z],`  
-    `"up": [x, y, z],`  
-    `"right": [x, y, z]`  
-  `},`  
-  `"matrices": {`  
-    `"view": [16],`  
-    `"projection": [16]`  
-  `},`  
-  `"viewport": { "width": 2048, "height": 1536 }`  
-`}`
-
-### **Output Contract**
-
-For every `{view}.png`, write `{view}.json` to the same snapshot directory.  
- API response returns both asset paths.
-
-### **Export**
-
-Objective
-
-After each PNG capture, export a sidecar JSON file containing ground-plane and parcel layout data.   
-This must be read-only with respect to rendering.
-
-Data You Already Have (Do Not Recompute)
-
-The renderer already has all required data in memory:
-
-**From the request**
-
-* Parcel geometry (GeoJSON, WGS84)  
-* Centroid (lon, lat)  
-* Centroid elevation (meters)
-
-**From Cesium (already instantiated)**
-
-* viewer.scene.globe.ellipsoid  
-* viewer.camera.position  
-* viewer.camera.direction  
-* viewer.camera.up  
-* viewer.camera.right  
-* viewer.camera.viewMatrix  
-* viewer.camera.projectionMatrix  
-* viewer.camera.frustum  
-* scene.canvas.width / height
-
-**From existing render logic**
-
-* Cartesian boundary points (already converted for BoundingSphere and entity creation)  
-* BoundingSphere center (already computed)  
-* Final camera pose per view (after `flyToBoundingSphere` completes)
-
-No new sampling, validation, or geometry modification is required.
-
-What to Compute (Once per View)
-
-1. Ground plane
-
-   * Origin: centroid projected onto ellipsoid or boundary-derived plane  
-   * Normal: ellipsoid surface normal at origin (fallback-safe)  
-   * X axis: camera.right projected onto plane  
-     Y axis: cross(normal, X)
-
-2. Parcel in plane space
-
-   * Project each boundary vertex into plane coordinates (meters)
-
-3. Optional projection context
-
-   * View-projection matrix (`projection * view`)  
-   * Image dimensions
-
----
-
-Output
-
-Write next to the image:
-
-| {view}.png{view}.json |
-| :---- |
-
-JSON must be sufficient for downstream pipelines to:
-
-* Draw parcel outlines
-
-* Place text aligned to ground
-
-* Measure distances in meters
-
-* Operate without Cesium
-
----
-
-Hard Rules
-
-* Do not alter render timing
-
-* Do not change camera logic
-
-* Do not add primitives
-
-* Do not sample terrain
-
-* Do not affect pixel output
-
-Sidecar export must be removable without changing rendering behavior.
-
-## 
+| File | Contents |
+|------|----------|
+| `{view}.psd` | Layered PSD: Map (bottom) → Boundary → Street Labels → Acreage (top) |
+| `{view}.png` | Flat preview of the map pass only |
 
 ---
 
@@ -362,10 +249,21 @@ Sidecar export must be removable without changing rendering behavior.
 
 Returns local file paths to keep n8n payloads lightweight.
 
-JSON
+```json
+{
+    "status": "success",
+    "customer_id": "uuid-user-string",
+    "order_id": "uuid-order-string",
+    "images": [
+        "/app/public/snapshots/123/456/north.psd",
+        "/app/public/snapshots/123/456/north.png",
+        "/app/public/snapshots/123/456/nadir.psd",
+        "/app/public/snapshots/123/456/nadir.png"
+    ]
+}
+```
 
-| {    "status": "success",    "customer\_id": "uuid-user-string",    "order\_id": "uuid-order-string",  "images": \[    "/app/public/snapshots/123/456/north.png",    "/app/public/snapshots/123/456/north.json",    "/app/public/snapshots/123/456/nadir.png",    "/app/public/snapshots/123/456/nadir.json"  \]} |
-| :---- |
+
 
 ## **🤖 The "Director" (Renderer) Workflow**
 
