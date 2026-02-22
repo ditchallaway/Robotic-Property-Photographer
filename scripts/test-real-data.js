@@ -1,7 +1,13 @@
+/**
+ * ⚠️ IMPORTANT FOR LOCAL TESTING ⚠️
+ * Since this application runs in Docker and Node may not be installed on the host,
+ * you MUST execute this script INSIDE the running container.
+ * 
+ * Command: docker compose exec moonshot node scripts/test-real-data.js
+ */
+
 // Native fetch is available in Node.js 18+
 // If running on older Node, install node-fetch manually
-
-
 // Real property data from n8n (actual payload structure)
 const realPropertyData = {
     "ap parcel number": "RP58N01W327600A",
@@ -37,7 +43,7 @@ async function testRender() {
     console.log(`🆔 Order: ${realPropertyData.order_id} / ${realPropertyData.customer_id}\n`);
 
     try {
-        const response = await fetch('http://localhost:3000/api/render', {
+        const response = await fetch('http://localhost:3001/api/render', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(realPropertyData)

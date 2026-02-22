@@ -26,7 +26,7 @@ export default function PhotoAgent({ viewer, Cesium }) {
         return null;
     };
 
-    const MAGENTA = new Cesium.Color(1.0, 0.0, 1.0, 1.0);
+    const TRANSPARENT = new Cesium.Color(0.0, 0.0, 0.0, 0.0);
 
     const runMission = async () => {
         if (!viewer || isRunning.current) return;
@@ -71,10 +71,10 @@ export default function PhotoAgent({ viewer, Cesium }) {
                 const label = labelCollection.add({
                     position: Cesium.Cartesian3.fromDegrees(lon, lat, 50),
                     text: road.name,
-                    font: '24px sans-serif',
+                    font: '64px sans-serif',
                     fillColor: Cesium.Color.WHITE,
                     outlineColor: Cesium.Color.BLACK,
-                    outlineWidth: 3,
+                    outlineWidth: 8,
                     style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                     verticalOrigin: Cesium.VerticalOrigin.CENTER,
                     horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
@@ -94,10 +94,10 @@ export default function PhotoAgent({ viewer, Cesium }) {
                         50
                     ),
                     text: data.acreageAnchor.text,
-                    font: 'bold 32px sans-serif',
+                    font: 'bold 96px sans-serif',
                     fillColor: Cesium.Color.WHITE,
                     outlineColor: Cesium.Color.BLACK,
-                    outlineWidth: 4,
+                    outlineWidth: 10,
                     style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                     verticalOrigin: Cesium.VerticalOrigin.CENTER,
                     horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
@@ -165,15 +165,23 @@ export default function PhotoAgent({ viewer, Cesium }) {
                 console.log(`[BROWSER] Capturing map pass...`);
                 await window.capturePass(shot.name, 'map');
 
-                // ── SWITCH TO CHROMA BACKGROUND ────────────────────────
-                // Hide 3D tiles + sky, set ENTIRE background to magenta
+                // ── SWITCH TO TRANSPARENT BACKGROUND ───────────────────
+                // Hide 3D tiles + sky, set ENTIRE background to transparent
                 if (tileset) tileset.show = false;
-                viewer.scene.globe.show = false; // hide globe entirely
+
+                // Set globe baseColor to transparent (used when imagery layers are hidden)
+                viewer.scene.globe.show = true;
+                const oldBaseColor = viewer.scene.globe.baseColor;
+                viewer.scene.globe.baseColor = TRANSPARENT;
+
                 if (viewer.scene.skyBox) viewer.scene.skyBox.show = false;
                 if (viewer.scene.sun) viewer.scene.sun.show = false;
                 if (viewer.scene.moon) viewer.scene.moon.show = false;
                 if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false;
-                viewer.scene.backgroundColor = MAGENTA;
+                viewer.scene.globe.enableLighting = false;
+                viewer.scene.globe.showGroundAtmosphere = false;
+                viewer.scene.highDynamicRange = false;
+                viewer.scene.backgroundColor = TRANSPARENT;
                 viewer.scene.render();
                 await new Promise(r => setTimeout(r, 300));
 
@@ -211,12 +219,17 @@ export default function PhotoAgent({ viewer, Cesium }) {
                 await window.composeShot(shot.name);
 
                 // ── RESTORE for next shot ──────────────────────────────
+                viewer.scene.globe.baseColor = oldBaseColor;
+
                 if (tileset) tileset.show = true;
                 viewer.scene.globe.show = true;
                 if (viewer.scene.skyBox) viewer.scene.skyBox.show = true;
                 if (viewer.scene.sun) viewer.scene.sun.show = true;
                 if (viewer.scene.moon) viewer.scene.moon.show = true;
                 if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = true;
+                viewer.scene.globe.enableLighting = true;
+                viewer.scene.globe.showGroundAtmosphere = true;
+                viewer.scene.highDynamicRange = true;
                 viewer.scene.backgroundColor = Cesium.Color.BLACK;
             }
 

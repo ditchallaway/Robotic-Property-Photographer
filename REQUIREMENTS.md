@@ -30,9 +30,9 @@
 
 ## 4. Multi-Pass Rendering Rules
 * **Passes per shot:** Map (satellite), Boundary (yellow polyline), Street Labels (LabelCollection), Acreage (positioned text).
-* **Chroma-key:** Overlay passes use a 1×1 magenta (#FF00FF) tile via `SingleTileImageryProvider`. Atmosphere/sky hidden.
-* **Composition:** `sharp` removes chroma background. `ag-psd` composes named layers into a PSD file.
-* **Output:** Each shot produces `{view}.psd` (layered) and `{view}.png` (map-only preview).
+* **Transparency:** Overlay passes use `alpha: true` in Cesium WebGL context, and `omitBackground: true` in Puppeteer screenshot options to create natively transparent backgrounds.
+* **Composition:** `ag-psd` composes the named transparent layers into a PSD file. `sharp` composites them over the base map for the PNG preview.
+* **Output:** Each shot produces `{view}.psd` (layered) and `{view}.png` (composited preview).
 
 ## 5. Camera Rules
 * **FOV:** 100 degrees.

@@ -2,7 +2,7 @@ services:
   moonshot:
     build: .
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       # 1. Sync your code (The "Bind Mount")
       - .:/app

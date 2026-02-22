@@ -8,7 +8,9 @@
     "build": "node scripts/copy-assets.cjs && next build",
     "start": "next start",
     "lint": "next lint",
-    "copy-assets": "node scripts/copy-assets.cjs"
+    "copy-assets": "node scripts/copy-assets.cjs",
+    "test:api": "docker compose exec moonshot node test-api.cjs",
+    "test:real": "docker compose exec moonshot node scripts/test-real-data.js"
   },
   "dependencies": {
     "@turf/turf": "^7.3.4",

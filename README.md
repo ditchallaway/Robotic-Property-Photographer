@@ -264,6 +264,25 @@ Returns local file paths to keep n8n payloads lightweight.
 ```
 
 
+## **10\. Local Testing**
+
+Since the application runs inside Docker (and Node.js may not be installed on the host machine), all test scripts must be executed **inside the running container**.
+
+Assuming your container is named `moonshot` (default in `docker-compose.yml`), run:
+
+```bash
+# Test with real property data payload
+docker compose exec moonshot node scripts/test-real-data.js
+
+# Test with basic mock payload
+docker compose exec moonshot node test-api.cjs
+```
+
+You can also use the npm shortcuts:
+```bash
+npm run test:real
+npm run test:api
+```
 
 ## **🤖 The "Director" (Renderer) Workflow**
 

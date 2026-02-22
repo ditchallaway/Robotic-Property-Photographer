@@ -1,3 +1,11 @@
+/**
+ * ⚠️ IMPORTANT FOR LOCAL TESTING ⚠️
+ * Since this application runs in Docker and Node may not be installed on the host,
+ * you MUST execute this script INSIDE the running container.
+ * 
+ * Command: docker compose exec moonshot node test-api.cjs
+ */
+
 const http = require('http');
 const fs = require('fs');
 

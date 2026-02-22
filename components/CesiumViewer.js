@@ -39,7 +39,8 @@ export default function CesiumViewer({ onViewerReady }) {
                         scene3DOnly: true,
                         contextOptions: {
                             webgl: {
-                                preserveDrawingBuffer: true
+                                preserveDrawingBuffer: true,
+                                alpha: true
                             }
                         }
                     });

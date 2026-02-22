@@ -3,7 +3,6 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fetchOsmRoads } from '../../lib/osmRoads.js';
 import { computeAcreageLabel } from '../../lib/acreageLabel.js';
-import { removeChromaKey } from '../../lib/chromaKey.js';
 import { composePsd } from '../../lib/psdComposer.js';
 
 export const config = { api: { responseLimit: false } };
@@ -78,7 +77,10 @@ export default async function handler(req, res) {
         // so the scene state is frozen while the screenshot is taken.
         await page.exposeFunction('capturePass', async (shotName, passName) => {
             try {
-                const buffer = await page.screenshot({ type: 'png' });
+                const buffer = await page.screenshot({
+                    type: 'png',
+                    omitBackground: passName !== 'map' // Only overlay passes need transparency
+                });
                 if (!shotPasses[shotName]) shotPasses[shotName] = {};
                 shotPasses[shotName][passName] = buffer;
                 await logToFile(`[RENDERER] Captured pass: ${shotName}/${passName} (${(buffer.length / 1024).toFixed(1)} KB)`);
@@ -103,24 +105,31 @@ export default async function handler(req, res) {
                 ];
 
                 if (passes.boundary) {
-                    const keyed = await removeChromaKey(passes.boundary);
-                    layers.push({ name: 'Boundary', buffer: keyed });
+                    layers.push({ name: 'Boundary', buffer: passes.boundary });
                 }
                 if (passes.labels) {
-                    const keyed = await removeChromaKey(passes.labels);
-                    layers.push({ name: 'Street Labels', buffer: keyed });
+                    layers.push({ name: 'Street Labels', buffer: passes.labels });
                 }
                 if (passes.acreage) {
-                    const keyed = await removeChromaKey(passes.acreage);
-                    layers.push({ name: 'Acreage', buffer: keyed });
+                    layers.push({ name: 'Acreage', buffer: passes.acreage });
                 }
 
                 const psdBuffer = await composePsd(layers);
                 const psdPath = path.join(snapshotDir, `${shotName}.psd`);
                 await fs.writeFile(psdPath, psdBuffer);
 
+                // Generate a flat composite PNG for preview
+                let pngBuffer = passes.map;
+                if (layers.length > 1) {
+                    const compositeInputs = layers.slice(1).map(layer => ({ input: layer.buffer }));
+                    pngBuffer = await sharp(passes.map)
+                        .ensureAlpha()
+                        .composite(compositeInputs)
+                        .png()
+                        .toBuffer();
+                }
                 const pngPath = path.join(snapshotDir, `${shotName}.png`);
-                await fs.writeFile(pngPath, passes.map);
+                await fs.writeFile(pngPath, pngBuffer);
 
                 outputPaths.push(psdPath, pngPath);
                 await logToFile(`[RENDERER] Composed PSD: ${psdPath} (${(psdBuffer.length / 1024).toFixed(1)} KB)`);
@@ -152,9 +161,8 @@ export default async function handler(req, res) {
             await logToFile(`[BROWSER] ${text}`);
         });
 
-        const protocol = req.headers['x-forwarded-proto'] || 'http';
-        const host = req.headers.host;
-        const targetUrl = `${protocol}://${host}/`;
+        // Inside the container, the Next.js server is always on localhost:3000
+        const targetUrl = `http://localhost:3000/`;
         await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
 
         // Wait for MISSION_COMPLETE
