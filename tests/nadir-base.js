@@ -3,12 +3,9 @@
  * Since this application runs in Docker and Node may not be installed on the host,
  * you MUST execute this script INSIDE the running container.
  * 
- * Command: docker compose exec moonshot node path/to/test-script.js
+ * Command: docker compose exec moonshot node tests/nadir-base.js
  */
 
-// Native fetch is available in Node.js 18+
-// If running on older Node, install node-fetch manually
-// Real property data from n8n (actual payload structure)
 const realPropertyData = {
     "ap parcel number": "RP58N01W327600A",
     "owner": "",
@@ -31,19 +28,20 @@ const realPropertyData = {
     "county": "Bonner County",
     "elevation": 655,
     "customer_id": "cust_12345",
-    "order_id": "order_12345",
+    "order_id": "test_nadir_base",
     "centroid_elevation": 655,
-    // Street labels are now fetched from OSM server-side (no longer passed in payload)
+
+    // 🔥 NEW ISOLATED TEST CAPS 🔥
+    "shots": ["nadir"],
+    "capabilities": ["base"]  // Only render the bare base imagery
 };
 
 async function testRender() {
-    console.log('🚀 Testing photographer with real property data...');
-    console.log(`📍 Location: ${realPropertyData.county}`);
-    console.log(`📐 Acreage: ${realPropertyData.ll_gisacre} acres`);
+    console.log('🚀 Testing ISOLATED CAPABILITY: Nadir Base Image...');
     console.log(`🆔 Order: ${realPropertyData.order_id} / ${realPropertyData.customer_id}\n`);
 
     try {
-        const response = await fetch('http://localhost:3001/api/render', {
+        const response = await fetch('http://localhost:3000/api/render', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(realPropertyData)
@@ -57,10 +55,7 @@ async function testRender() {
         const result = await response.json();
         console.log('\n✅ Render complete!');
         console.log(`📁 Outputs saved to: tmp/snapshots/${realPropertyData.order_id}/${realPropertyData.customer_id}`);
-        console.log('\n📋 Next steps:');
-        console.log('1. Open .psd files to verify 4 named layers (Map, Boundary, Street Labels, Acreage)');
-        console.log('2. Check .png preview matches satellite imagery');
-        console.log('3. Verify acreage label shows "6.19 acres"\n');
+        console.log('\n📋 Check the output. It should be a single PNG and PSD with JUST the satellite imagery.');
     } catch (err) {
         console.error('❌ Test failed:', err.message);
         process.exit(1);

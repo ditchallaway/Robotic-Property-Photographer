@@ -55,3 +55,15 @@
 ## 8. Overlay Independence
 * Overlay layers (boundary, labels, acreage) must not alter the base map render pass.
 * Each overlay must be independently removable from the PSD without affecting other layers.
+
+## 9. Testing Strategy
+* **Methodical Isolation:** Tests must isolate capabilities and test only what is needed. 
+* **Two View Types:** 
+    * **Cardinal Direction:** Angled 3D shots (North=0, East=90, South=180, West=270). Since the same orthographic/perspective rules apply to all 4 angles, a single Cardinal test file per capability is sufficient.
+    * **Nadir Direction:** Top-down shot. The math and rendering logic required for a flat, top-down map is entirely different from angled 3D views. There is only one Nadir view, requiring its own isolated tests.
+* **Capabilities Breakdown:** Both Cardinal and Nadir require their own isolated test for each of the following passes:
+    * `[ ]` Base Image pass.
+    * `[ ]` Boundary pass (MUST support polygons with holes).
+    * `[ ]` Acres text pass.
+    * `[ ]` Street Labels pass.
+* **Emergent Complexity:** By testing these highly isolated parts individually, the final multi-pass drone photography service simply emerges.

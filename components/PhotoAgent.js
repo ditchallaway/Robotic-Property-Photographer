@@ -3,18 +3,44 @@ import { useEffect, useRef } from 'react';
 export default function PhotoAgent({ viewer, Cesium }) {
     const isRunning = useRef(false);
 
-    // Wait until globe tiles are fully loaded (with timeout safety)
+    // Wait until globe tiles and any 3D tilesets are fully loaded (with timeout safety)
     const waitForTiles = (viewer) => new Promise(resolve => {
         let stableCycles = 0;
+        let lastLog = Date.now();
+        console.log('[BROWSER] waitForTiles: Starting tile load wait loop...');
+
         const check = setInterval(() => {
-            if (viewer.scene.globe.tilesLoaded) {
+            const tileset = findTileset(viewer);
+            // Cesium3DTileset has `tilesLoaded` boolean
+            const tilesetLoaded = tileset ? (tileset.tilesLoaded === true || tileset.allTilesLoaded === true || tileset.tilesLoaded === undefined) : true;
+
+            // If the tileset is present, we only care that the tileset is loaded.
+            // If not present, we fall back to checking if the globe is loaded.
+            const allLoaded = tileset ? tilesetLoaded : (viewer.scene.globe.tilesLoaded !== false);
+
+            // Console.log every 2 seconds to avoid spam but give feedback
+            if (Date.now() - lastLog > 2000) {
+                console.log(`[BROWSER] waitForTiles status: tilesetLoaded=${tilesetLoaded}, allLoaded=${allLoaded}, stableCycles=${stableCycles}`);
+                lastLog = Date.now();
+            }
+
+            if (allLoaded) {
                 stableCycles++;
-                if (stableCycles > 2) { clearInterval(check); resolve(); }
+                if (stableCycles > 3) {
+                    console.log('[BROWSER] waitForTiles: Tiles completely loaded.');
+                    clearInterval(check);
+                    resolve();
+                }
             } else {
                 stableCycles = 0;
             }
-        }, 200);
-        setTimeout(() => { clearInterval(check); resolve(); }, 10000);
+        }, 300);
+
+        setTimeout(() => {
+            console.warn('[BROWSER] waitForTiles: TIMEOUT REACHED (30s). Capturing anyway.');
+            clearInterval(check);
+            resolve();
+        }, 30000);
     });
 
     // Find the 3D tileset primitive (Google Photorealistic Tiles)
@@ -108,11 +134,8 @@ export default function PhotoAgent({ viewer, Cesium }) {
             console.log(`[BROWSER] Acreage label: ${acreageLabel ? data.acreageAnchor.text : 'none'}`);
 
             // ── Camera Setup ───────────────────────────────────────────
-            const centroidCarto = Cesium.Cartographic.fromDegrees(data.centroid[0], data.centroid[1]);
-            const terrainHeight = viewer.scene.globe.getHeight(centroidCarto);
-            const effectiveHeight = (terrainHeight !== undefined && terrainHeight !== null)
-                ? terrainHeight
-                : (data.centroid_elevation || 0);
+            // WGS84 globe without a terrain provider returns 0. Google 3D Tiles require the actual terrain bounds.
+            const effectiveHeight = data.centroid_elevation || 0;
             const origin = Cesium.Cartesian3.fromDegrees(
                 data.centroid[0], data.centroid[1], effectiveHeight
             );
@@ -120,16 +143,25 @@ export default function PhotoAgent({ viewer, Cesium }) {
             boundingSphere.center = origin;
 
             viewer.camera.frustum.fov = Cesium.Math.toRadians(100);
-            viewer.scene.globe.maximumScreenSpaceError = 1.0;
-            console.log(`[BROWSER] Camera FOV=100deg, SSE=1.0, height=${effectiveHeight.toFixed(1)}m`);
+            // Default SSE is 16.0. 1.0 crashes headless CPU-based swiftshader rendering due to aggressive tile refinement.
+            viewer.scene.globe.maximumScreenSpaceError = 8.0;
+            console.log(`[BROWSER] Camera FOV=100deg, SSE=8.0, height=${effectiveHeight.toFixed(1)}m`);
 
-            const shotList = [
+            let shotList = [
                 { name: 'nadir', heading: 0, pitch: -90 },
                 { name: 'north', heading: 0, pitch: -24 },
                 { name: 'east', heading: 90, pitch: -24 },
                 { name: 'south', heading: 180, pitch: -24 },
                 { name: 'west', heading: 270, pitch: -24 }
             ];
+
+            if (data.shots && Array.isArray(data.shots) && data.shots.length > 0) {
+                shotList = shotList.filter(s => data.shots.includes(s.name));
+            }
+
+            const capabilities = (data.capabilities && Array.isArray(data.capabilities) && data.capabilities.length > 0)
+                ? data.capabilities
+                : ['base', 'boundary', 'labels', 'acreage'];
 
             // ── Multi-Pass Capture Loop ────────────────────────────────
             for (const shot of shotList) {
@@ -146,80 +178,92 @@ export default function PhotoAgent({ viewer, Cesium }) {
                 });
 
                 // ── PASS 1: Map Background (opaque, full scene) ────────
-                if (tileset) tileset.show = true;
-                viewer.scene.globe.show = true;
-                boundaryEntity.show = false;
-                labelEntries.forEach(l => l.show = false);
-                if (acreageLabel) acreageLabel.show = false;
-                // Normal sky/atmosphere for the base map
-                if (viewer.scene.skyBox) viewer.scene.skyBox.show = true;
-                if (viewer.scene.sun) viewer.scene.sun.show = true;
-                if (viewer.scene.moon) viewer.scene.moon.show = true;
-                if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = true;
-                viewer.scene.backgroundColor = Cesium.Color.BLACK;
+                if (capabilities.includes('base')) {
+                    if (tileset) tileset.show = true;
+                    viewer.scene.globe.show = true;
+                    boundaryEntity.show = false;
+                    labelEntries.forEach(l => l.show = false);
+                    if (acreageLabel) acreageLabel.show = false;
+                    // Normal sky/atmosphere for the base map
+                    if (viewer.scene.skyBox) viewer.scene.skyBox.show = true;
+                    if (viewer.scene.sun) viewer.scene.sun.show = true;
+                    if (viewer.scene.moon) viewer.scene.moon.show = true;
+                    if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = true;
+                    viewer.scene.backgroundColor = Cesium.Color.BLACK;
 
-                await waitForTiles(viewer);
-                viewer.scene.render();
-                await new Promise(r => setTimeout(r, 500));
-                viewer.scene.render();
-                console.log(`[BROWSER] Capturing map pass...`);
-                await window.capturePass(shot.name, 'map');
+                    await waitForTiles(viewer);
+                    viewer.scene.render();
+                    await new Promise(r => setTimeout(r, 500));
+                    viewer.scene.render();
+                    console.log(`[BROWSER] Capturing map pass...`);
+                    await window.capturePass(shot.name, 'map');
+                }
 
-                // ── SWITCH TO TRANSPARENT BACKGROUND ───────────────────
-                // Hide 3D tiles + sky, set ENTIRE background to transparent
-                if (tileset) tileset.show = false;
+                // ── OVERLAY PASSES (Transparent) ───────────────────────────
+                if (capabilities.some(c => ['boundary', 'labels', 'acreage'].includes(c))) {
+                    // Hide 3D tiles + sky, set ENTIRE background to transparent
+                    if (tileset) tileset.show = false;
 
-                // Set globe baseColor to transparent (used when imagery layers are hidden)
-                viewer.scene.globe.show = true;
-                const oldBaseColor = viewer.scene.globe.baseColor;
-                viewer.scene.globe.baseColor = TRANSPARENT;
+                    // Set globe baseColor to transparent (used when imagery layers are hidden)
+                    viewer.scene.globe.show = true;
+                    const oldBaseColor = viewer.scene.globe.baseColor;
+                    viewer.scene.globe.baseColor = TRANSPARENT;
 
-                if (viewer.scene.skyBox) viewer.scene.skyBox.show = false;
-                if (viewer.scene.sun) viewer.scene.sun.show = false;
-                if (viewer.scene.moon) viewer.scene.moon.show = false;
-                if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false;
-                viewer.scene.globe.enableLighting = false;
-                viewer.scene.globe.showGroundAtmosphere = false;
-                viewer.scene.highDynamicRange = false;
-                viewer.scene.backgroundColor = TRANSPARENT;
-                viewer.scene.render();
-                await new Promise(r => setTimeout(r, 300));
-
-                // ── PASS 2: Boundary ───────────────────────────────────
-                boundaryEntity.show = true;
-                viewer.scene.render();
-                await new Promise(r => setTimeout(r, 300));
-                viewer.scene.render();
-                console.log(`[BROWSER] Capturing boundary pass...`);
-                await window.capturePass(shot.name, 'boundary');
-                boundaryEntity.show = false;
-
-                // ── PASS 3: Street Labels ──────────────────────────────
-                labelEntries.forEach(l => l.show = true);
-                viewer.scene.render();
-                await new Promise(r => setTimeout(r, 300));
-                viewer.scene.render();
-                console.log(`[BROWSER] Capturing labels pass...`);
-                await window.capturePass(shot.name, 'labels');
-                labelEntries.forEach(l => l.show = false);
-
-                // ── PASS 4: Acreage Text ───────────────────────────────
-                if (acreageLabel) {
-                    acreageLabel.show = true;
+                    if (viewer.scene.skyBox) viewer.scene.skyBox.show = false;
+                    if (viewer.scene.sun) viewer.scene.sun.show = false;
+                    if (viewer.scene.moon) viewer.scene.moon.show = false;
+                    if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false;
+                    viewer.scene.globe.enableLighting = false;
+                    viewer.scene.globe.showGroundAtmosphere = false;
+                    viewer.scene.highDynamicRange = false;
+                    viewer.scene.backgroundColor = TRANSPARENT;
                     viewer.scene.render();
                     await new Promise(r => setTimeout(r, 300));
-                    viewer.scene.render();
+
+                    // ── PASS 2: Boundary ───────────────────────────────────
+                    if (capabilities.includes('boundary')) {
+                        boundaryEntity.show = true;
+                        viewer.scene.render();
+                        await new Promise(r => setTimeout(r, 300));
+                        viewer.scene.render();
+                        console.log(`[BROWSER] Capturing boundary pass...`);
+                        await window.capturePass(shot.name, 'boundary');
+                        boundaryEntity.show = false;
+                    }
+
+                    // ── PASS 3: Street Labels ──────────────────────────────
+                    if (capabilities.includes('labels')) {
+                        labelEntries.forEach(l => l.show = true);
+                        viewer.scene.render();
+                        await new Promise(r => setTimeout(r, 300));
+                        viewer.scene.render();
+                        console.log(`[BROWSER] Capturing labels pass...`);
+                        await window.capturePass(shot.name, 'labels');
+                        labelEntries.forEach(l => l.show = false);
+                    }
+
+                    // ── PASS 4: Acreage Text ───────────────────────────────
+                    if (capabilities.includes('acreage')) {
+                        if (acreageLabel) {
+                            acreageLabel.show = true;
+                            viewer.scene.render();
+                            await new Promise(r => setTimeout(r, 300));
+                            viewer.scene.render();
+                        }
+                        console.log(`[BROWSER] Capturing acreage pass...`);
+                        await window.capturePass(shot.name, 'acreage');
+                        if (acreageLabel) acreageLabel.show = false;
+                    }
+
+                    // ── RESTORE GLOBE COLOR ────────────────────────────────
+                    viewer.scene.globe.baseColor = oldBaseColor;
                 }
-                console.log(`[BROWSER] Capturing acreage pass...`);
-                await window.capturePass(shot.name, 'acreage');
-                if (acreageLabel) acreageLabel.show = false;
 
                 // ── Compose this shot's PSD ─────────────────────────────
                 console.log(`[BROWSER] Composing PSD for ${shot.name}...`);
                 await window.composeShot(shot.name);
 
-                // ── RESTORE for next shot ──────────────────────────────
-                viewer.scene.globe.baseColor = oldBaseColor;
+                // ── RESTORE for next shot (if we messed with it) ───────
 
                 if (tileset) tileset.show = true;
                 viewer.scene.globe.show = true;

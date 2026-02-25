@@ -16,10 +16,12 @@ export default async function handler(req, res) {
         centroid,
         centroid_elevation,
         geometry,
-        ll_gisacre
+        ll_gisacre,
+        shots,
+        capabilities
     } = req.body;
 
-    const snapshotDir = path.join(process.cwd(), 'public', 'snapshots', order_id, customer_id);
+    const snapshotDir = path.join(process.cwd(), 'tmp', 'snapshots', order_id, customer_id);
     const logFile = path.join(snapshotDir, `${new Date().toISOString().split('T')[0]}.log`);
     await fs.mkdir(snapshotDir, { recursive: true });
 
@@ -95,14 +97,15 @@ export default async function handler(req, res) {
         await page.exposeFunction('composeShot', async (shotName) => {
             try {
                 const passes = shotPasses[shotName];
-                if (!passes || !passes.map) {
-                    await logToFile(`[RENDERER] WARNING: Missing map pass for ${shotName}`);
+                if (!passes) {
+                    await logToFile(`[RENDERER] WARNING: No passes captured for ${shotName}`);
                     return false;
                 }
 
-                const layers = [
-                    { name: 'Map', buffer: passes.map }
-                ];
+                const layers = [];
+                if (passes.map) {
+                    layers.push({ name: 'Map', buffer: passes.map });
+                }
 
                 if (passes.boundary) {
                     layers.push({ name: 'Boundary', buffer: passes.boundary });
@@ -117,21 +120,24 @@ export default async function handler(req, res) {
                 const psdBuffer = await composePsd(layers);
                 const psdPath = path.join(snapshotDir, `${shotName}.psd`);
                 await fs.writeFile(psdPath, psdBuffer);
+                outputPaths.push(psdPath);
 
                 // Generate a flat composite PNG for preview
-                let pngBuffer = passes.map;
-                if (layers.length > 1) {
-                    const compositeInputs = layers.slice(1).map(layer => ({ input: layer.buffer }));
-                    pngBuffer = await sharp(passes.map)
-                        .ensureAlpha()
-                        .composite(compositeInputs)
-                        .png()
-                        .toBuffer();
+                if (layers.length > 0) {
+                    let pngBuffer = layers[0].buffer;
+                    if (layers.length > 1) {
+                        const compositeInputs = layers.slice(1).map(layer => ({ input: layer.buffer }));
+                        pngBuffer = await sharp(layers[0].buffer)
+                            .ensureAlpha()
+                            .composite(compositeInputs)
+                            .png()
+                            .toBuffer();
+                    }
+                    const pngPath = path.join(snapshotDir, `${shotName}.png`);
+                    await fs.writeFile(pngPath, pngBuffer);
+                    outputPaths.push(pngPath);
                 }
-                const pngPath = path.join(snapshotDir, `${shotName}.png`);
-                await fs.writeFile(pngPath, pngBuffer);
 
-                outputPaths.push(psdPath, pngPath);
                 await logToFile(`[RENDERER] Composed PSD: ${psdPath} (${(psdBuffer.length / 1024).toFixed(1)} KB)`);
                 return true;
             } catch (err) {
@@ -140,7 +146,6 @@ export default async function handler(req, res) {
             }
         });
 
-        // Inject mission data
         await page.evaluateOnNewDocument((data) => {
             window.__MISSION_DATA__ = data;
         }, {
@@ -151,7 +156,9 @@ export default async function handler(req, res) {
             roads,
             acreageAnchor,
             customer_id,
-            order_id
+            order_id,
+            shots,
+            capabilities
         });
 
         // Forward browser console to server logs
