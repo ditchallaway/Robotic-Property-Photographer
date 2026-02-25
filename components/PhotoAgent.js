@@ -66,23 +66,31 @@ export default function PhotoAgent({ viewer, Cesium }) {
 
         try {
             // ── Setup ──────────────────────────────────────────────────
-            const coords = data.geometry.coordinates[0].flat();
-            const positions = Cesium.Cartesian3.fromDegreesArray(coords);
-            console.log(`[BROWSER] Boundary: ${positions.length} vertices`);
+            const boundaryEntities = [];
+            const allPositions = [];
+
+            if (data.geometry && data.geometry.coordinates) {
+                // GeoJSON Polygon coordinates are an array of linear rings (outer, then inner rings/holes)
+                for (const ring of data.geometry.coordinates) {
+                    const ringCoords = ring.flat();
+                    const ringPositions = Cesium.Cartesian3.fromDegreesArray(ringCoords);
+                    allPositions.push(...ringPositions);
+
+                    boundaryEntities.push(viewer.entities.add({
+                        polyline: {
+                            positions: ringPositions,
+                            width: 5,
+                            clampToGround: true,
+                            material: Cesium.Color.YELLOW
+                        },
+                        show: false
+                    }));
+                }
+            }
+            console.log(`[BROWSER] Boundary rings: ${boundaryEntities.length}, total vertices: ${allPositions.length}`);
 
             const tileset = findTileset(viewer);
             console.log(`[BROWSER] 3D Tileset found: ${!!tileset}`);
-
-            // Boundary entity (hidden initially)
-            const boundaryEntity = viewer.entities.add({
-                polyline: {
-                    positions,
-                    width: 5,
-                    clampToGround: true,
-                    material: Cesium.Color.YELLOW
-                },
-                show: false
-            });
 
             // Street labels (hidden initially)
             const labelCollection = viewer.scene.primitives.add(
@@ -139,7 +147,7 @@ export default function PhotoAgent({ viewer, Cesium }) {
             const origin = Cesium.Cartesian3.fromDegrees(
                 data.centroid[0], data.centroid[1], effectiveHeight
             );
-            const boundingSphere = Cesium.BoundingSphere.fromPoints(positions);
+            const boundingSphere = Cesium.BoundingSphere.fromPoints(allPositions);
             boundingSphere.center = origin;
 
             viewer.camera.frustum.fov = Cesium.Math.toRadians(100);
@@ -177,21 +185,26 @@ export default function PhotoAgent({ viewer, Cesium }) {
                     duration: 0
                 });
 
-                // ── PASS 1: Map Background (opaque, full scene) ────────
+                // ── OPAQUE MAP SETUP ───────────────────────────────────────
+                if (tileset) tileset.show = true;
+                viewer.scene.globe.show = true;
+                if (viewer.scene.skyBox) viewer.scene.skyBox.show = true;
+                if (viewer.scene.sun) viewer.scene.sun.show = true;
+                if (viewer.scene.moon) viewer.scene.moon.show = true;
+                if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = true;
+                viewer.scene.backgroundColor = Cesium.Color.BLACK;
+
+                // Wait for tiles if any opaque pass is required so they are loaded
+                if (capabilities.some(c => ['base', 'boundary'].includes(c))) {
+                    await waitForTiles(viewer);
+                }
+
+                // ── PASS 1: Map Background (opaque, no boundaries/labels) ──
                 if (capabilities.includes('base')) {
-                    if (tileset) tileset.show = true;
-                    viewer.scene.globe.show = true;
-                    boundaryEntity.show = false;
+                    boundaryEntities.forEach(e => e.show = false);
                     labelEntries.forEach(l => l.show = false);
                     if (acreageLabel) acreageLabel.show = false;
-                    // Normal sky/atmosphere for the base map
-                    if (viewer.scene.skyBox) viewer.scene.skyBox.show = true;
-                    if (viewer.scene.sun) viewer.scene.sun.show = true;
-                    if (viewer.scene.moon) viewer.scene.moon.show = true;
-                    if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = true;
-                    viewer.scene.backgroundColor = Cesium.Color.BLACK;
 
-                    await waitForTiles(viewer);
                     viewer.scene.render();
                     await new Promise(r => setTimeout(r, 500));
                     viewer.scene.render();
@@ -199,8 +212,22 @@ export default function PhotoAgent({ viewer, Cesium }) {
                     await window.capturePass(shot.name, 'map');
                 }
 
-                // ── OVERLAY PASSES (Transparent) ───────────────────────────
-                if (capabilities.some(c => ['boundary', 'labels', 'acreage'].includes(c))) {
+                // ── PASS 2: Boundary (opaque, map + boundary) ──────────────
+                if (capabilities.includes('boundary')) {
+                    boundaryEntities.forEach(e => e.show = true);
+                    labelEntries.forEach(l => l.show = false);
+                    if (acreageLabel) acreageLabel.show = false;
+
+                    viewer.scene.render();
+                    await new Promise(r => setTimeout(r, 500));
+                    viewer.scene.render();
+                    console.log(`[BROWSER] Capturing boundary pass...`);
+                    await window.capturePass(shot.name, 'boundary');
+                    boundaryEntities.forEach(e => e.show = false);
+                }
+
+                // ── TRANSPARENT OVERLAY PASSES (Labels & Acreage) ──────────
+                if (capabilities.some(c => ['labels', 'acreage'].includes(c))) {
                     // Hide 3D tiles + sky, set ENTIRE background to transparent
                     if (tileset) tileset.show = false;
 
@@ -219,17 +246,6 @@ export default function PhotoAgent({ viewer, Cesium }) {
                     viewer.scene.backgroundColor = TRANSPARENT;
                     viewer.scene.render();
                     await new Promise(r => setTimeout(r, 300));
-
-                    // ── PASS 2: Boundary ───────────────────────────────────
-                    if (capabilities.includes('boundary')) {
-                        boundaryEntity.show = true;
-                        viewer.scene.render();
-                        await new Promise(r => setTimeout(r, 300));
-                        viewer.scene.render();
-                        console.log(`[BROWSER] Capturing boundary pass...`);
-                        await window.capturePass(shot.name, 'boundary');
-                        boundaryEntity.show = false;
-                    }
 
                     // ── PASS 3: Street Labels ──────────────────────────────
                     if (capabilities.includes('labels')) {

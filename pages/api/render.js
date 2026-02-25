@@ -108,7 +108,7 @@ export default async function handler(req, res) {
                 }
 
                 if (passes.boundary) {
-                    layers.push({ name: 'Boundary', buffer: passes.boundary });
+                    layers.push({ name: 'Map with Boundary', buffer: passes.boundary });
                 }
                 if (passes.labels) {
                     layers.push({ name: 'Street Labels', buffer: passes.labels });

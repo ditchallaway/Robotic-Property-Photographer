@@ -10,12 +10,48 @@
 
 ## 2. API Contract
 * **Input:** The app exposes a single HTTP POST endpoint (`/api/render`).
-    * `customer_id` (string): Customer identifier.
-    * `order_id` (string): Order identifier.
-    * `centroid` (array): `[lon, lat]` target centroid.
-    * `centroid_elevation` (number): Elevation in meters.
-    * `geometry` (object): GeoJSON Polygon defining the property boundary.
-    * `ll_gisacre` (number): Property acreage for label generation.
+
+```
+
+ * ⚠️ IMPORTANT FOR LOCAL TESTING ⚠️
+ * Since this application runs in Docker and Node may not be installed on the host,
+ * you MUST execute this script INSIDE the running container.
+ * 
+ * Command: docker compose exec moonshot node path/to/test-script.js
+ */
+
+// Native fetch is available in Node.js 18+
+// If running on older Node, install node-fetch manually
+// Real property data from n8n (actual payload structure)
+const realPropertyData = {
+    "ap parcel number": "RP58N01W327600A",
+    "owner": "",
+    "centroid": [-116.4869477327835, 48.33225928561425],
+    "lat": "48.332259",
+    "lon": "-116.486948",
+    "ll_gisacre": 6.1944,
+    "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+            [-116.4868255, 48.3317135],
+            [-116.485553, 48.3317135],
+            [-116.4855585, 48.332807],
+            [-116.488335, 48.3328055],
+            [-116.488341, 48.332094],
+            [-116.4883485, 48.3317135],
+            [-116.4868255, 48.3317135]
+        ]]
+    },
+    "county": "Bonner County",
+    "elevation": 655,
+    "customer_id": "cust_12345",
+    "order_id": "order_12345",
+    "centroid_elevation": 655,
+    // Street labels are now fetched from OSM server-side (no longer passed in payload)
+};
+
+```
+
 * **Output:** A JSON response containing metadata and file paths for PSD and PNG assets.
 
 ## 3. Technology Standards
