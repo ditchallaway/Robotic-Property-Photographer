@@ -66,31 +66,40 @@ export default function PhotoAgent({ viewer, Cesium }) {
 
         try {
             // ── Setup ──────────────────────────────────────────────────
-            const boundaryEntities = [];
+            let hierarchy = null;
             const allPositions = [];
 
             if (data.geometry && data.geometry.coordinates) {
-                // GeoJSON Polygon coordinates are an array of linear rings (outer, then inner rings/holes)
-                for (const ring of data.geometry.coordinates) {
-                    const ringCoords = ring.flat();
-                    const ringPositions = Cesium.Cartesian3.fromDegreesArray(ringCoords);
-                    allPositions.push(...ringPositions);
+                const rings = data.geometry.coordinates;
+                const outerPositions = Cesium.Cartesian3.fromDegreesArray(rings[0].flat());
+                allPositions.push(...outerPositions);
 
-                    boundaryEntities.push(viewer.entities.add({
-                        polyline: {
-                            positions: ringPositions,
-                            width: 5,
-                            clampToGround: true,
-                            material: Cesium.Color.YELLOW
-                        },
-                        show: false
-                    }));
+                const holes = [];
+                for (let i = 1; i < rings.length; i++) {
+                    const innerPositions = Cesium.Cartesian3.fromDegreesArray(rings[i].flat());
+                    allPositions.push(...innerPositions);
+                    holes.push(new Cesium.PolygonHierarchy(innerPositions));
                 }
+                hierarchy = new Cesium.PolygonHierarchy(outerPositions, holes);
+                console.log(`[BROWSER] Boundary parsed: 1 outer ring, ${holes.length} holes, total vertices: ${allPositions.length}`);
             }
-            console.log(`[BROWSER] Boundary rings: ${boundaryEntities.length}, total vertices: ${allPositions.length}`);
 
             const tileset = findTileset(viewer);
             console.log(`[BROWSER] 3D Tileset found: ${!!tileset}`);
+
+            // Boundary entity (hidden initially)
+            const boundaryEntity = viewer.entities.add({
+                polygon: {
+                    hierarchy: hierarchy,
+                    // Use a translucent yellow fill and opaque outline. 
+                    // Note: Cesium polygon outlines on terrain can be finicky, but a fill works inherently with holes.
+                    material: Cesium.Color.YELLOW.withAlpha(0.2),
+                    outline: true,
+                    outlineColor: Cesium.Color.YELLOW,
+                    outlineWidth: 5
+                },
+                show: false
+            });
 
             // Street labels (hidden initially)
             const labelCollection = viewer.scene.primitives.add(
@@ -201,7 +210,7 @@ export default function PhotoAgent({ viewer, Cesium }) {
 
                 // ── PASS 1: Map Background (opaque, no boundaries/labels) ──
                 if (capabilities.includes('base')) {
-                    boundaryEntities.forEach(e => e.show = false);
+                    boundaryEntity.show = false;
                     labelEntries.forEach(l => l.show = false);
                     if (acreageLabel) acreageLabel.show = false;
 
@@ -214,7 +223,7 @@ export default function PhotoAgent({ viewer, Cesium }) {
 
                 // ── PASS 2: Boundary (opaque, map + boundary) ──────────────
                 if (capabilities.includes('boundary')) {
-                    boundaryEntities.forEach(e => e.show = true);
+                    boundaryEntity.show = true;
                     labelEntries.forEach(l => l.show = false);
                     if (acreageLabel) acreageLabel.show = false;
 
@@ -223,7 +232,7 @@ export default function PhotoAgent({ viewer, Cesium }) {
                     viewer.scene.render();
                     console.log(`[BROWSER] Capturing boundary pass...`);
                     await window.capturePass(shot.name, 'boundary');
-                    boundaryEntities.forEach(e => e.show = false);
+                    boundaryEntity.show = false;
                 }
 
                 // ── TRANSPARENT OVERLAY PASSES (Labels & Acreage) ──────────
