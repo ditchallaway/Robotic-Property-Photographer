@@ -105,25 +105,62 @@ export default function PhotoAgent({ viewer, Cesium }) {
             const labelCollection = viewer.scene.primitives.add(
                 new Cesium.LabelCollection()
             );
+            const billboardCollection = viewer.scene.primitives.add(
+                new Cesium.BillboardCollection()
+            );
+
+            // Helper to rasterize text so we can rotate it as a billboard (standard Labels don't rotate)
+            function createTextCanvas(text) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.font = 'bold 64px sans-serif';
+                const metrics = ctx.measureText(text);
+                // add padding
+                canvas.width = metrics.width + 40;
+                canvas.height = 100;
+
+                // re-apply after resizing
+                ctx.font = 'bold 64px sans-serif';
+                ctx.fillStyle = 'white';
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 8;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const cx = canvas.width / 2;
+                const cy = canvas.height / 2;
+                ctx.strokeText(text, cx, cy);
+                ctx.fillText(text, cx, cy);
+                return canvas;
+            }
+
             const roads = data.roads || [];
             const labelEntries = [];
             for (const road of roads) {
                 if (!road.geometry || road.geometry.length < 2) continue;
                 const midIdx = Math.floor(road.geometry.length / 2);
                 const [lon, lat] = road.geometry[midIdx];
-                const label = labelCollection.add({
+
+                // Calculate road angle for "sticker" alignment in Nadir
+                const p1 = road.geometry[Math.max(0, midIdx - 1)];
+                const p2 = road.geometry[Math.min(road.geometry.length - 1, midIdx + 1)];
+                const dx = (p2[0] - p1[0]) * Math.cos(p1[1] * Math.PI / 180);
+                const dy = p2[1] - p1[1];
+                let angle = Math.atan2(dy, dx);
+
+                // Keep text readable (never completely upside-down)
+                if (angle > Math.PI / 2) angle -= Math.PI;
+                else if (angle < -Math.PI / 2) angle += Math.PI;
+
+                // Billboard rotation is counter-clockwise and 0 is right (East). Our calc uses 0 as right (dx=East).
+                // However, Cesium billboard rotation is visually mapped in screen space. 
+
+                const label = billboardCollection.add({
                     position: Cesium.Cartesian3.fromDegrees(lon, lat, 50),
-                    text: road.name,
-                    font: '64px sans-serif',
-                    fillColor: Cesium.Color.WHITE,
-                    outlineColor: Cesium.Color.BLACK,
-                    outlineWidth: 8,
-                    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                    verticalOrigin: Cesium.VerticalOrigin.CENTER,
-                    horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+                    image: createTextCanvas(road.name),
                     disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     show: false
                 });
+                label.roadAngle = angle;
                 labelEntries.push(label);
             }
             console.log(`[BROWSER] Created ${labelEntries.length} street labels`);
@@ -258,7 +295,11 @@ export default function PhotoAgent({ viewer, Cesium }) {
 
                     // ── PASS 3: Street Labels ──────────────────────────────
                     if (capabilities.includes('labels')) {
-                        labelEntries.forEach(l => l.show = true);
+                        labelEntries.forEach(l => {
+                            l.show = true;
+                            // Only apply "painted sticker" rotation for nadir shots
+                            l.rotation = (shot.name === 'nadir') ? l.roadAngle : 0;
+                        });
                         viewer.scene.render();
                         await new Promise(r => setTimeout(r, 300));
                         viewer.scene.render();
