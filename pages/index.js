@@ -37,7 +37,7 @@ export default function Home() {
             overflow: 'hidden',
             margin: 0,
             padding: 0,
-            backgroundColor: '#000'
+            backgroundColor: 'transparent'
         }}>
             <CesiumViewer onViewerReady={handleViewerReady} />
 

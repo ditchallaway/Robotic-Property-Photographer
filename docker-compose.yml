@@ -18,4 +18,4 @@ services:
       - ./public/snapshots:/app/public/snapshots
     environment:
       - WATCHPACK_POLLING=true
-      - NODE_ENV=development
+      - NODE_ENV=production

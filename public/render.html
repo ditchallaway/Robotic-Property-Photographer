@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Robotic Property Photographer — Core Renderer</title>
+    <script src="cesium/Cesium.js"></script>
+    <link href="cesium/Widgets/widgets.css" rel="stylesheet">
+    <style>
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: transparent;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="cesiumContainer"></div>
+    <script>
+        window.CESIUM_BASE_URL = 'cesium';
+
+        async function start() {
+            const data = window.__MISSION_DATA__;
+            if (!data) {
+                console.error('[BROWSER] No MISSION_DATA found in window');
+                return;
+            }
+
+            console.log('[BROWSER] Starting standalone renderer...');
+
+            try {
+                // 1. Initialize Viewer
+                const viewer = new Cesium.Viewer('cesiumContainer', {
+                    imageryProvider: false,
+                    baseLayerPicker: false,
+                    geocoder: false,
+                    homeButton: false,
+                    infoBox: false,
+                    navigationHelpButton: false,
+                    sceneModePicker: false,
+                    selectionIndicator: false,
+                    timeline: false,
+                    animation: false,
+                    fullscreenButton: false,
+                    scene3DOnly: true,
+                    contextOptions: {
+                        webgl: {
+                            preserveDrawingBuffer: true,
+                            alpha: true
+                        }
+                    }
+                });
+
+                viewer.scene.globe.show = true;
+                viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#111111');
+                if (viewer.creditContainer) viewer.creditContainer.style.display = 'none';
+
+                // 2. Add Google 3D Tiles
+                const apiKey = data.google_api_key;
+                if (apiKey) {
+                    try {
+                        const tileset = await Cesium.Cesium3DTileset.fromUrl(
+                            `https://tile.googleapis.com/v1/3dtiles/root.json?key=${apiKey}`
+                        );
+                        viewer.scene.primitives.add(tileset);
+                        window.__TILESET__ = tileset;
+                    } catch (e) {
+                        console.error('[BROWSER] Tileset Load Error:', e.message);
+                    }
+                } else {
+                    console.error('[BROWSER] Missing Google API Key in data');
+                }
+
+                // 3. Port mission logic (Simplified Version of PhotoAgent)
+                await runMission(viewer, data);
+
+            } catch (err) {
+                console.error('[BROWSER] Fatal Renderer Error:', err.message);
+                console.log('MISSION_ERROR');
+            }
+        }
+
+        async function runMission(viewer, data) {
+            const TRANSPARENT = new Cesium.Color(0.0, 0.0, 0.0, 0.0);
+            const allPositions = [];
+            let hierarchy = null;
+
+            if (data.geometry && data.geometry.coordinates) {
+                const rings = data.geometry.coordinates;
+                const outerPositions = Cesium.Cartesian3.fromDegreesArray(rings[0].flat());
+                allPositions.push(...outerPositions);
+
+                const holes = [];
+                for (let i = 1; i < rings.length; i++) {
+                    const innerPositions = Cesium.Cartesian3.fromDegreesArray(rings[i].flat());
+                    allPositions.push(...innerPositions);
+                    holes.push(new Cesium.PolygonHierarchy(innerPositions));
+                }
+                hierarchy = new Cesium.PolygonHierarchy(outerPositions, holes);
+            }
+
+            // Boundary
+            const boundaryLineCollection = viewer.scene.primitives.add(new Cesium.PolylineCollection());
+            const boundaryPolylines = [];
+            const boundaryAlt = (data.centroid_elevation || 0) + 5;
+            if (data.geometry && data.geometry.coordinates) {
+                const rings = data.geometry.coordinates;
+                for (let i = 0; i < rings.length; i++) {
+                    const positions = [];
+                    for (const coord of rings[i]) {
+                        positions.push(Cesium.Cartesian3.fromDegrees(coord[0], coord[1], boundaryAlt));
+                    }
+                    boundaryPolylines.push(boundaryLineCollection.add({
+                        positions, width: 8,
+                        material: Cesium.Material.fromType('Color', { color: Cesium.Color.YELLOW }),
+                        show: false
+                    }));
+                }
+            }
+
+            // Labels
+            const billboardCollection = viewer.scene.primitives.add(new Cesium.BillboardCollection());
+
+            function createTextCanvas(text, isAcreage = false) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const fontStr = isAcreage ? 'bold 96px sans-serif' : 'bold 64px sans-serif';
+                ctx.font = fontStr;
+                const metrics = ctx.measureText(text);
+                canvas.width = metrics.width + 40;
+                canvas.height = isAcreage ? 150 : 100;
+                ctx.font = fontStr;
+                ctx.fillStyle = isAcreage ? 'yellow' : 'white';
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 10;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const cx = canvas.width / 2;
+                const cy = canvas.height / 2;
+                ctx.strokeText(text, cx, cy);
+                ctx.fillText(text, cx, cy);
+                return canvas;
+            }
+
+            const labelEntries = (data.roads || []).map(road => {
+                const label = billboardCollection.add({
+                    position: Cesium.Cartesian3.fromDegrees(road.anchorLon, road.anchorLat, (data.centroid_elevation || 0) + 20),
+                    image: createTextCanvas(road.name, false),
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                    show: false
+                });
+                label.roadAngle = road.angle;
+                return label;
+            });
+
+            // Acreage
+            let acreageLabel = null;
+            if (data.acreageAnchor) {
+                const { lon, lat, text, rotation } = data.acreageAnchor;
+                acreageLabel = billboardCollection.add({
+                    position: Cesium.Cartesian3.fromDegrees(lon, lat, (data.centroid_elevation || 0) + 20),
+                    image: createTextCanvas(text, true),
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                    show: false
+                });
+                acreageLabel.roadAngle = rotation;
+            }
+
+            // Camera
+            const origin = Cesium.Cartesian3.fromDegrees(data.centroid[0], data.centroid[1], data.centroid_elevation || 0);
+            const boundingSphere = Cesium.BoundingSphere.fromPoints(allPositions);
+            boundingSphere.center = origin;
+            if (boundingSphere.radius < 50) boundingSphere.radius = 50;
+
+            viewer.camera.frustum.fov = Cesium.Math.toRadians(100);
+            viewer.scene.globe.maximumScreenSpaceError = 1.0;
+
+            let shotList = [
+                { name: 'nadir', heading: 0, pitch: -90 },
+                { name: 'cardinal', heading: 0, pitch: -24 },
+                { name: 'east', heading: 90, pitch: -24 },
+                { name: 'south', heading: 180, pitch: -24 },
+                { name: 'west', heading: 270, pitch: -24 }
+            ];
+
+            if (data.shots) shotList = shotList.filter(s => data.shots.includes(s.name));
+            const capabilities = data.capabilities || ['base', 'boundary', 'labels', 'acreage'];
+
+            for (const shot of shotList) {
+                console.log(`[BROWSER] === Shot: ${shot.name} ===`);
+                viewer.camera.flyToBoundingSphere(boundingSphere, {
+                    offset: new Cesium.HeadingPitchRange(
+                        Cesium.Math.toRadians(shot.heading),
+                        Cesium.Math.toRadians(shot.pitch),
+                        boundingSphere.radius * 2.0
+                    ),
+                    duration: 0
+                });
+
+                const tileset = window.__TILESET__;
+
+                // PASS 1: Base Map
+                if (capabilities.includes('base')) {
+                    if (tileset) tileset.show = true;
+                    viewer.scene.globe.show = true;
+                    viewer.scene.backgroundColor = Cesium.Color.BLACK;
+
+                    await waitForTiles(viewer, tileset);
+
+                    viewer.scene.render();
+                    await new Promise(r => setTimeout(r, 500));
+                    viewer.scene.render();
+                    await window.capturePass(shot.name, 'map');
+                }
+
+                // Transparent Passes
+                if (capabilities.some(c => ['boundary', 'labels', 'acreage'].includes(c))) {
+                    if (tileset) tileset.show = false;
+                    viewer.scene.backgroundColor = TRANSPARENT;
+                    viewer.scene.globe.baseColor = TRANSPARENT;
+
+                    if (capabilities.includes('boundary')) {
+                        boundaryPolylines.forEach(p => p.show = true);
+                        viewer.scene.render();
+                        await new Promise(r => setTimeout(r, 300));
+                        viewer.scene.render();
+                        await window.capturePass(shot.name, 'boundary');
+                        boundaryPolylines.forEach(p => p.show = false);
+                    }
+
+                    if (capabilities.includes('labels')) {
+                        labelEntries.forEach(l => {
+                            l.show = true;
+                            l.rotation = (shot.name === 'nadir') ? l.roadAngle : 0;
+                        });
+                        viewer.scene.render();
+                        await new Promise(r => setTimeout(r, 300));
+                        viewer.scene.render();
+                        await window.capturePass(shot.name, 'labels');
+                        labelEntries.forEach(l => l.show = false);
+                    }
+
+                    if (capabilities.includes('acreage') && acreageLabel) {
+                        acreageLabel.show = true;
+                        acreageLabel.rotation = (shot.name === 'nadir') ? acreageLabel.roadAngle : 0;
+                        viewer.scene.render();
+                        await new Promise(r => setTimeout(r, 300));
+                        viewer.scene.render();
+                        await window.capturePass(shot.name, 'acreage');
+                        acreageLabel.show = false;
+                    }
+                }
+
+                await window.composeShot(shot.name);
+            }
+
+            console.log('MISSION_COMPLETE');
+        }
+
+        async function waitForTiles(viewer, tileset) {
+            return new Promise(resolve => {
+                let stable = 0;
+                const timer = setInterval(() => {
+                    const tsLoaded = tileset ? (tileset.tilesLoaded || tileset.allTilesLoaded) : true;
+                    const gLoaded = viewer.scene.globe.tilesLoaded;
+                    if (tsLoaded && gLoaded) {
+                        if (++stable >= 3) {
+                            clearInterval(timer);
+                            resolve();
+                        }
+                    } else {
+                        stable = 0;
+                    }
+                }, 300);
+                setTimeout(() => { clearInterval(timer); resolve(); }, 60000);
+            });
+        }
+
+        // Trigger start when MISSION_DATA is injected
+        if (window.__MISSION_DATA__) {
+            start();
+        } else {
+            // Fallback for injection timing
+            Object.defineProperty(window, '__MISSION_DATA__', {
+                set: function (val) {
+                    this._mission_data = val;
+                    start();
+                },
+                get: function () { return this._mission_data; }
+            });
+        }
+    </script>
+</body>
+
+</html>

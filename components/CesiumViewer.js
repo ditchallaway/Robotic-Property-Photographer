@@ -55,6 +55,7 @@ export default function CesiumViewer({ onViewerReady }) {
 
                     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
                     if (apiKey) {
+                        console.log('[BROWSER] Cesium viewer initialized. Fetching Google 3D Tiles...');
                         const tileset = await Cesium.Cesium3DTileset.fromUrl(
                             `https://tile.googleapis.com/v1/3dtiles/root.json?key=${apiKey}`
                         );
@@ -64,9 +65,16 @@ export default function CesiumViewer({ onViewerReady }) {
                         if (!isDestroyed && onViewerReady) {
                             onViewerReady(viewer, Cesium);
                         }
+                    } else {
+                        console.error('[BROWSER] CRITICAL: NEXT_PUBLIC_GOOGLE_API_KEY is missing!');
+                        console.log('MISSION_ERROR');
                     }
                 } catch (err) {
-                    // Silently handle or log to a proper service in production
+                    console.error('[BROWSER] Cesium initialization error:', err.message);
+                    if (err.stack) console.error('[BROWSER] Stack:', err.stack);
+
+                    // Signal to Puppeteer that something went wrong
+                    console.log('MISSION_ERROR');
                 }
             };
             initCesium();
@@ -88,7 +96,7 @@ export default function CesiumViewer({ onViewerReady }) {
             style={{
                 width: '100%',
                 height: '100vh',
-                backgroundColor: '#000',
+                backgroundColor: 'transparent',
                 overflow: 'hidden'
             }}
         />

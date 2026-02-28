@@ -7,40 +7,46 @@ export default function PhotoAgent({ viewer, Cesium }) {
     const waitForTiles = (viewer) => new Promise(resolve => {
         let stableCycles = 0;
         let lastLog = Date.now();
-        console.log('[BROWSER] waitForTiles: Starting tile load wait loop...');
+        console.log('[BROWSER] waitForTiles: Waiting 500ms before checking to allow tile requests to queue...');
 
-        const check = setInterval(() => {
-            const tileset = findTileset(viewer);
-            // Cesium3DTileset has `tilesLoaded` boolean
-            const tilesetLoaded = tileset ? (tileset.tilesLoaded === true || tileset.allTilesLoaded === true || tileset.tilesLoaded === undefined) : true;
-
-            // If the tileset is present, we only care that the tileset is loaded.
-            // If not present, we fall back to checking if the globe is loaded.
-            const allLoaded = tileset ? tilesetLoaded : (viewer.scene.globe.tilesLoaded !== false);
-
-            // Console.log every 2 seconds to avoid spam but give feedback
-            if (Date.now() - lastLog > 2000) {
-                console.log(`[BROWSER] waitForTiles status: tilesetLoaded=${tilesetLoaded}, allLoaded=${allLoaded}, stableCycles=${stableCycles}`);
-                lastLog = Date.now();
-            }
-
-            if (allLoaded) {
-                stableCycles++;
-                if (stableCycles > 3) {
-                    console.log('[BROWSER] waitForTiles: Tiles completely loaded.');
-                    clearInterval(check);
-                    resolve();
-                }
-            } else {
-                stableCycles = 0;
-            }
-        }, 300);
+        let timeoutTimer;
 
         setTimeout(() => {
-            console.warn('[BROWSER] waitForTiles: TIMEOUT REACHED (30s). Capturing anyway.');
-            clearInterval(check);
-            resolve();
-        }, 30000);
+            const check = setInterval(() => {
+                const tileset = findTileset(viewer);
+                // Cesium3DTileset uses tilesLoaded/allTilesLoaded. Globe uses tilesLoaded.
+                const tilesetLoaded = tileset
+                    ? (tileset.tilesLoaded === true || tileset.allTilesLoaded === true)
+                    : true;
+
+                const globeLoaded = viewer.scene.globe.tilesLoaded === true;
+                const allLoaded = tilesetLoaded && globeLoaded;
+
+                // Console.log every 2 seconds to avoid spam but give feedback
+                if (Date.now() - lastLog > 2000) {
+                    console.log(`[BROWSER] waitForTiles status: tileset=${!!tileset}, tilesetLoaded=${tilesetLoaded}, globeLoaded=${globeLoaded}, stableCycles=${stableCycles}`);
+                    lastLog = Date.now();
+                }
+
+                if (allLoaded) {
+                    stableCycles++;
+                    if (stableCycles >= 3) { // Ensure multiple frames of complete loading
+                        console.log('[BROWSER] waitForTiles: Tiles completely loaded.');
+                        clearInterval(check);
+                        clearTimeout(timeoutTimer);
+                        resolve();
+                    }
+                } else {
+                    stableCycles = 0;
+                }
+            }, 300);
+
+            timeoutTimer = setTimeout(() => {
+                console.warn('[BROWSER] waitForTiles: TIMEOUT REACHED (90s). Capturing anyway.');
+                clearInterval(check);
+                resolve();
+            }, 90000);
+        }, 500); // Small initial delay so Cesium realizes the camera moved and starts requesting new tiles
     });
 
     // Find the 3D tileset primitive (Google Photorealistic Tiles)
@@ -87,19 +93,28 @@ export default function PhotoAgent({ viewer, Cesium }) {
             const tileset = findTileset(viewer);
             console.log(`[BROWSER] 3D Tileset found: ${!!tileset}`);
 
-            // Boundary entity (hidden initially)
-            const boundaryEntity = viewer.entities.add({
-                polygon: {
-                    hierarchy: hierarchy,
-                    // Use a translucent yellow fill and opaque outline. 
-                    // Note: Cesium polygon outlines on terrain can be finicky, but a fill works inherently with holes.
-                    material: Cesium.Color.YELLOW.withAlpha(0.2),
-                    outline: true,
-                    outlineColor: Cesium.Color.YELLOW,
-                    outlineWidth: 5
-                },
-                show: false
-            });
+            // Boundary polylines — using PolylineCollection primitive so they render
+            // in the transparent pass (entity clampToGround polylines need the globe visible).
+            const boundaryLineCollection = viewer.scene.primitives.add(new Cesium.PolylineCollection());
+            const boundaryPolylines = [];
+            const boundaryAlt = (data.centroid_elevation || 0) + 5;
+            if (data.geometry && data.geometry.coordinates) {
+                const rings = data.geometry.coordinates;
+                for (let i = 0; i < rings.length; i++) {
+                    const positions = [];
+                    for (const coord of rings[i]) {
+                        positions.push(Cesium.Cartesian3.fromDegrees(coord[0], coord[1], boundaryAlt));
+                    }
+                    const polyline = boundaryLineCollection.add({
+                        positions,
+                        width: 8,
+                        material: Cesium.Material.fromType('Color', { color: Cesium.Color.YELLOW }),
+                        show: false
+                    });
+                    boundaryPolylines.push(polyline);
+                }
+            }
+            console.log(`[BROWSER] Created ${boundaryPolylines.length} boundary rings as PolylineCollection primitives`);
 
             // Street labels (hidden initially)
             const labelCollection = viewer.scene.primitives.add(
@@ -110,20 +125,21 @@ export default function PhotoAgent({ viewer, Cesium }) {
             );
 
             // Helper to rasterize text so we can rotate it as a billboard (standard Labels don't rotate)
-            function createTextCanvas(text) {
+            function createTextCanvas(text, isAcreage = false) {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                ctx.font = 'bold 64px sans-serif';
+                const fontStr = isAcreage ? 'bold 96px sans-serif' : 'bold 64px sans-serif';
+                ctx.font = fontStr;
                 const metrics = ctx.measureText(text);
                 // add padding
                 canvas.width = metrics.width + 40;
-                canvas.height = 100;
+                canvas.height = isAcreage ? 150 : 100;
 
                 // re-apply after resizing
-                ctx.font = 'bold 64px sans-serif';
-                ctx.fillStyle = 'white';
+                ctx.font = fontStr;
+                ctx.fillStyle = isAcreage ? 'yellow' : 'white';
                 ctx.strokeStyle = 'black';
-                ctx.lineWidth = 8;
+                ctx.lineWidth = 10;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 const cx = canvas.width / 2;
@@ -136,56 +152,34 @@ export default function PhotoAgent({ viewer, Cesium }) {
             const roads = data.roads || [];
             const labelEntries = [];
             for (const road of roads) {
-                if (!road.geometry || road.geometry.length < 2) continue;
-                const midIdx = Math.floor(road.geometry.length / 2);
-                const [lon, lat] = road.geometry[midIdx];
-
-                // Calculate road angle for "sticker" alignment in Nadir
-                const p1 = road.geometry[Math.max(0, midIdx - 1)];
-                const p2 = road.geometry[Math.min(road.geometry.length - 1, midIdx + 1)];
-                const dx = (p2[0] - p1[0]) * Math.cos(p1[1] * Math.PI / 180);
-                const dy = p2[1] - p1[1];
-                let angle = Math.atan2(dy, dx);
-
-                // Keep text readable (never completely upside-down)
-                if (angle > Math.PI / 2) angle -= Math.PI;
-                else if (angle < -Math.PI / 2) angle += Math.PI;
-
-                // Billboard rotation is counter-clockwise and 0 is right (East). Our calc uses 0 as right (dx=East).
-                // However, Cesium billboard rotation is visually mapped in screen space. 
+                if (!road.name) continue;
+                const lon = road.anchorLon;
+                const lat = road.anchorLat;
 
                 const label = billboardCollection.add({
-                    position: Cesium.Cartesian3.fromDegrees(lon, lat, 50),
-                    image: createTextCanvas(road.name),
+                    position: Cesium.Cartesian3.fromDegrees(lon, lat, (data.centroid_elevation || 0) + 20),
+                    image: createTextCanvas(road.name, false),
                     disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     show: false
                 });
-                label.roadAngle = angle;
+                label.roadAngle = road.angle;
                 labelEntries.push(label);
             }
             console.log(`[BROWSER] Created ${labelEntries.length} street labels`);
 
-            // Acreage label (hidden initially)
-            const acreageLabel = data.acreageAnchor
-                ? labelCollection.add({
-                    position: Cesium.Cartesian3.fromDegrees(
-                        data.acreageAnchor.lon,
-                        data.acreageAnchor.lat,
-                        50
-                    ),
-                    text: data.acreageAnchor.text,
-                    font: 'bold 96px sans-serif',
-                    fillColor: Cesium.Color.WHITE,
-                    outlineColor: Cesium.Color.BLACK,
-                    outlineWidth: 10,
-                    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                    verticalOrigin: Cesium.VerticalOrigin.CENTER,
-                    horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+            // ── Acreage label ──────────────────────────────────────────────
+            let acreageLabel = null;
+            if (data.acreageAnchor) {
+                const { lon, lat, text, rotation } = data.acreageAnchor;
+                acreageLabel = billboardCollection.add({
+                    position: Cesium.Cartesian3.fromDegrees(lon, lat, (data.centroid_elevation || 0) + 20),
+                    image: createTextCanvas(text, true),
                     disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     show: false
-                })
-                : null;
-            console.log(`[BROWSER] Acreage label: ${acreageLabel ? data.acreageAnchor.text : 'none'}`);
+                });
+                acreageLabel.roadAngle = rotation;
+            }
+            console.log(`[BROWSER] Acreage label setup completed.`);
 
             // ── Camera Setup ───────────────────────────────────────────
             // WGS84 globe without a terrain provider returns 0. Google 3D Tiles require the actual terrain bounds.
@@ -195,15 +189,20 @@ export default function PhotoAgent({ viewer, Cesium }) {
             );
             const boundingSphere = Cesium.BoundingSphere.fromPoints(allPositions);
             boundingSphere.center = origin;
+            // Enforce minimum radius to avoid Frustum clipping labels/boundaries on very small parcels
+            if (boundingSphere.radius < 50) {
+                boundingSphere.radius = 50;
+            }
 
             viewer.camera.frustum.fov = Cesium.Math.toRadians(100);
-            // Default SSE is 16.0. 1.0 crashes headless CPU-based swiftshader rendering due to aggressive tile refinement.
-            viewer.scene.globe.maximumScreenSpaceError = 8.0;
-            console.log(`[BROWSER] Camera FOV=100deg, SSE=8.0, height=${effectiveHeight.toFixed(1)}m`);
+
+            // Set maximum screen space error to 1.0 per user instruction for maximum quality
+            viewer.scene.globe.maximumScreenSpaceError = 1.0;
+            console.log(`[BROWSER] Camera FOV=100deg, SSE=1.0, height=${effectiveHeight.toFixed(1)}m`);
 
             let shotList = [
                 { name: 'nadir', heading: 0, pitch: -90 },
-                { name: 'north', heading: 0, pitch: -24 },
+                { name: 'cardinal', heading: 0, pitch: -24 },
                 { name: 'east', heading: 90, pitch: -24 },
                 { name: 'south', heading: 180, pitch: -24 },
                 { name: 'west', heading: 270, pitch: -24 }
@@ -240,14 +239,16 @@ export default function PhotoAgent({ viewer, Cesium }) {
                 if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = true;
                 viewer.scene.backgroundColor = Cesium.Color.BLACK;
 
-                // Wait for tiles if any opaque pass is required so they are loaded
-                if (capabilities.some(c => ['base', 'boundary'].includes(c))) {
+                // Only wait for tiles when the base (opaque satellite) pass is needed.
+                // Boundary/labels/acreage are transparent passes that hide the tileset, so waiting is both
+                // unnecessary and harmful — the tileset never reports tilesLoaded while hidden.
+                if (capabilities.includes('base')) {
                     await waitForTiles(viewer);
                 }
 
                 // ── PASS 1: Map Background (opaque, no boundaries/labels) ──
                 if (capabilities.includes('base')) {
-                    boundaryEntity.show = false;
+                    boundaryPolylines.forEach(p => p.show = false);
                     labelEntries.forEach(l => l.show = false);
                     if (acreageLabel) acreageLabel.show = false;
 
@@ -258,22 +259,8 @@ export default function PhotoAgent({ viewer, Cesium }) {
                     await window.capturePass(shot.name, 'map');
                 }
 
-                // ── PASS 2: Boundary (opaque, map + boundary) ──────────────
-                if (capabilities.includes('boundary')) {
-                    boundaryEntity.show = true;
-                    labelEntries.forEach(l => l.show = false);
-                    if (acreageLabel) acreageLabel.show = false;
-
-                    viewer.scene.render();
-                    await new Promise(r => setTimeout(r, 500));
-                    viewer.scene.render();
-                    console.log(`[BROWSER] Capturing boundary pass...`);
-                    await window.capturePass(shot.name, 'boundary');
-                    boundaryEntity.show = false;
-                }
-
-                // ── TRANSPARENT OVERLAY PASSES (Labels & Acreage) ──────────
-                if (capabilities.some(c => ['labels', 'acreage'].includes(c))) {
+                // ── TRANSPARENT OVERLAY PASSES (Boundary, Labels & Acreage) ──────────
+                if (capabilities.some(c => ['boundary', 'labels', 'acreage'].includes(c))) {
                     // Hide 3D tiles + sky, set ENTIRE background to transparent
                     if (tileset) tileset.show = false;
 
@@ -292,6 +279,17 @@ export default function PhotoAgent({ viewer, Cesium }) {
                     viewer.scene.backgroundColor = TRANSPARENT;
                     viewer.scene.render();
                     await new Promise(r => setTimeout(r, 300));
+
+                    // ── PASS 2: Boundary (Transparent) ─────────────────────
+                    if (capabilities.includes('boundary')) {
+                        boundaryPolylines.forEach(p => p.show = true);
+                        viewer.scene.render();
+                        await new Promise(r => setTimeout(r, 300));
+                        viewer.scene.render();
+                        console.log(`[BROWSER] Capturing boundary pass...`);
+                        await window.capturePass(shot.name, 'boundary');
+                        boundaryPolylines.forEach(p => p.show = false);
+                    }
 
                     // ── PASS 3: Street Labels ──────────────────────────────
                     if (capabilities.includes('labels')) {
@@ -312,6 +310,7 @@ export default function PhotoAgent({ viewer, Cesium }) {
                     if (capabilities.includes('acreage')) {
                         if (acreageLabel) {
                             acreageLabel.show = true;
+                            acreageLabel.rotation = (shot.name === 'nadir') ? acreageLabel.roadAngle : 0;
                             viewer.scene.render();
                             await new Promise(r => setTimeout(r, 300));
                             viewer.scene.render();
@@ -348,7 +347,7 @@ export default function PhotoAgent({ viewer, Cesium }) {
         } catch (err) {
             console.error(`[BROWSER] MISSION ERROR: ${err.message}`);
             console.error(err.stack);
-            console.log('MISSION_COMPLETE');
+            console.log('MISSION_ERROR');
         }
     };
 

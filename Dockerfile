@@ -44,22 +44,23 @@ WORKDIR /app
 # Node deps
 # -----------------------------
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
+RUN npm ci
 
 COPY . .
 
 # -----------------------------
 # Cesium physical asset migration
 # -----------------------------
-RUN mkdir -p public/cesium && \
-    cp -R node_modules/cesium/Build/Cesium/Workers public/cesium/ && \
-    cp -R node_modules/cesium/Build/Cesium/Assets public/cesium/ && \
-    cp -R node_modules/cesium/Build/Cesium/Widgets public/cesium/ && \
-    cp -R node_modules/cesium/Build/Cesium/ThirdParty public/cesium/
+RUN node scripts/copy-assets.cjs
+
+# -----------------------------
+# Production Build
+# -----------------------------
+RUN npm run build
 
 # -----------------------------
 # Runtime safety
 # -----------------------------
 ENTRYPOINT ["dumb-init", "--"]
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "start"]

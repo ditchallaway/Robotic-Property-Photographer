@@ -2,16 +2,25 @@
  * ⚠️ IMPORTANT FOR LOCAL TESTING ⚠️
  * Since this application runs in Docker and Node may not be installed on the host,
  * you MUST execute this script INSIDE the running container.
- * 
- * Command: docker compose exec moonshot node tests/nadir-boundary.js
+ *
+ * Command: docker compose exec moonshot node tests/cardinal.js
+ *
+ * CARDINAL TEST
+ * ──────────────────────────────────────
+ * Perspective: Oblique (pitch -24°), True North aligned (0°)
+ * Passes tested: ALL (base, boundary, labels, acreage)
+ *
+ * Expected output: 
+ *   tmp/test/cardinal/cardinal.psd
+ *   tmp/test/cardinal/layers/cardinal_base.png
+ *   tmp/test/cardinal/layers/cardinal_boundary.png
+ *   tmp/test/cardinal/layers/cardinal_labels.png
+ *   tmp/test/cardinal/layers/cardinal_acreage.png
  */
 
-const realPropertyDataWithHole = {
-    "ap parcel number": "RP58N01W327600A",
-    "owner": "",
+const TEST_PAYLOAD = {
+    "ap_parcel_number": "RP58N01W327600A",
     "centroid": [-116.4869477327835, 48.33225928561425],
-    "lat": "48.332259",
-    "lon": "-116.486948",
     "ll_gisacre": 6.1944,
     "geometry": {
         "type": "Polygon",
@@ -34,41 +43,38 @@ const realPropertyDataWithHole = {
             ]
         ]
     },
-    "county": "Bonner County",
     "elevation": 655,
-    "customer_id": "cust_12345",
-    "order_id": "test_nadir_boundary",
     "centroid_elevation": 655,
-
-    // 🔥 NEW ISOLATED TEST CAPS 🔥
-    "shots": ["nadir"],
-    "capabilities": ["boundary"]  // Only render the boundary
+    "customer_id": "test_cardinal",
+    "order_id": "test", // Triggers routing to /tmp/test
+    "shots": ["cardinal"],
+    "capabilities": ["base", "boundary", "labels", "acreage"]
 };
 
-async function testRender() {
-    console.log('🚀 Testing ISOLATED CAPABILITY: Nadir Boundary (with holes)...');
-    console.log(`🆔 Order: ${realPropertyDataWithHole.order_id} / ${realPropertyDataWithHole.customer_id}\n`);
+console.log("\n🚀 Cardinal Composited Test");
 
+async function run() {
     try {
         const response = await fetch('http://localhost:3000/api/render', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(realPropertyDataWithHole)
+            body: JSON.stringify(TEST_PAYLOAD)
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(`Render failed: ${error.message}`);
+            const errorText = await response.text();
+            throw new Error(`API failed with ${response.status}: ${errorText}`);
         }
 
         const result = await response.json();
-        console.log('\n✅ Render complete!');
-        console.log(`📁 Outputs saved to: tmp/snapshots/${realPropertyDataWithHole.order_id}/${realPropertyDataWithHole.customer_id}`);
-        console.log('\n📋 Check the output. It should be a single PNG containing ONLY the yellow boundary line (no map) and it MUST contain the inner hole cutout.');
-    } catch (err) {
-        console.error('❌ Test failed:', err.message);
+        console.log("✅ Render complete!");
+        console.log(result.images);
+
+    } catch (error) {
+        console.error("\n❌ TEST FAILED:");
+        console.error(error);
         process.exit(1);
     }
 }
 
-testRender();
+run();

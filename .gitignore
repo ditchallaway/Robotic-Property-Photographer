@@ -4,4 +4,6 @@ node_modules
 .env.local
 .vscode
 public/snapshots/
+public/cesium/
+tmp/
 *.log
