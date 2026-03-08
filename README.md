@@ -266,6 +266,9 @@ Returns local file paths to keep n8n payloads lightweight.
 
 ## **10\. Local Testing**
 
+> [!IMPORTANT]
+> **Check Map Tile Key First:** Before running tests or writing new code, verify that `NEXT_PUBLIC_GOOGLE_API_KEY` in `.env` is valid and not IP-restricted for the current environment. A `403 PERMISSION_DENIED` error often indicates an IP whitelist issue.
+
 Since the application runs inside Docker (and Node.js may not be installed on the host machine), all test scripts must be executed **inside the running container**.
 
 Assuming your container is named `moonshot` (default in `docker-compose.yml`), run:

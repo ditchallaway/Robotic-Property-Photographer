@@ -43,8 +43,10 @@ async function doRender(req, res) {
     } = req.body;
 
     let snapshotDir = path.join(process.cwd(), 'tmp', 'snapshots', order_id, customer_id);
+    let isTest = false;
     if (order_id === 'test' || req.body.is_test) {
-        snapshotDir = path.join(process.cwd(), 'tmp', 'test');
+        snapshotDir = path.join(process.cwd(), 'test-results');
+        isTest = true;
     }
 
     // Create base dir to ensure log file writes
@@ -113,10 +115,18 @@ async function doRender(req, res) {
                 shotPasses[shotName][passName] = buffer;
 
                 // Write the pass PNG to the layers directory
-                const shotDir = path.join(snapshotDir, shotName);
-                const layersDir = path.join(shotDir, 'layers');
-                await fs.mkdir(layersDir, { recursive: true }).catch(() => { });
-                const passPngPath = path.join(layersDir, `${shotName}_${passName}.png`);
+                let _passName = passName === 'acreage' ? 'acres' : passName;
+                let passPngPath;
+                if (isTest) {
+                    const layersDir = path.join(snapshotDir, `${shotName}_layers`);
+                    await fs.mkdir(layersDir, { recursive: true }).catch(() => { });
+                    passPngPath = path.join(layersDir, `${shotName}_${_passName}.png`);
+                } else {
+                    const shotDir = path.join(snapshotDir, shotName);
+                    const layersDir = path.join(shotDir, 'layers');
+                    await fs.mkdir(layersDir, { recursive: true }).catch(() => { });
+                    passPngPath = path.join(layersDir, `${shotName}_${_passName}.png`);
+                }
                 await fs.writeFile(passPngPath, buffer);
                 outputPaths.push(passPngPath);
 
@@ -153,11 +163,20 @@ async function doRender(req, res) {
                 }
 
                 const psdBuffer = await composePsd(layers);
-                const shotDir = path.join(snapshotDir, shotName);
-                await fs.mkdir(shotDir, { recursive: true }).catch(() => { });
-                const psdPath = path.join(shotDir, `${shotName}.psd`);
-                await fs.writeFile(psdPath, psdBuffer);
-                outputPaths.push(psdPath);
+                let psdPath;
+                if (isTest) {
+                    if (shotName === 'cardinal') {
+                        psdPath = path.join(snapshotDir, 'composite.psd');
+                        await fs.writeFile(psdPath, psdBuffer);
+                        outputPaths.push(psdPath);
+                    }
+                } else {
+                    const shotDir = path.join(snapshotDir, shotName);
+                    await fs.mkdir(shotDir, { recursive: true }).catch(() => { });
+                    psdPath = path.join(shotDir, `${shotName}.psd`);
+                    await fs.writeFile(psdPath, psdBuffer);
+                    outputPaths.push(psdPath);
+                }
 
                 await logToFile(`[RENDERER] Composed PSD: ${psdPath} (${(psdBuffer.length / 1024).toFixed(1)} KB)`);
                 return true;

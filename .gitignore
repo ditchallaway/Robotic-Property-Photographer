@@ -5,5 +5,8 @@ node_modules
 .vscode
 public/snapshots/
 public/cesium/
+public/test-results/
+test-results/
+styles/*.code-workspace
 tmp/
 *.log

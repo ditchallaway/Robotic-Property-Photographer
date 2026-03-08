@@ -52,6 +52,27 @@ const realPropertyData = {
 
 ```
 
+Requirement:
+
+delete previous test results before exicuting the test scrippt. After test execution, the test-results/ directory MUST match the following structure:
+for testing, only 1 cardinal is required. for our tests cardinal = north 
+test-results/
+├── cardinal_layers/
+│   ├── cardinal_map.png
+│   ├── cardinal_acres.png
+│   ├── cardinal_boundary.png
+│   ├── cardinal_labels.png
+├── nadir_layers/
+│   ├── nadir_map.png
+│   ├── nadir_acres.png
+│   ├── nadir_boundary.png
+│   ├── nadir_labels.png
+├── composite.psd
+├── index.html
+
+After all tests pass, perform a final browser verification.
+index.html is a page that displayses all layers in an easy to debug page
+
 * **Output:** A JSON response containing metadata and file paths for PSD and PNG assets.
 
 ## 3. Technology Standards

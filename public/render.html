@@ -215,7 +215,8 @@
                     await waitForTiles(viewer, tileset);
 
                     viewer.scene.render();
-                    await new Promise(r => setTimeout(r, 500));
+                    await new Promise(r => setTimeout(r, 1000));
+                    viewer.scene.render();
                     viewer.scene.render();
                     await window.capturePass(shot.name, 'map');
                 }
@@ -279,7 +280,7 @@
                         stable = 0;
                     }
                 }, 300);
-                setTimeout(() => { clearInterval(timer); resolve(); }, 60000);
+                setTimeout(() => { clearInterval(timer); resolve(); }, 300000);
             });
         }
 
