@@ -146,7 +146,7 @@ docker compose exec moonshot node tests/nadir.js
 - [x] `lib/notify.js` — Push notifications via free ntfy.sh
 - [x] Notification includes shot count, road names, acreage, and click-to-open Photopea link
 - [x] Both services gracefully no-op when env vars are missing
-- [ ] Configure `NTFY_TOPIC` for production notifications
+- [x] Configure `NTFY_TOPIC` for production notifications
 
 ---
 

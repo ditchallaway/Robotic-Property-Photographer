@@ -1,42 +1,51 @@
 # Robotic Property Photographer 🚀
 
-A headless, stateless microservice for capturing layered PSD aerial property composite images using CesiumJS, Puppeteer, and ag-psd.
+A headless rendering microservice built on Next.js and CesiumJS, designed to generate deterministic 3D property imagery via API for n8n-driven workflows.
 
 ---
 
-## **1. System Overview**
+## 1. System Overview
 
-The "Headless Renderer" Pattern
+**Goal:** Render consistent aerial property images with layered PSD output using CesiumJS.
 
-This repository is a **stateless rendering engine**. It receives a JSON payload and returns local file paths to the generated assets.
+**High-level flow:**
+1. n8n sends JSON payload (centroid + elevation + GeoJSON + acreage).
+2. Renderer fetches road geometry from OSM Overpass API (`way[highway]`).
+3. Renderer boots Cesium in headless Chromium.
+4. Standard map and boundary are rendered together for each shot.
+5. One opaque screenshot is captured per shot.
+6. Road names and acreage are added as editable text layers via `ag-psd`.
+7. A single layered PSD is composed and written to disk.
+8. Renderer returns asset paths and URLs to n8n.
 
-### **Pipeline**
+**Notes:** Renderer is stateless and geometry-agnostic. It does not fetch data from external real estate APIs or parse user addresses.
 
-1. n8n sends JSON payload (centroid + elevation + GeoJSON + acreage)
-2. Renderer fetches road geometry from OSM Overpass API (`way[highway]`)
-3. Renderer boots Cesium in headless Chromium
-4. For each shot, standard map and boundary are rendered together
-5. One opaque screenshot is captured per shot
-6. Road names and acreage are added as editable text layers via `ag-psd`
-7. A single layered PSD is composed and written to disk
-8. Renderer returns asset paths and URLs to n8n
+**Role & Scope:**
+* **Stateless Worker:** Handles rendering only. Does not handle long-term storage, job queuing, or notifications.
+* **Orchestration:** Triggered exclusively via n8n.
+* **Concurrency:** Only 1 job at a time to prevent WebGL memory crashes in Docker.
 
-Renderer is **stateless** and **geometry-agnostic**.
-It does **not** fetch data from external real estate APIs or parse user addresses.
+**Single-Pass Human-in-the-Loop PSD Compositing**
+For each shot, the renderer captures a single base pass and composes a PSD with editable text layers for a human editor:
+* **Background:** Raster - Satellite map + yellow boundary
+* **Road: [name]:** Text - White, 48pt, one per road
+* **Acreage:** Text - Yellow, 80pt, centered bottom
+
+* Single-pass capture → background + boundary.
+* Composed via `ag-psd`.
+* `sharp` checks for >95% black screenshots.
 
 ---
 
-## **2. API Contract**
+## 2. API Contract
 
-### **🔌 API Interface (POST /api/render)**
+**POST /api/render**
 
 **Config Requirements:**
-
-* **Resolution**: 2048 x 1536 px (4:3 aspect ratio).  
-* **Source**: Google Photorealistic 3D Tiles (direct API key via `.env`, no Cesium ion)
+* **Resolution:** 2048 x 1536 px (4:3 aspect ratio).
+* **Source:** Google Photorealistic 3D Tiles (direct API key via `.env`, no Cesium ion).
 
 **Input JSON:**
-
 ```json
 {
   "customer_id": "uuid-user-string",
@@ -50,132 +59,138 @@ It does **not** fetch data from external real estate APIs or parse user addresse
 ```
 
 **Assumptions:**
-
-* WGS84  
-* meters  
-* geometry already validated
-
-Renderer performs **no** terrain sampling or centroid computation.
+* WGS84, meters.
+* Geometry already validated.
+* Renderer does not compute terrain or centroid.
 
 ---
 
-## **3. Renderer Pipeline**
+## 3. Renderer Pipeline
 
-The renderer functions as a stateless worker.  
-Renderer does:
+The renderer functions as a stateless worker.
 
-* Accept HTTP POST JSON  
-* Initialize Cesium Viewer  
-* Convert GeoJSON → Cesium entities  
-* Apply material styling  
-* Solve camera positions  
-* Capture full-frame screenshot (PNG)  
-* Fetch road data from OSM Overpass (`way[highway]`)
-* Compose PSD via `ag-psd` with editable text layers
-* Upload PSD to robust storage like Cloudflare R2 (Optional)
-* Issue notification via ntfy.sh (Optional)
+**Renderer does:**
+* Accept HTTP POST JSON.
+* Initialize Cesium Viewer.
+* Convert GeoJSON → Cesium entities.
+* Apply material styling.
+* Solve camera positions.
+* Capture full-frame screenshot (PNG).
+* Fetch road data from OSM Overpass (`way[highway]`).
+* Compose PSD via `ag-psd`.
+* Upload PSD to storage (Cloudflare R2 optional).
+* Issue notifications via ntfy.sh (optional).
 
-Renderer does **not**:
-
-* Use Bull / Redis for queues (that belongs in n8n)
-* Talk directly to Amazon S3 (unless via R2 wrapper)
+**Renderer does NOT:**
+* Modify geometry.
+* Sample terrain.
+* Perform GIS validation.
 
 ---
 
-## **4. Cesium Configuration**
+## 4. Cesium Configuration
 
-### **Pillar 1: Camera Rules**
+### Architecture Pillars 🏗️
 
-Based on empirical testing, relying on bounds or polygon extents to determine height is fragile. We standardize via a uniform multiplier against the `BoundingSphere` radius.
+**Pillar 1: Native Terrain & Auto-Framing**
+* **Terrain Engine:** CesiumWorldTerrain enabled for realistic slopes and rural topography.
+* **Auto-Framing:** `viewer.camera.flyToBoundingSphere(...)` with range `0.0` for "fit-to-frame" distance.
+* **Logic:** Automatically adjusts for parcel sizes 1–1,000 acres.
 
-* `viewer.camera.flyToBoundingSphere(...)`  
+**Pillar 2: Automated Shot List (Deterministic)**
+* Shot headings aligned to True North: 0°, 90°, 180°, 270°.
+* Pitch: -35° for oblique, -89.9° for nadir.
+* Field of View: 100°
 
-**BoundingSphere Overrides:**
-
-* We override the `center` of the BoundingSphere to exactly match the provided `centroid` payload coordinate, explicitly setting the height to `centroid_elevation`.
-
-**Radius Multipliers:**
-
-* `radius * 2.5` for oblique framing
-* `radius * 2.0` for nadir framing
-
-### **Pillar 2: Views (The "Shots")**
-
-* `0°` = faces North  
-* `90°` = faces East  
-* `180°` = faces South  
+* `0°` = faces North
+* `90°` = faces East
+* `180°` = faces South
 * `270°` = faces West
 
-* **North-facing view**: Heading `0°`, Pitch `-35°`  
-* **East-facing view**: Heading `90°`, Pitch `-35°`  
-* **South-facing view**: Heading `180°`, Pitch `-35°`  
-* **West-facing view**: Heading `270°`, Pitch `-35°`  
-* **Nadir View**: Heading `0°`, Pitch `-89.9°`
+**Pillar 3: Boundary & Styling**
+* GeoJSON support: Inject property lines.
+* Clamped to ground: All Polylines/Polygons use `clampToGround: true`.
 
-**FOV:** `100°`  
-**Alignment:** All headings aligned to True North (`0, 90, 180, 270`)
+### Code Reference
 
-### **Pillar 3: Boundary & Styling**
+**Cesium Initialization:**
+```javascript
+const viewer = new Cesium.Viewer('container', {
+    scene3DOnly: true,
+    useDefaultRenderLoop: false,
+    timeline: false,
+    animation: false,
+    contextOptions: { webgl: { preserveDrawingBuffer: true } }
+});
 
-* **Rule**: All polyline entities receive `clampToGround: true`
-* **Why**: Clamping ensures lines follow 3D terrain perfectly and prevents lines from "burying" into hills or "floating" over valleys.
+const terrainProvider = Cesium.CesiumWorldTerrain();
+viewer.terrainProvider = terrainProvider;
+```
 
-**Single-Pass Human-in-the-Loop PSD Compositing**
-For each shot, the renderer captures a single base pass and composes a PSD with editable text layers for a human editor:
+**Boundary Rendering:**
+```javascript
+const cartesianPoints = Cesium.Cartesian3.fromDegreesArray([...coordinates]);
 
-| Layer | Type | Content |
-|-------|------|---------|
-| Background | Raster | Satellite map + yellow boundary (single pass) |
-| Road: [name] | Text Layer | White, 48pt, one per road |
-| Acreage | Text Layer | Yellow, 80pt, centered bottom |
+viewer.entities.add({
+    polyline: {
+        positions: cartesianPoints,
+        width: 3,
+        clampToGround: true,
+        material: new Cesium.ColorMaterialProperty(Cesium.Color.YELLOW)
+    }
+});
+```
 
-* **Single-Pass Capture:** Map and boundary are rendered together into one opaque screenshot.
-* **Composition:** `ag-psd` creates a `.psd` file containing the raster background overlaid with editable text layers.
-* **Black-Frame Detection:** `sharp` warns if the background screenshot is >95% black (indicating failed tileset load).
+**Camera Framing:**
+```javascript
+const boundingSphere = Cesium.BoundingSphere.fromPoints(cartesianPoints);
+viewer.camera.flyToBoundingSphere(boundingSphere, {
+    offset: new Cesium.HeadingPitchRange(headingRadians, pitchRadians, 0)
+});
+```
 
----
-
-## **5. Output Contract**
-
-Returns local file paths (and URLs if configured) to keep n8n payloads lightweight.
-
-```json
-{
-    "status": "success",
-    "customer_id": "uuid-user-string",
-    "order_id": "uuid-order-string",
-    "shots": {
-        "cardinal": {
-            "psd_path": "/app/test-results/cardinal.psd",
-            "psd_url": "https://r2.example.com/order_id/cust_id/cardinal.psd",
-            "photopea_url": "https://app.brokertricks.com#..."
-        }
-    },
-    "static_map_url": "https://maps.googleapis.com/maps/api/staticmap?...",
-    "roads": ["West Shingle Mill Road", "Shingle Mill Road"],
-    "acreage": "6.19 ACRES"
-}
+**Render Loop & Capture:**
+```javascript
+await viewer.scene.globe.tilesLoaded;
+viewer.scene.globe.maximumScreenSpaceError = 1.0;
+// Puppeteer page.screenshot() captures the frame
 ```
 
 ---
 
-## **6. Local Development**
+## 5. Output Contract
 
-### **🤖 The "Director" (Renderer) Workflow**
+**Output JSON (To n8n):**
+```json
+{
+  "status": "success",
+  "customer_id": "uuid-user-string",
+  "order_id": "uuid-order-string",
+  "shots": {
+    "north": {
+      "psd_path": "/app/test-results/north.psd",
+      "psd_url": "https://r2.example.com/order_id/cust_id/north.psd",
+      "photopea_url": "https://app.brokertricks.com#..."
+    }
+  },
+  "static_map_url": "https://maps.googleapis.com/maps/api/staticmap?...",
+  "roads": ["West Shingle Mill Road", "Shingle Mill Road"],
+  "acreage": "6.19 ACRES"
+}
+```
 
-Inside the Puppeteer environment, the sequence of operations for each job is highly linear to ensure stability.
+**Save path:**
+`/app/public/snapshots/{order_id}/{customer_id}/{view}.png`
+Snapshots folder must be mounted: `./snapshots:/app/public/snapshots`
 
-1. **Setup**: Load 3D Tiles, draw polygon `Cesium.Cartesian3.fromDegreesArray(...)`  
-2. **Style**: Restrict colors strictly to HEX `#FFFF00`, `viewer.entities.add({...})`  
-3. **Position**: Loop through Headings (0, 90, 180, 270) at **-35° pitch**.  
-4. **Refine**: Set `viewer.scene.globe.maximumScreenSpaceError = 1.0` to force maximum high-res detail.  
-5. **Validate**: Wait until `viewer.scene.globe.tilesLoaded === true` before capture.  
-6. **Capture**: Execute `Puppeteer page.screenshot()` and inspect for black frames using Sharp.
+---
 
-### **Testing Locally**
+## 6. Local Development
 
-Assuming your container is named `moonshot` (default in `docker-compose.yml`), run:
+**Check Map Tile Key:**
+Verify `NEXT_PUBLIC_GOOGLE_API_KEY` in `.env`. 403 errors → IP restriction.
 
+**Run inside Docker container (moonshot):**
 ```bash
 # Test oblique cardinal view
 docker compose exec moonshot node tests/cardinal.js
@@ -183,3 +198,14 @@ docker compose exec moonshot node tests/cardinal.js
 # Test nadir top-down view
 docker compose exec moonshot node tests/nadir.js
 ```
+
+### The "Director" (Renderer) Workflow 🤖
+
+1. **Initialize:** Boot with `preserveDrawingBuffer: true`, 2048x1536 viewport.
+2. **Ingest:** Load GeoJSON, create BoundingSphere, `clampToGround: true`.
+3. **Position:** Loop headings 0, 90, 180, 270 at -35° pitch.
+4. **Refine:** `viewer.scene.globe.maximumScreenSpaceError = 1.0`.
+5. **Validate:** Wait until `tilesLoaded === true`.
+6. **Capture:** `Puppeteer page.screenshot()`.
+7. **Compose:** `ag-psd` with text layers.
+8. **Return:** File paths, PSD URLs, Photopea links, static map preview.
