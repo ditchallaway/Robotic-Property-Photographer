@@ -79,7 +79,7 @@ For each shot, the renderer captures a single base pass and composes a PSD with 
 * **Composition:** `ag-psd` creates a `.psd` file containing the raster background overlaid with editable text layers.
 * **Black-Frame Detection:** `sharp` warns if the background screenshot is >95% black (indicating failed tileset load).
 
-## **ðŸ”Œ API Interface (POST /api/render)**
+## **🔌 API Interface (POST /api/render)**
 
 **Config Requirements:**
 
@@ -88,7 +88,7 @@ For each shot, the renderer captures a single base pass and composes a PSD with 
 
 **Input JSON:**
 
-JSON
+
 
 ```json
 {
