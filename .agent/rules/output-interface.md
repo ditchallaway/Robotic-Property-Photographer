@@ -1,5 +1,1 @@
----
-trigger: always_on
----
-
-The response should be a JSON object containing metadata and download links, ready for n8n to parse.
+The response should be a JSON object containing metadata, generated PSD paths, and deep links (like `photopea_url` and `static_map_url`), ready for upstream n8n to parse.

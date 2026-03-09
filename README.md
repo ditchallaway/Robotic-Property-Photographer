@@ -1,4 +1,4 @@
-# **Robotic Property Photographer \- Drone Scale Engine**
+﻿# **Robotic Property Photographer \- Drone Scale Engine**
 
 A headless rendering microservice built on Next.js and CesiumJS, designed to generate consistent, professional 3D property imagery via API for n8n-driven workflows.
 
@@ -10,17 +10,17 @@ A headless rendering microservice built on Next.js and CesiumJS, designed to gen
 
 1. n8n sends JSON payload (centroid + elevation + GeoJSON + acreage)
 2. Renderer fetches road geometry from OSM Overpass API (`way[highway]`)
-3. Renderer computes acreage label placement via Turf.js
-4. Renderer boots Cesium in headless Chromium
-5. For each shot, 4 passes are captured: Map, Boundary, Street Labels, Acreage
-6. Overlay passes use a magenta chroma-key tile, which is removed server-side
-7. All passes are composed into a layered PSD file via ag-psd
-8. PSD + preview PNG files are written to disk
+3. Renderer boots Cesium in headless Chromium
+4. For each shot, standard map and boundary are rendered together
+5. One opaque screenshot is captured per shot
+6. Road names and acreage are added as editable text layers via `ag-psd`
+7. A single layered PSD is composed and written to disk
+8. Renderer returns PSD paths and Photopea deep-links to n8n
 9. Renderer returns asset references to n8n
 
 Renderer is **stateless** and **geometry-agnostic**.
 
-## **🚀 Role & Scope**
+## **ðŸš€ Role & Scope**
 
 **Stateless Worker:** This service is a rendering engine. It does NOT handle long-term storage, job queuing, or notifications. It receives a coordinate/geometry and returns images.
 
@@ -28,7 +28,7 @@ Renderer is **stateless** and **geometry-agnostic**.
 
 **Concurrency:** Render exactly 1 job at a time to prevent WebGL memory crashes in Docker.
 
-## **🏗️ Architecture Pillars**
+## **ðŸ—ï¸ Architecture Pillars**
 
 ### **Pillar 1: Native Terrain & Auto-Framing**
 
@@ -44,20 +44,20 @@ Deterministic camera sequence triggered via `/api/render`.
 
 **Heading values represent camera heading (direction the camera faces), per CesiumJS.**
 
-* `0°` \= faces North  
-* `90°` \= faces East  
-* `180°` \= faces South
+* `0Â°` \= faces North  
+* `90Â°` \= faces East  
+* `180Â°` \= faces South
 
-* #### `270°` \= faces West   **Oblique Views**
+* #### `270Â°` \= faces West   **Oblique Views**
 
-* **North-facing view**: Heading `0°`, Pitch `-24°`  
-* **East-facing view**: Heading `90°`, Pitch `-24°`  
-* **South-facing view**: Heading `180°`, Pitch `-24°`  
-* **West-facing view**: Heading `270°`, Pitch `-24°`  
-* **Nadir View**: Heading `0°`, Pitch `-90°`
+* **North-facing view**: Heading `0Â°`, Pitch `-35Â°`  
+* **East-facing view**: Heading `90Â°`, Pitch `-35Â°`  
+* **South-facing view**: Heading `180Â°`, Pitch `-35Â°`  
+* **West-facing view**: Heading `270Â°`, Pitch `-35Â°`  
+* **Nadir View**: Heading `0Â°`, Pitch `-89.9Â°`
 
-**FOV:** `100°`  
-	 **Alignment:** All headings aligned to True North (`0, 90, 180, 270`)
+**FOV:** `100Â°`  
+**Alignment:** All headings aligned to True North (`0, 90, 180, 270`)
 
 ### **Pillar 3: Boundary & Styling**
 
@@ -66,21 +66,20 @@ Deterministic camera sequence triggered via `/api/render`.
 * **Why**: Clamping ensures lines follow 3D terrain perfectly and prevents lines from "burying" into hills or "floating" over valleys.
 
 
-**Pillar 4: Multi-Pass PSD Compositing**
-For each shot, the renderer captures 4 separate passes and composes them into a layered PSD file:
+**Pillar 4: Single-Pass Human-in-the-Loop PSD Compositing**
+For each shot, the renderer captures a single base pass and composes a PSD with editable text layers for a human editor:
 
-| Pass | Imagery | Entities | Result |
-|------|---------|----------|--------|
-| Map | Satellite tiles | None | Opaque base layer |
-| Boundary | Chroma magenta | Yellow polyline | Transparent overlay |
-| Labels | Chroma magenta | Cesium LabelCollection | Transparent overlay |
-| Acreage | Chroma magenta | Turf-positioned text | Transparent overlay |
+| Layer | Type | Content |
+|-------|------|---------|
+| Background | Raster | Satellite map + yellow boundary (single pass) |
+| Road: [name] | Text Layer | White, 48pt, one per road |
+| Acreage | Text Layer | Yellow, 80pt, centered bottom |
 
-* **Chroma-key:** 1×1 magenta tile via `SingleTileImageryProvider`, removed by `sharp` post-capture.
-* **Composition:** `ag-psd` stacks passes as named layers in a `.psd` file.
-* **Preview:** A flat `.png` of the map pass is saved alongside for quick reference.
+* **Single-Pass Capture:** Map and boundary are rendered together into one opaque screenshot.
+* **Composition:** `ag-psd` creates a `.psd` file containing the raster background overlaid with editable text layers.
+* **Black-Frame Detection:** `sharp` warns if the background screenshot is >95% black (indicating failed tileset load).
 
-## **🔌 API Interface (POST /api/render)**
+## **ðŸ”Œ API Interface (POST /api/render)**
 
 **Config Requirements:**
 
@@ -91,8 +90,18 @@ For each shot, the renderer captures 4 separate passes and composes them into a 
 
 JSON
 
-| {  "customer\_id": "uuid-user-string",  "order\_id": "uuid-order-string",  "centroid": \[lon, lat\],  "centroid\_elevation": meters,  "geometry": { "type": "Polygon", "coordinates": \[...\] }} |
-| :---- |
+```json
+{
+  "customer_id": "uuid-user-string",
+  "order_id": "uuid-order-string",
+  "shots": ["nadir", "cardinal", "east", "south", "west"],
+  "centroid": [lon, lat],
+  "centroid_elevation": meters,
+  "ll_gisacre": 6.1944,
+  "geometry": { "type": "Polygon", "coordinates": [...] }
+}
+```
+
 
 **Assumptions:**
 
@@ -109,14 +118,14 @@ Renderer does:
 
 * Accept HTTP POST JSON  
 * Initialize Cesium Viewer  
-* Convert GeoJSON → Cesium entities  
+* Convert GeoJSON â†’ Cesium entities  
 * Apply material styling  
 * Solve camera positions  
-* Capture PNG frames  
+* Capture full-frame screenshot (PNG)  
 * Fetch road data from OSM Overpass (`way[highway]`)
-* Compute acreage label anchor via Turf.js
-* Execute multi-pass capture (map, boundary, labels, acreage) per shot
-* Chroma-key overlay passes and compose into layered PSD via ag-psd
+* Compose PSD via `ag-psd` with editable text layers
+* Upload PSD to robust storage like Cloudflare R2 (Optional)
+* Issue notification via ntfy.sh (Optional)
 
 Renderer does **not**:
 
@@ -153,12 +162,12 @@ Tileset:
 * Geometry must be clamped to terrain
 
 | Cesium.Cartesian3.fromDegreesArrayHeights(...) |
-| :---- |
+
 
 ### **5.2 Entity Creation**
 
 | viewer.entities.add({  polyline: {    positions: cartesianPoints,    width: 3,    clampToGround: true,    material: new Cesium.ColorMaterialProperty(      Cesium.Color.YELLOW    )  }}); |
-| :---- |
+
 
 (Polygon fill intentionally omitted in beta.)
 
@@ -168,12 +177,12 @@ Tileset:
 * Center overridden with centroid
 
 | Cesium.BoundingSphere.fromPoints() |
-| :---- |
+
 
 Camera positioning uses Cesium-native framing:
 
 | viewer.camera.flyToBoundingSphere(boundingSphere, {  offset: new Cesium.HeadingPitchRange(    headingRadians,    pitchRadians,    0 *// auto range*  )}); |
-| :---- |
+
 
 Views:
 
@@ -195,71 +204,54 @@ No manual distance math.
 * Wait until
 
 | \`viewer.scene.globe.tilesLoaded \=== true |
-| :---- |
+
 
 * Force max detail:
 
 | viewer.scene.globe.maximumScreenSpaceError \= 1.0; |
-| :---- |
+
 
 * Then capture via:
 
 |  canvas.toDataURL("image/png") |
-| :---- |
+
 
 * To the following path
 
 | /app/public/snapshots/{order\_id}/{customer\_id}/{view}.png |
-| :---- |
 
-👆Above snapshots folder is a mounted volume  \- ./snapshots:/app/public/snapshots  
+
+ðŸ‘†Above snapshots folder is a mounted volume  \- ./snapshots:/app/public/snapshots  
 ---
 
 
-## **8\. Multi-Pass PSD Output**
-
-For each shot, the renderer captures 4 separate passes that are composed into a layered PSD file:
-
-### **Pass Sequence**
-
-1. **Map** — Satellite imagery, opaque, all overlays hidden
-2. **Boundary** — Yellow property polyline on chroma-key background
-3. **Street Labels** — Cesium `LabelCollection` from OSM data on chroma-key background
-4. **Acreage** — Turf.js-positioned acreage text on chroma-key background
-
-### **Chroma-Key Process**
-
-* Overlay passes swap satellite imagery for a 1×1 magenta (`#FF00FF`) tile via `SingleTileImageryProvider`
-* Sky, sun, moon, and atmosphere are hidden during overlay passes
-* After capture, `sharp` removes the magenta background with configurable tolerance
-* `ag-psd` composes all passes into a PSD with named layers
-
-### **Output Files**
-
-For each shot (nadir, north, east, south, west):
-
-| File | Contents |
-|------|----------|
-| `{view}.psd` | Layered PSD: Map (bottom) → Boundary → Street Labels → Acreage (top) |
-| `{view}.png` | Flat preview of the map pass only |
+## **8\. Notification & URL Generation**
+* The REST response emits PSD file paths.
+* A deep link to Photopea (`https://app.brokertricks.com`) is generated to open the PSD.
+* A static image preview of the map and roads is also compiled and returned via Google Static Maps URL, loading as an extra tab in Photopea.
+* Notifications are handled by the `lib/notify.js` wrapper invoking `ntfy.sh`. 
 
 ---
 
 ## **9\. Output Contract (To n8n)**
 
-Returns local file paths to keep n8n payloads lightweight.
+Returns local file paths (and URLs if configured) to keep n8n payloads lightweight.
 
 ```json
 {
     "status": "success",
     "customer_id": "uuid-user-string",
     "order_id": "uuid-order-string",
-    "images": [
-        "/app/public/snapshots/123/456/north.psd",
-        "/app/public/snapshots/123/456/north.png",
-        "/app/public/snapshots/123/456/nadir.psd",
-        "/app/public/snapshots/123/456/nadir.png"
-    ]
+    "shots": {
+        "cardinal": {
+            "psd_path": "/app/test-results/cardinal.psd",
+            "psd_url": "https://r2.example.com/order_id/cust_id/cardinal.psd",
+            "photopea_url": "https://app.brokertricks.com#..."
+        }
+    },
+    "static_map_url": "https://maps.googleapis.com/maps/api/staticmap?...",
+    "roads": ["West Shingle Mill Road", "Shingle Mill Road"],
+    "acreage": "6.19 ACRES"
 }
 ```
 
@@ -274,27 +266,23 @@ Since the application runs inside Docker (and Node.js may not be installed on th
 Assuming your container is named `moonshot` (default in `docker-compose.yml`), run:
 
 ```bash
-# Test with real property data payload
-docker compose exec moonshot node scripts/test-real-data.js
+# Test oblique cardinal view
+docker compose exec moonshot node tests/cardinal.js
 
-# Test with basic mock payload
-docker compose exec moonshot node test-api.cjs
+# Test nadir top-down view
+docker compose exec moonshot node tests/nadir.js
 ```
 
-You can also use the npm shortcuts:
-```bash
-npm run test:real
-npm run test:api
-```
-
-## **🤖 The "Director" (Renderer) Workflow**
+## **ðŸ¤– The "Director" (Renderer) Workflow**
 
 The renderer follows this stateless cycle for every job to prevent common headless failures:
 
 1. **Initialize**: Boot with preserveDrawingBuffer: true and 2048 x 1536 viewport.  
 2. **Ingest**: Load GeoJSON, create Bounding Sphere, and apply clampToGround.  
-3. **Position**: Loop through Headings (0, 90, 180, 270\) at **\-24° pitch**.  
+3. **Position**: Loop through Headings (0, 90, 180, 270\) at **\-24Â° pitch**.  
 4. **Refine**: Set viewer.scene.globe.maximumScreenSpaceError \= 1.0 to force maximum high-res detail.  
 5. **Validate**: Wait until viewer.scene.globe.tilesLoaded \=== true before capture.  
-6. **Capture**: Execute canvas.toDataURL() and write to local /app/public/snapshots/ path.
+6. **Capture**: Execute Puppeteer page.screenshot() and inspect for black frames using Sharp.
+
+
 

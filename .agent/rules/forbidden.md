@@ -1,5 +1,1 @@
----
-trigger: always_on
----
-
-Do not implement file storage (S3, GCS), email notifications, or complex job queues inside the Next.js app.
+Do not implement long-term file storage (S3, GCS), email notifications, or complex job queues as hard dependencies inside the Next.js app. Keep upstream integrations like Cloudflare R2 and ntfy.sh strictly optional and environment-gated so the app functions fully offline.

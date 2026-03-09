@@ -5,17 +5,15 @@
  *
  * Command: docker compose exec moonshot node tests/cardinal.js
  *
- * CARDINAL TEST
+ * CARDINAL TEST (Human-in-the-Loop v2)
  * ──────────────────────────────────────
  * Perspective: Oblique (pitch -24°), True North aligned (0°)
- * Passes tested: ALL (base, boundary, labels, acreage)
+ * Single pass: map + boundary baked into one screenshot
+ * PSD: background raster + text layers (roads + acreage)
  *
  * Expected output: 
- *   tmp/test/cardinal/cardinal.psd
- *   tmp/test/cardinal/layers/cardinal_base.png
- *   tmp/test/cardinal/layers/cardinal_boundary.png
- *   tmp/test/cardinal/layers/cardinal_labels.png
- *   tmp/test/cardinal/layers/cardinal_acreage.png
+ *   test-results/cardinal.psd
+ *   test-results/cardinal_layers/cardinal_background.png
  */
 
 const TEST_PAYLOAD = {
@@ -46,20 +44,24 @@ const TEST_PAYLOAD = {
     "elevation": 655,
     "centroid_elevation": 655,
     "customer_id": "test_cardinal",
-    "order_id": "test", // Triggers routing to /tmp/test
-    "shots": ["cardinal"],
-    "capabilities": ["base", "boundary", "labels", "acreage"]
+    "order_id": "test",
+    "shots": ["cardinal"]
 };
 
-console.log("\n🚀 Cardinal Composited Test");
+console.log("\n🚀 Cardinal Test (Human-in-the-Loop v2)");
 
 async function run() {
     try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 600000); // 10 minutes
+
         const response = await fetch('http://localhost:3000/api/render', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(TEST_PAYLOAD)
+            body: JSON.stringify(TEST_PAYLOAD),
+            signal: controller.signal
         });
+        clearTimeout(timeout);
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -68,7 +70,25 @@ async function run() {
 
         const result = await response.json();
         console.log("✅ Render complete!");
-        console.log(result.images);
+        console.log(JSON.stringify(result, null, 2));
+
+        // Validate response schema
+        if (!result.shots?.cardinal) throw new Error("Missing 'shots.cardinal' in response");
+        if (!result.shots.cardinal.psd_path) throw new Error("Missing 'psd_path' in cardinal shot");
+        if (!result.static_map_url) throw new Error("Missing 'static_map_url' in response");
+        if (!Array.isArray(result.roads)) throw new Error("Missing 'roads' array in response");
+        if (typeof result.acreage !== 'string') throw new Error("Missing 'acreage' string in response");
+
+        console.log("\n✅ Schema validation passed");
+        console.log(`📍 Static Map URL: ${result.static_map_url}`);
+        console.log(`🏷️  Roads: ${result.roads.join(', ') || '(none found)'}`);
+        console.log(`📐 Acreage: ${result.acreage}`);
+        console.log(`📄 PSD: ${result.shots.cardinal.psd_path}`);
+        if (result.shots.cardinal.psd_url) {
+            console.log(`☁️  R2 URL: ${result.shots.cardinal.psd_url}`);
+        } else {
+            console.log(`☁️  R2: not configured (local only)`);
+        }
 
     } catch (error) {
         console.error("\n❌ TEST FAILED:");
