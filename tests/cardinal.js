@@ -77,6 +77,7 @@ async function run() {
         console.log("📸 Running Dynamic Visual Validation (Sky, Boundaries, Terrain)...");
 
         let blueSkyPixels = 0;
+        let darkSkyPixels = 0;
         let yellowBoundaryPixels = 0;
         const colorSet = new Set();
 
@@ -96,6 +97,10 @@ async function run() {
                     if ((b > r && b > g && b > 50) || (r > 150 && g > 150 && b > 150)) {
                         blueSkyPixels++;
                     }
+                    // Dark Sky check: pure black or very dark colors
+                    if (r < 30 && g < 30 && b < 30) {
+                        darkSkyPixels++;
+                    }
                 }
 
                 // Boundary Line Check (Yellow: R > 200, G > 200, B < 100)
@@ -114,13 +119,19 @@ async function run() {
 
         const top15TotalPixels = info.width * top15PercentRows;
         const blueSkyPct = blueSkyPixels / top15TotalPixels;
+        const darkSkyPct = darkSkyPixels / top15TotalPixels;
 
         console.log(`☁️  Sky/Fog Pixels: ${blueSkyPixels} (${(blueSkyPct * 100).toFixed(1)}% of top 15%)`);
+        console.log(`🌌 Dark/Space Pixels: ${darkSkyPixels} (${(darkSkyPct * 100).toFixed(1)}% of top 15%)`);
         console.log(`🟨 Yellow Boundary Pixels: ${yellowBoundaryPixels}`);
         console.log(`🌍 Terrain Unique Colors: ${colorSet.size}`);
 
         if (blueSkyPct < 0.01) { // At least 1% of top 15% should be sky (horizon might be blocked by mountains/trees)
             throw new Error(`❌ Dynamic Validation Failed: Missing Sky/Fog.`);
+        }
+
+        if (darkSkyPct > 0.50) { // If > 50% of the top 15% is pure black, it's night or outer space.
+            throw new Error(`❌ Dynamic Validation Failed: Night or Outer Space detected.`);
         }
 
         if (yellowBoundaryPixels < 100) { // Expecting at least some yellow line
