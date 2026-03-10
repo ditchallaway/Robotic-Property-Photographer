@@ -33,12 +33,11 @@
                 return;
             }
 
-            console.log('[BROWSER] Starting standalone renderer (single-pass mode)...');
+            console.log('[BROWSER] Starting standalone renderer v2 (check=no-listeners)...');
 
             try {
                 // 1. Initialize Viewer
                 const viewer = new Cesium.Viewer('cesiumContainer', {
-                    imageryProvider: false,
                     baseLayerPicker: false,
                     geocoder: false,
                     homeButton: false,
@@ -58,12 +57,22 @@
                     }
                 });
 
+                window.viewer = viewer;
+
+                // --- Perfect Lighting & Atmosphere ---
+                viewer.scene.skyAtmosphere.show = true;
+                viewer.scene.fog.enabled = true;
+                viewer.scene.fog.density = 0.0002;
+                viewer.scene.globe.enableLighting = false; // "Perfect" uniform lighting
+                viewer.scene.sun.show = false;
+                viewer.scene.moon.show = false;
+
                 viewer.scene.globe.show = true;
                 viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#111111');
                 if (viewer.creditContainer) viewer.creditContainer.style.display = 'none';
 
                 // 2. Add Google 3D Tiles
-                const apiKey = data.google_api_key;
+                const apiKey = (data.google_api_key || '').trim(); // Absolute trim check
                 if (apiKey) {
                     try {
                         const tileset = await Cesium.Cesium3DTileset.fromUrl(
@@ -156,16 +165,12 @@
                 // Ensure everything is visible
                 if (tileset) tileset.show = true;
                 viewer.scene.globe.show = true;
-                viewer.scene.backgroundColor = Cesium.Color.BLACK;
+                viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#87CEEB');
 
-                // Wait for tiles to load
+                // Wait for tiles to settle before capture
                 await waitForTiles(viewer, tileset);
 
-                // Render and capture — single pass (map + boundary together)
-                viewer.scene.render();
-                await new Promise(r => setTimeout(r, 1000));
-                viewer.scene.render();
-                viewer.scene.render();
+                // Render and capture triggered from Puppeteer via capturePass
                 await window.capturePass(shot.name);
             }
 

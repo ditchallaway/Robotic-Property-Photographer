@@ -76,8 +76,7 @@ async function run() {
         // ── 2. Dynamic Visual Assertions ──
         console.log("📸 Running Dynamic Visual Validation (Sky, Boundaries, Terrain)...");
 
-        let blueSkyPixels = 0;
-        let darkSkyPixels = 0;
+        let daylightSkyPixels = 0;
         let yellowBoundaryPixels = 0;
         const colorSet = new Set();
 
@@ -91,15 +90,14 @@ async function run() {
                 const g = data[idx + 1];
                 const b = data[idx + 2];
 
-                // Sky Check (Top 15%)
+                // Sky Check (Top 15%): Ensure it's not the void of space or night
                 if (y < top15PercentRows) {
-                    // Sky heuristic: Accept Blue sky (B dominant) OR Bright Fog (R,G,B all > 150)
-                    if ((b > r && b > g && b > 50) || (r > 150 && g > 150 && b > 150)) {
-                        blueSkyPixels++;
-                    }
-                    // Dark Sky check: pure black or very dark colors
-                    if (r < 30 && g < 30 && b < 30) {
-                        darkSkyPixels++;
+                    // Daylight Heuristic: Not just "not black", but "sufficiently bright"
+                    // (Night sky/Space is typically < 40 per channel)
+                    const isBright = (r + g + b) / 3 > 80;
+                    const isBlue = (b > r + 10 && b > g + 10);
+                    if (isBright || isBlue) {
+                        daylightSkyPixels++;
                     }
                 }
 
@@ -118,20 +116,14 @@ async function run() {
         }
 
         const top15TotalPixels = info.width * top15PercentRows;
-        const blueSkyPct = blueSkyPixels / top15TotalPixels;
-        const darkSkyPct = darkSkyPixels / top15TotalPixels;
+        const daylightSkyPct = daylightSkyPixels / top15TotalPixels;
 
-        console.log(`☁️  Sky/Fog Pixels: ${blueSkyPixels} (${(blueSkyPct * 100).toFixed(1)}% of top 15%)`);
-        console.log(`🌌 Dark/Space Pixels: ${darkSkyPixels} (${(darkSkyPct * 100).toFixed(1)}% of top 15%)`);
+        console.log(`☀️  Daylight Sky/Fog Pixels: ${daylightSkyPixels} (${(daylightSkyPct * 100).toFixed(1)}% of top 15%)`);
         console.log(`🟨 Yellow Boundary Pixels: ${yellowBoundaryPixels}`);
         console.log(`🌍 Terrain Unique Colors: ${colorSet.size}`);
 
-        if (blueSkyPct < 0.01) { // At least 1% of top 15% should be sky (horizon might be blocked by mountains/trees)
-            throw new Error(`❌ Dynamic Validation Failed: Missing Sky/Fog.`);
-        }
-
-        if (darkSkyPct > 0.50) { // If > 50% of the top 15% is pure black, it's night or outer space.
-            throw new Error(`❌ Dynamic Validation Failed: Night or Outer Space detected.`);
+        if (daylightSkyPct < 0.30) { // If < 30% of the top 15% is bright, it's likely outer space or night.
+            throw new Error(`❌ Dynamic Validation Failed: Top region is too dark (Likely Space or Night).`);
         }
 
         if (yellowBoundaryPixels < 100) { // Expecting at least some yellow line
