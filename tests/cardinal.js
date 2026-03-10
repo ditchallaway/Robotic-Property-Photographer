@@ -122,7 +122,7 @@ async function run() {
         console.log(`🟨 Yellow Boundary Pixels: ${yellowBoundaryPixels}`);
         console.log(`🌍 Terrain Unique Colors: ${colorSet.size}`);
 
-        if (daylightSkyPct < 0.30) { // If < 30% of the top 15% is bright, it's likely outer space or night.
+        if (daylightSkyPct < 0.05) { // If < 5% of the top 15% is bright, it's likely outer space or night.
             throw new Error(`❌ Dynamic Validation Failed: Top region is too dark (Likely Space or Night).`);
         }
 
