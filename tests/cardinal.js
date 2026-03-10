@@ -131,6 +131,9 @@ async function run() {
             throw new Error(`❌ Dynamic Validation Failed: Low terrain variance (${colorSet.size} colors). Empty map tile?`);
         }
 
+        console.log("\n======================================================");
+        console.log(`🖼️  VIEW RESULT: file://${path.resolve(bgPath).replace(/\\/g, '/')}`);
+        console.log("======================================================\n");
         console.log("✅ Dynamic Image Validation Passed.");
         console.log("✅ Render and PNG generation verified successfully.");
 
