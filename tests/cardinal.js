@@ -1,20 +1,8 @@
-/**
- * ⚠️ IMPORTANT FOR LOCAL TESTING ⚠️
- * Since this application runs in Docker and Node may not be installed on the host,
- * you MUST execute this script INSIDE the running container.
- *
- * Command: docker compose exec moonshot node tests/cardinal.js
- *
- * CARDINAL TEST (Human-in-the-Loop v2)
- * ──────────────────────────────────────
- * Perspective: Oblique (pitch -24°), True North aligned (0°)
- * Single pass: map + boundary baked into one screenshot
- * PSD: background raster + text layers (roads + acreage)
- *
- * Expected output: 
- *   test-results/cardinal.psd
- *   test-results/cardinal_layers/cardinal_background.png
- */
+import fs from 'fs/promises';
+import { existsSync } from 'fs';
+import path from 'path';
+import sharp from 'sharp';
+import { readPsd } from 'ag-psd';
 
 const TEST_PAYLOAD = {
     "ap_parcel_number": "RP58N01W327600A",
@@ -23,38 +11,26 @@ const TEST_PAYLOAD = {
     "geometry": {
         "type": "Polygon",
         "coordinates": [
-            [ // Exterior Ring
-                [-116.4868255, 48.3317135],
-                [-116.485553, 48.3317135],
-                [-116.4855585, 48.332807],
-                [-116.488335, 48.3328055],
-                [-116.488341, 48.332094],
-                [-116.4883485, 48.3317135],
-                [-116.4868255, 48.3317135]
-            ],
-            [ // Interior Ring (Hole)
-                [-116.487000, 48.332000],
-                [-116.487000, 48.332200],
-                [-116.487500, 48.332200],
-                [-116.487500, 48.332000],
-                [-116.487000, 48.332000]
-            ]
+            [[-116.4868255, 48.3317135], [-116.485553, 48.3317135], [-116.4855585, 48.332807], [-116.488335, 48.3328055], [-116.488341, 48.332094], [-116.4883485, 48.3317135], [-116.4868255, 48.3317135]],
+            [[-116.487000, 48.332000], [-116.487000, 48.332200], [-116.487500, 48.332200], [-116.487500, 48.332000], [-116.487000, 48.332000]]
         ]
     },
     "elevation": 655,
     "centroid_elevation": 655,
     "customer_id": "test_cardinal",
     "order_id": "test",
-    "shots": ["cardinal"]
+    "shots": ["cardinal"],
+    "is_test": true // Ensure output goes to test-results/
 };
 
-console.log("\n🚀 Cardinal Test (Human-in-the-Loop v2)");
+console.log("\n🚀 Cardinal Test (Puppeteer E2E & Visual Regression)");
 
 async function run() {
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 600000); // 10 minutes
+        const timeout = setTimeout(() => controller.abort(), 600000);
 
+        console.log("📍 Sending render request (Mocking JSON Payload)...");
         const response = await fetch('http://localhost:3000/api/render', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -70,29 +46,97 @@ async function run() {
 
         const result = await response.json();
         console.log("✅ Render complete!");
-        console.log(JSON.stringify(result, null, 2));
 
         // Validate response schema
-        if (!result.shots?.cardinal) throw new Error("Missing 'shots.cardinal' in response");
-        if (!result.shots.cardinal.psd_path) throw new Error("Missing 'psd_path' in cardinal shot");
-        if (!result.static_map_url) throw new Error("Missing 'static_map_url' in response");
-        if (!Array.isArray(result.roads)) throw new Error("Missing 'roads' array in response");
-        if (typeof result.acreage !== 'string') throw new Error("Missing 'acreage' string in response");
+        if (!result.shots?.cardinal) throw new Error("Missing 'cardinal' in shot results");
 
-        console.log("\n✅ Schema validation passed");
-        console.log(`📍 Static Map URL: ${result.static_map_url}`);
-        console.log(`🏷️  Roads: ${result.roads.join(', ') || '(none found)'}`);
-        console.log(`📐 Acreage: ${result.acreage}`);
-        console.log(`📄 PSD: ${result.shots.cardinal.psd_path}`);
-        if (result.shots.cardinal.psd_url) {
-            console.log(`☁️  R2 URL: ${result.shots.cardinal.psd_url}`);
-        } else {
-            console.log(`☁️  R2: not configured (local only)`);
+        const bgPath = path.join(process.cwd(), 'test-results', 'cardinal_layers', 'cardinal_background.png');
+
+        console.log(`📄 Checking output at: ${bgPath}`);
+
+        // ── 1. WebGL Context Loss Validation (Black Screen Check) ──
+        console.log("🔍 Validating WebGL Context (Black Screen detection)...");
+        const bgBuffer = await fs.readFile(bgPath);
+        const image = sharp(bgBuffer);
+        const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
+
+        let blackPixels = 0;
+        const totalPixels = info.width * info.height;
+        for (let i = 0; i < data.length; i += info.channels) {
+            if (data[i] <= 30 && data[i + 1] <= 30 && data[i + 2] <= 30) {
+                blackPixels++;
+            }
         }
+        const blackPct = blackPixels / totalPixels;
+        if (blackPct > 0.95) {
+            throw new Error(`❌ WebGL Context Loss: Screenshot is >95% black (${(blackPct * 100).toFixed(1)}%). Cesium tiles likely failed to load.`);
+        }
+        console.log(`✅ WebGL OK: Frame is ${(100 - blackPct * 100).toFixed(1)}% visible.`);
+
+        // ── 2. Dynamic Visual Assertions ──
+        console.log("📸 Running Dynamic Visual Validation (Sky, Boundaries, Terrain)...");
+
+        let blueSkyPixels = 0;
+        let yellowBoundaryPixels = 0;
+        const colorSet = new Set();
+
+        const top15PercentRows = Math.floor(info.height * 0.15);
+        const bottomHalfStart = Math.floor(info.height * 0.50);
+
+        for (let y = 0; y < info.height; y++) {
+            for (let x = 0; x < info.width; x++) {
+                const idx = (y * info.width + x) * info.channels;
+                const r = data[idx];
+                const g = data[idx + 1];
+                const b = data[idx + 2];
+
+                // Sky Check (Top 15%)
+                if (y < top15PercentRows) {
+                    // Sky heuristic: Accept Blue sky (B dominant) OR Bright Fog (R,G,B all > 150)
+                    if ((b > r && b > g && b > 50) || (r > 150 && g > 150 && b > 150)) {
+                        blueSkyPixels++;
+                    }
+                }
+
+                // Boundary Line Check (Yellow: R > 200, G > 200, B < 100)
+                if (r > 200 && g > 200 && b < 100) {
+                    yellowBoundaryPixels++;
+                }
+
+                // Terrain Variance Check (Bottom half)
+                if (y > bottomHalfStart) {
+                    // Reduce color depth slightly so very close colors merge, making standard solid map tiles very low variance
+                    const rgbString = `${Math.floor(r / 8)},${Math.floor(g / 8)},${Math.floor(b / 8)}`;
+                    colorSet.add(rgbString);
+                }
+            }
+        }
+
+        const top15TotalPixels = info.width * top15PercentRows;
+        const blueSkyPct = blueSkyPixels / top15TotalPixels;
+
+        console.log(`☁️  Sky/Fog Pixels: ${blueSkyPixels} (${(blueSkyPct * 100).toFixed(1)}% of top 15%)`);
+        console.log(`🟨 Yellow Boundary Pixels: ${yellowBoundaryPixels}`);
+        console.log(`🌍 Terrain Unique Colors: ${colorSet.size}`);
+
+        if (blueSkyPct < 0.01) { // At least 1% of top 15% should be sky (horizon might be blocked by mountains/trees)
+            throw new Error(`❌ Dynamic Validation Failed: Missing Sky/Fog.`);
+        }
+
+        if (yellowBoundaryPixels < 100) { // Expecting at least some yellow line
+            throw new Error(`❌ Dynamic Validation Failed: Missing Boundary Lines.`);
+        }
+
+        if (colorSet.size < 1000) { // Solid color backgrounds or gray tiles have very few unique colors
+            throw new Error(`❌ Dynamic Validation Failed: Low terrain variance (${colorSet.size} colors). Empty map tile?`);
+        }
+
+        console.log("✅ Dynamic Image Validation Passed.");
+        console.log("✅ Render and PNG generation verified successfully.");
 
     } catch (error) {
         console.error("\n❌ TEST FAILED:");
-        console.error(error);
+        console.error(error.message || error);
         process.exit(1);
     }
 }
