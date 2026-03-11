@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y \
     libegl1 \
     xdg-utils \
     ca-certificates \
-    dumb-init \
+    tini \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
@@ -61,6 +61,6 @@ RUN npm run build
 # -----------------------------
 # Runtime safety
 # -----------------------------
-ENTRYPOINT ["dumb-init", "--"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
 
 CMD ["npm", "start"]

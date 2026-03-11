@@ -2,7 +2,6 @@ import puppeteer from 'puppeteer';
 import fs from 'fs/promises';
 import path from 'path';
 import { fetchOsmRoads } from '../../lib/osmRoads.js';
-import { computeAcreageLabel } from '../../lib/acreageLabel.js';
 import { composeHumanPsd } from '../../lib/psdComposer.js';
 import { buildStaticMapUrl } from '../../lib/staticMap.js';
 import { uploadToR2, isR2Configured } from '../../lib/r2Upload.js';
@@ -75,9 +74,8 @@ async function doRender(req, res) {
     // Compute acreage text (for text layer)
     let acreageText = null;
     try {
-        if (ll_gisacre && boundaryCoords.length >= 3) {
-            const acreageData = computeAcreageLabel(ll_gisacre, boundaryCoords);
-            acreageText = acreageData.text;
+        if (ll_gisacre) {
+            acreageText = `${parseFloat(ll_gisacre).toFixed(2)} ACRES`;
             await logToFile(`[RENDERER] Acreage label: "${acreageText}"`);
         }
     } catch (err) {
@@ -85,23 +83,26 @@ async function doRender(req, res) {
     }
 
     // Build Google Static Map URL for road label reference
-    const googleApiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+    const googleApiKey = (process.env.NEXT_PUBLIC_GOOGLE_API_KEY || '').trim();
     const staticMapUrl = buildStaticMapUrl(geometry, googleApiKey);
 
     // ── Puppeteer session ──────────────────────────────────────────
     let browser = null;
     try {
         browser = await puppeteer.launch({
-            headless: true,
+            headless: 'new',
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--ignore-gpu-blocklist'
+                '--ignore-gpu-blocklist',
+                '--use-gl=angle',
+                '--use-angle=swiftshader'
             ]
         });
 
         const page = await browser.newPage();
+        await page.setCacheEnabled(false);
         await page.setViewport({ width: 2048, height: 1536 });
 
         // Per-shot screenshot buffers
@@ -111,6 +112,18 @@ async function doRender(req, res) {
         // ── Single-pass capture function ─────────────────────────────
         await page.exposeFunction('capturePass', async (shotName) => {
             try {
+                // Poll for tilesLoaded using Puppeteer
+                await logToFile(`[RENDERER] Waiting for tiles to load for ${shotName}...`);
+                await logToFile(`[RENDERER] Browser tile-settle complete for ${shotName}. Proceeding to capture.`);
+
+                // Request render explicitly
+                await page.evaluate(() => {
+                    if (window.viewer) window.viewer.scene.requestRender();
+                });
+
+                // Wait a tiny bit for the render frame to be drawn
+                await new Promise(r => setTimeout(r, 200));
+
                 const buffer = await page.screenshot({
                     type: 'png',
                     omitBackground: false // Full opaque screenshot with map + boundary
@@ -168,7 +181,7 @@ async function doRender(req, res) {
             customer_id,
             order_id,
             shots,
-            google_api_key: googleApiKey
+            google_api_key: googleApiKey.trim()
         });
 
         page.on('console', async (msg) => {
@@ -178,7 +191,7 @@ async function doRender(req, res) {
         });
 
         console.log(`[API] Navigating Puppeteer to: ${targetUrl}`);
-        await page.goto(targetUrl, { waitUntil: 'load', timeout: 60000 });
+        await page.goto(targetUrl, { waitUntil: 'load', timeout: 150000 });
 
         // Wait for MISSION_COMPLETE or MISSION_ERROR
         await new Promise((resolve, reject) => {
@@ -274,7 +287,7 @@ async function doRender(req, res) {
         // Send push notification
         const shotNames = Object.keys(shotsResponse);
         await sendNotification(
-            `📸 ${shotNames.length} shots ready`,
+            `${shotNames.length} shots ready`,
             `Order ${order_id} for ${customer_id}\n${shotNames.join(', ')}\nRoads: ${roadNames.join(', ')}\nAcreage: ${acreageText || 'N/A'}`,
             {
                 tags: ['camera', 'white_check_mark'],
