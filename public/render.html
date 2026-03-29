@@ -26,19 +26,21 @@
     <script>
         window.CESIUM_BASE_URL = 'cesium';
 
+        let started = false;
         async function start() {
+            if (started) return;
+            started = true;
             const data = window.__MISSION_DATA__;
             if (!data) {
                 console.error('[BROWSER] No MISSION_DATA found in window');
                 return;
             }
 
-            console.log('[BROWSER] Starting standalone renderer...');
+            console.log('[BROWSER] Starting standalone renderer v2...');
 
             try {
                 // 1. Initialize Viewer
                 const viewer = new Cesium.Viewer('cesiumContainer', {
-                    imageryProvider: false,
                     baseLayerPicker: false,
                     geocoder: false,
                     homeButton: false,
@@ -58,12 +60,27 @@
                     }
                 });
 
-                viewer.scene.globe.show = true;
-                viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#111111');
+                window.viewer = viewer;
+
+                // --- Perfect Lighting & Atmosphere ---
+                if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = true;
+                if (viewer.scene.fog) {
+                    viewer.scene.fog.enabled = true;
+                    viewer.scene.fog.density = 0.0002;
+                }
+
+                if (viewer.scene.globe) {
+                    viewer.scene.globe.enableLighting = false; // "Perfect" uniform lighting
+                    viewer.scene.globe.show = true;
+                    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#111111');
+                }
+                if (viewer.scene.sun) viewer.scene.sun.show = false;
+                if (viewer.scene.moon) viewer.scene.moon.show = false;
+                if (viewer.scene.skyBox) viewer.scene.skyBox.show = false;
                 if (viewer.creditContainer) viewer.creditContainer.style.display = 'none';
 
                 // 2. Add Google 3D Tiles
-                const apiKey = data.google_api_key;
+                const apiKey = (data.google_api_key || '').trim();
                 if (apiKey) {
                     try {
                         const tileset = await Cesium.Cesium3DTileset.fromUrl(
@@ -74,11 +91,9 @@
                     } catch (e) {
                         console.error('[BROWSER] Tileset Load Error:', e.message);
                     }
-                } else {
-                    console.error('[BROWSER] Missing Google API Key in data');
                 }
 
-                // 3. Port mission logic (Simplified Version of PhotoAgent)
+                // 3. Run single-pass mission
                 await runMission(viewer, data);
 
             } catch (err) {
@@ -88,177 +103,69 @@
         }
 
         async function runMission(viewer, data) {
-            const TRANSPARENT = new Cesium.Color(0.0, 0.0, 0.0, 0.0);
+            const boundaryLineCollection = viewer.scene.primitives.add(new Cesium.PolylineCollection());
             const allPositions = [];
-            let hierarchy = null;
+            const boundaryAlt = (data.centroid_elevation || 0) + 5;
 
             if (data.geometry && data.geometry.coordinates) {
                 const rings = data.geometry.coordinates;
                 const outerPositions = Cesium.Cartesian3.fromDegreesArray(rings[0].flat());
                 allPositions.push(...outerPositions);
 
-                const holes = [];
-                for (let i = 1; i < rings.length; i++) {
-                    const innerPositions = Cesium.Cartesian3.fromDegreesArray(rings[i].flat());
-                    allPositions.push(...innerPositions);
-                    holes.push(new Cesium.PolygonHierarchy(innerPositions));
-                }
-                hierarchy = new Cesium.PolygonHierarchy(outerPositions, holes);
-            }
-
-            // Boundary
-            const boundaryLineCollection = viewer.scene.primitives.add(new Cesium.PolylineCollection());
-            const boundaryPolylines = [];
-            const boundaryAlt = (data.centroid_elevation || 0) + 5;
-            if (data.geometry && data.geometry.coordinates) {
-                const rings = data.geometry.coordinates;
                 for (let i = 0; i < rings.length; i++) {
                     const positions = [];
                     for (const coord of rings[i]) {
                         positions.push(Cesium.Cartesian3.fromDegrees(coord[0], coord[1], boundaryAlt));
                     }
-                    boundaryPolylines.push(boundaryLineCollection.add({
+                    boundaryLineCollection.add({
                         positions, width: 8,
                         material: Cesium.Material.fromType('Color', { color: Cesium.Color.YELLOW }),
-                        show: false
-                    }));
+                        show: true
+                    });
                 }
             }
 
-            // Labels
-            const billboardCollection = viewer.scene.primitives.add(new Cesium.BillboardCollection());
-
-            function createTextCanvas(text, isAcreage = false) {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const fontStr = isAcreage ? 'bold 96px sans-serif' : 'bold 64px sans-serif';
-                ctx.font = fontStr;
-                const metrics = ctx.measureText(text);
-                canvas.width = metrics.width + 40;
-                canvas.height = isAcreage ? 150 : 100;
-                ctx.font = fontStr;
-                ctx.fillStyle = isAcreage ? 'yellow' : 'white';
-                ctx.strokeStyle = 'black';
-                ctx.lineWidth = 10;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                const cx = canvas.width / 2;
-                const cy = canvas.height / 2;
-                ctx.strokeText(text, cx, cy);
-                ctx.fillText(text, cx, cy);
-                return canvas;
-            }
-
-            const labelEntries = (data.roads || []).map(road => {
-                const label = billboardCollection.add({
-                    position: Cesium.Cartesian3.fromDegrees(road.anchorLon, road.anchorLat, (data.centroid_elevation || 0) + 20),
-                    image: createTextCanvas(road.name, false),
-                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    show: false
-                });
-                label.roadAngle = road.angle;
-                return label;
-            });
-
-            // Acreage
-            let acreageLabel = null;
-            if (data.acreageAnchor) {
-                const { lon, lat, text, rotation } = data.acreageAnchor;
-                acreageLabel = billboardCollection.add({
-                    position: Cesium.Cartesian3.fromDegrees(lon, lat, (data.centroid_elevation || 0) + 20),
-                    image: createTextCanvas(text, true),
-                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    show: false
-                });
-                acreageLabel.roadAngle = rotation;
-            }
-
-            // Camera
             const origin = Cesium.Cartesian3.fromDegrees(data.centroid[0], data.centroid[1], data.centroid_elevation || 0);
             const boundingSphere = Cesium.BoundingSphere.fromPoints(allPositions);
             boundingSphere.center = origin;
             if (boundingSphere.radius < 50) boundingSphere.radius = 50;
 
             viewer.camera.frustum.fov = Cesium.Math.toRadians(100);
-            viewer.scene.globe.maximumScreenSpaceError = 1.0;
+            if (viewer.scene.globe) viewer.scene.globe.maximumScreenSpaceError = 1.0;
 
             let shotList = [
-                { name: 'nadir', heading: 0, pitch: -90 },
-                { name: 'cardinal', heading: 0, pitch: -24 },
-                { name: 'east', heading: 90, pitch: -24 },
-                { name: 'south', heading: 180, pitch: -24 },
-                { name: 'west', heading: 270, pitch: -24 }
+                { name: 'nadir', heading: 0, pitch: -89.9 },
+                { name: 'cardinal', heading: 0, pitch: -35 },
+                { name: 'east', heading: 90, pitch: -35 },
+                { name: 'south', heading: 180, pitch: -35 },
+                { name: 'west', heading: 270, pitch: -35 }
             ];
 
             if (data.shots) shotList = shotList.filter(s => data.shots.includes(s.name));
-            const capabilities = data.capabilities || ['base', 'boundary', 'labels', 'acreage'];
+            const tileset = window.__TILESET__;
 
             for (const shot of shotList) {
                 console.log(`[BROWSER] === Shot: ${shot.name} ===`);
+                const rangeMultiplier = (shot.pitch > -80) ? 2.5 : 2.0;
                 viewer.camera.flyToBoundingSphere(boundingSphere, {
                     offset: new Cesium.HeadingPitchRange(
                         Cesium.Math.toRadians(shot.heading),
                         Cesium.Math.toRadians(shot.pitch),
-                        boundingSphere.radius * 2.0
+                        boundingSphere.radius * rangeMultiplier
                     ),
                     duration: 0
                 });
 
-                const tileset = window.__TILESET__;
-
-                // PASS 1: Base Map
-                if (capabilities.includes('base')) {
+                try {
                     if (tileset) tileset.show = true;
-                    viewer.scene.globe.show = true;
-                    viewer.scene.backgroundColor = Cesium.Color.BLACK;
-
-                    await waitForTiles(viewer, tileset);
-
-                    viewer.scene.render();
-                    await new Promise(r => setTimeout(r, 500));
-                    viewer.scene.render();
-                    await window.capturePass(shot.name, 'map');
+                    if (viewer.scene && viewer.scene.globe) viewer.scene.globe.show = true;
+                    if (viewer.scene) viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#87CEEB');
+                } catch (e) {
+                    console.warn('[BROWSER] Non-fatal visibility error:', e.message);
                 }
 
-                // Transparent Passes
-                if (capabilities.some(c => ['boundary', 'labels', 'acreage'].includes(c))) {
-                    if (tileset) tileset.show = false;
-                    viewer.scene.backgroundColor = TRANSPARENT;
-                    viewer.scene.globe.baseColor = TRANSPARENT;
-
-                    if (capabilities.includes('boundary')) {
-                        boundaryPolylines.forEach(p => p.show = true);
-                        viewer.scene.render();
-                        await new Promise(r => setTimeout(r, 300));
-                        viewer.scene.render();
-                        await window.capturePass(shot.name, 'boundary');
-                        boundaryPolylines.forEach(p => p.show = false);
-                    }
-
-                    if (capabilities.includes('labels')) {
-                        labelEntries.forEach(l => {
-                            l.show = true;
-                            l.rotation = (shot.name === 'nadir') ? l.roadAngle : 0;
-                        });
-                        viewer.scene.render();
-                        await new Promise(r => setTimeout(r, 300));
-                        viewer.scene.render();
-                        await window.capturePass(shot.name, 'labels');
-                        labelEntries.forEach(l => l.show = false);
-                    }
-
-                    if (capabilities.includes('acreage') && acreageLabel) {
-                        acreageLabel.show = true;
-                        acreageLabel.rotation = (shot.name === 'nadir') ? acreageLabel.roadAngle : 0;
-                        viewer.scene.render();
-                        await new Promise(r => setTimeout(r, 300));
-                        viewer.scene.render();
-                        await window.capturePass(shot.name, 'acreage');
-                        acreageLabel.show = false;
-                    }
-                }
-
-                await window.composeShot(shot.name);
+                await waitForTiles(viewer, tileset);
+                await window.capturePass(shot.name);
             }
 
             console.log('MISSION_COMPLETE');
@@ -279,15 +186,13 @@
                         stable = 0;
                     }
                 }, 300);
-                setTimeout(() => { clearInterval(timer); resolve(); }, 60000);
+                setTimeout(() => { clearInterval(timer); resolve(); }, 120000);
             });
         }
 
-        // Trigger start when MISSION_DATA is injected
         if (window.__MISSION_DATA__) {
             start();
         } else {
-            // Fallback for injection timing
             Object.defineProperty(window, '__MISSION_DATA__', {
                 set: function (val) {
                     this._mission_data = val;

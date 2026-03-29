@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+tmp
+test-results
+public/cesium
+public/snapshots
+*.log
+.env.local
+.vscode
+docs
+.agent

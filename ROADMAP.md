@@ -44,83 +44,62 @@
 
 ---
 
-## ✅ Phase 4 — Multi-Pass PSD Compositing
+## ✅ Phase 4 — Single-Pass PSD Compositing (v2 — Human-in-the-Loop)
 
-*4-pass capture per shot → layered PSD + preview PNG.*
+*Simplified: 1 screenshot per shot → PSD with editable text layers.*
 
-| Pass | Background | Content | Output |
-|------|-----------|---------|--------|
-| Map | Satellite tiles | None | Opaque base layer |
-| Boundary | Chroma magenta `#FF00FF` | Yellow polyline | Transparent overlay |
-| Street Labels | Chroma magenta | `LabelCollection` text | Transparent overlay |
-| Acreage | Chroma magenta | Turf.js-positioned text | Transparent overlay |
+| Layer | Type | Content |
+|-------|------|--------|
+| Background | Raster | Satellite map + yellow boundary (single pass) |
+| Road: [name] | Editable text | White, 48pt, one per road |
+| [acreage] | Editable text | Yellow, 80pt, centered bottom |
 
-- [x] Magenta chroma-key tile via `SingleTileImageryProvider` (1×1 px tile)
-- [x] Sky, sun, moon, atmosphere hidden during overlay passes
-- [x] `sharp` removes magenta background post-capture (configurable tolerance)
-- [x] `ag-psd` composes named transparent layers into a `.psd` file
-- [x] Per-shot output: `layers/{shot}_{pass}.png` (transparent layers) + `{shot}.psd` (composited layered file)
-- [x] Test output path: `tmp/test/{shot_name}/`
-- [x] Production output path: `tmp/snapshots/{order_id}/{customer_id}/{shot_name}/`
-- [x] API response: JSON object with metadata + file paths (n8n-parseable)
+- [x] Single opaque screenshot per shot (map + boundary together)
+- [x] `ag-psd` creates PSD with raster background + editable text layers
+- [x] Text layers use `invalidateTextLayers: true` for Photopea/Photoshop compatibility
+- [x] Black-frame detection: warns when tiles fail to load (< 5% non-black pixels)
+- [x] Test output: `test-results/{shot}.psd` + `test-results/{shot}_layers/{shot}_background.png`
+- [x] Production output: `tmp/snapshots/{order_id}/{customer_id}/{shot_name}/`
+- [x] API response: JSON with `shots`, `static_map_url`, `roads`, `acreage`
 
 ---
 
-## ✅ Phase 5 — Street Label Rendering
+## ✅ Phase 5 — Street Label Data (v2 — Text Layers)
 
-*OSM Overpass road data → geo-projected canvas text labels.*
+*OSM Overpass road data → editable PSD text layers (no longer rendered by CesiumJS).*
 
 - [x] Road geometry fetched server-side from OSM Overpass API (`way[highway]` only)
 - [x] `relation[type=route]` explicitly excluded
 - [x] Label text sourced strictly from `name → ref → alt_name` tags (missing name = excluded)
 - [x] Labels do NOT merge or infer names across multiple ways
-- [x] Road segments projected to pixel coordinates via `Cesium.SceneTransforms.wgs84ToWindowCoordinates`
-- [x] Terrain elevation sampled for accurate 3D → 2D projection
-- [x] Visible road filtering (frustum culling + viewport bounds check)
-- [x] Labels rendered upright (rotation = 0) in both cardinal and nadir views
-- [x] Overlay independence: street label pass does not affect base map render
+- [x] Road names added as editable text layers in PSD (white, 48pt)
+- [x] Acreage added as editable text layer (yellow, 80pt)
+- [x] Google Static Map URL generated for road label reference
 
 ---
 
-## ✅ Phase 6 — Test Suite Infrastructure
+## ✅ Phase 6 — Test Suite Infrastructure (v2)
 
-*Isolated, per-capability test scripts executed inside the Docker container.*
+*Simplified test scripts matching the single-pass human-in-the-loop workflow.*
 
-### Test Architecture
+### Test Scripts
 
 ```
 tests/
-  cardinal-base.js     → Cardinal base image only
-  cardinal-boundary.js → Cardinal boundary (with hole polygon)
-  cardinal-acreage.js  → Cardinal acreage label
-  cardinal-labels.js   → Cardinal street labels
-  nadir-base.js        → Nadir base image only
-  nadir-boundary.js    → Nadir boundary (with hole polygon)
-  nadir-acreage.js     → Nadir acreage label
-  nadir-labels.js      → Nadir street labels
+  cardinal.js   → Oblique shot (heading 0°, pitch -24°)
+  nadir.js      → Top-down shot (heading 0°, pitch -89.9°)
 ```
 
-### Cardinal Tests — ✅ Complete
+### What Each Test Validates
 
-A single cardinal test generates an oblique shot containing all layers.
+- ✅ API returns `shots.{name}.psd_path`
+- ✅ API returns `static_map_url`
+- ✅ API returns `roads` array
+- ✅ API returns `acreage` string
+- ✅ Black-frame detection logs in server output
+- ✅ PSD file is generated at returned path
 
-- `cardinal_map` — satellite imagery, no overlays
-- `cardinal_boundary` — yellow polyline, oblique foreshortening, hole visible
-- `cardinal_labels` — upright white street text, transparent bg
-- `cardinal_acreage` — upright yellow text, transparent bg
-
-> **Expected output:** 1 PSD nested at `tmp/test/cardinal/cardinal.psd` and 4 PNGs in `layers/`.
-
-### Nadir Tests — ✅ Complete
-
-A single nadir test generates a top-down shot containing all layers.
-
-- `nadir_map` — satellite base image, top-down -90° pitch
-- `nadir_boundary` — yellow polyline, hole polygon support verified
-- `nadir_labels` — street labels, painted street-aligned projection
-- `nadir_acreage` — acreage label, Turf.js centroid anchor
-
-> **Expected output:** 1 PSD nested at `tmp/test/nadir/nadir.psd` and 4 PNGs in `layers/`.
+> **Expected output:** `test-results/{shot}.psd` + `test-results/{shot}_layers/{shot}_background.png`
 
 ### Local Test Runner
 
@@ -146,48 +125,28 @@ docker compose exec moonshot node tests/nadir.js
 
 ---
 
-## 🔜 Phase 8 — Cloudflare R2 Artifact Storage
+## ✅ Phase 8 — Cloudflare R2 Artifact Storage
 
-*Persistent, remotely accessible storage for PSD and PNG test artifacts.*
+*Optional, env-gated upload to S3-compatible storage.*
 
-> **Scope note:** Storage is handled upstream. R2 is being added specifically to enable
-> browser-accessible PSD inspection via Photopea — not as production delivery storage.
-> n8n will continue to orchestrate the upload step.
-
-- [ ] Provision Cloudflare R2 bucket (e.g. `rpp-test-artifacts`)
-- [ ] Configure public access (or signed URL generation) on the bucket
-- [ ] Define upload path convention: `{order_id}/{customer_id}/{view}.{psd|png}`
-- [ ] Add optional n8n upload step post-render (outside this repo's scope)
-- [ ] Or: lightweight upload script callable from the container for dev testing
+- [x] `lib/r2Upload.js` — S3-compatible upload using `@aws-sdk/client-s3`
+- [x] Graceful no-op when `R2_ENDPOINT` / `R2_ACCESS_KEY_ID` / `R2_SECRET_KEY` / `R2_BUCKET` not configured
+- [x] Upload path: `{order_id}/{customer_id}/{shot_name}.psd`
+- [x] Returns public URL when `R2_PUBLIC_URL` is set
+- [ ] Provision actual R2 bucket and configure credentials
 
 ---
 
-## 🔜 Phase 9 — Photopea Deep-Link Integration
+## ✅ Phase 9 — Photopea + ntfy.sh Integration
 
-*One-click PSD inspection in the browser — no Photoshop license needed.*
+*Human-in-the-loop notification and editing workflow.*
 
-Photopea supports a URL parameter that accepts a publicly accessible PSD URL
-and opens it directly in the browser editor.
-
-### URL Format
-
-```
-https://www.photopea.com#pa=<url-encoded-json>
-```
-
-Where the JSON payload is:
-```json
-{ "files": ["https://r2.your-bucket.com/order_id/cust_id/north.psd"] }
-```
-
-### Planned Changes
-
-- [ ] Update `viewer.html` to generate a Photopea link per PSD card
-  - Each card gets an "Open in Photopea" button alongside the PSD download chip
-  - Button only renders when a public R2 URL is configured
-- [ ] Add `R2_PUBLIC_BASE_URL` env variable convention
-- [ ] Update test scripts to log Photopea links after successful render
-- [ ] Consider: `psd-links.html` auto-generated per test run (a run manifest)
+- [x] `lib/photopea.js` — Generates deep-link URLs to self-hosted Photopea (`app.brokertricks.com`)
+- [x] Opens PSD + Google Static Map reference in a single Photopea session
+- [x] `lib/notify.js` — Push notifications via free ntfy.sh
+- [x] Notification includes shot count, road names, acreage, and click-to-open Photopea link
+- [x] Both services gracefully no-op when env vars are missing
+- [x] Configure `NTFY_TOPIC` for production notifications
 
 ---
 
@@ -213,7 +172,7 @@ Where the JSON payload is:
 - [ ] Input validation: reject malformed GeoJSON before invoking renderer
 - [ ] Health check endpoint (`/api/health`) for Docker + n8n polling
 - [ ] Graceful Puppeteer teardown on container SIGTERM
-- [ ] README: update test commands to match current test file names
+- [x] README: update test commands to match current test file names
 
 ---
 
@@ -227,9 +186,9 @@ Where the JSON payload is:
 | 3D tiles | Google Photorealistic 3D Tiles |
 | Terrain | CesiumWorldTerrain |
 | Road data | OSM Overpass API (`way[highway]`) |
-| Geo utilities | Turf.js (acreage centroid) |
-| PSD compositing | ag-psd |
-| Image processing | sharp (chroma-key removal) |
+| PSD compositing | ag-psd (raster + text layers) |
+| Image processing | sharp (black-frame detection) |
+| Artifact storage | Cloudflare R2 (optional, env-gated) |
+| PSD review | Photopea (self-hosted at `app.brokertricks.com`) |
+| Notifications | ntfy.sh (free hosted) |
 | Orchestration | n8n (upstream, not in this repo) |
-| Artifact storage | Cloudflare R2 *(planned — Phase 8)* |
-| PSD review | Photopea deep-links *(planned — Phase 9)* |
