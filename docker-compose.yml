@@ -1,21 +1,33 @@
 services:
   moonshot:
     build: .
+    # CRITICAL: Offloads Chromium's shared memory to prevent "Aw Snap" crashes
+    shm_size: '2gb'
     ports:
-      - "3001:3000"
+      - "3000:3000"
     volumes:
-      # 1. Sync your code (The "Bind Mount")
+      # 1. THE BIND MOUNT: Maps your WSL/Windows code to the container for live editing
       - .:/app
 
-      # 2. PROTECT THE GENERATED ASSETS (The "Anonymous Volumes")
-      # These lines tell Docker: "Keep using the internal version of these folders
-      # that we created during the 'Build' step, don't use my computer's version."
+      # 2. ANONYMOUS VOLUMES: Protects Linux-native binaries from Windows interference
+      # This ensures the container uses the 'sharp' and 'puppeteer' versions built for Debian
       - /app/node_modules
       - /app/.next
       - /app/public/cesium
 
-      # 3. Persistent data
+      # 3. PERSISTENCE: Ensures rendered snapshots are saved back to your host
       - ./public/snapshots:/app/public/snapshots
     environment:
+      # Enables hot-reloading for Next.js across the WSL bridge
       - WATCHPACK_POLLING=true
       - NODE_ENV=production
+      # Rigorously trim these in your code to avoid 403 Forbidden errors
+      - NEXT_PUBLIC_GOOGLE_API_KEY=${NEXT_PUBLIC_GOOGLE_API_KEY}
+      - R2_ENDPOINT=${R2_ENDPOINT}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_KEY=${R2_SECRET_KEY}
+      - R2_BUCKET=${R2_BUCKET}
+      - R2_PUBLIC_URL=${R2_PUBLIC_URL}
+      - NTFY_TOPIC=${NTFY_TOPIC}
+      - NTFY_URL=${NTFY_URL}
+      - PHOTOPEA_URL=${PHOTOPEA_URL:-https://app.brokertricks.com}

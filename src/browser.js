@@ -12,8 +12,9 @@ export function getBrowser() {
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
-                "--enable-webgl",
-                "--use-gl=egl"
+                "--enable-unsafe-swiftshader",
+                "--use-gl=angle",
+                "--use-angle=swiftshader"
             ]
         });
     }

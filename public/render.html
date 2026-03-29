@@ -35,6 +35,16 @@
 
             console.log('[BROWSER] Starting standalone renderer...');
 
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            console.log('[BROWSER] WebGL Context:', gl ? 'Supported' : 'NOT SUPPORTED');
+            if (gl) {
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                console.log('[BROWSER] Renderer:', debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Unknown');
+            }
+
+            console.log('[BROWSER] API Key present:', !!data.google_api_key, '(CESIUM_BASE_URL:', !!window.CESIUM_BASE_URL, ')');
+
             try {
                 // 1. Initialize Viewer
                 const viewer = new Cesium.Viewer('cesiumContainer', {
@@ -62,15 +72,40 @@
                 viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#111111');
                 if (viewer.creditContainer) viewer.creditContainer.style.display = 'none';
 
+                const supportsWebGL = Cesium.FeatureDetection.supportsWebGL(viewer.scene);
+                console.log('[BROWSER] supportsWebGL:', supportsWebGL);
+                if (!supportsWebGL) {
+                    throw new Error('WEBGL_NOT_SUPPORTED_IN_DOCKER');
+                }
+
                 // 2. Add Google 3D Tiles
                 const apiKey = data.google_api_key;
+                console.log('[BROWSER] Using Google API Key (prefix):', apiKey ? apiKey.substring(0, 8) : 'MISSING');
+                
                 if (apiKey) {
                     try {
-                        const tileset = await Cesium.Cesium3DTileset.fromUrl(
-                            `https://tile.googleapis.com/v1/3dtiles/root.json?key=${apiKey}`
-                        );
+                        const url = `https://tile.googleapis.com/v1/3dtiles/root.json?key=${apiKey}`;
+                        console.log('[BROWSER] Loading tileset from:', url.split('?')[0]);
+                        
+                        const tileset = await Cesium.Cesium3DTileset.fromUrl(url);
                         viewer.scene.primitives.add(tileset);
                         window.__TILESET__ = tileset;
+                        
+                        tileset.allTilesLoaded.addEventListener(() => {
+                            console.log('[BROWSER] Event: allTilesLoaded');
+                        });
+                        
+                        tileset.initialTilesLoaded.addEventListener(() => {
+                            console.log('[BROWSER] Event: initialTilesLoaded');
+                        });
+
+                        tileset.loadProgress.addEventListener((numberOfPendingRequests, numberOfActiveRequests) => {
+                            if (numberOfActiveRequests > 0) {
+                                console.log(`[BROWSER] Tileset progress: ${numberOfPendingRequests} pending, ${numberOfActiveRequests} active`);
+                            }
+                        });
+
+                        console.log('[BROWSER] Tileset primitive added to scene');
                     } catch (e) {
                         console.error('[BROWSER] Tileset Load Error:', e.message);
                     }
@@ -107,19 +142,21 @@
             }
 
             // Boundary
-            const boundaryLineCollection = viewer.scene.primitives.add(new Cesium.PolylineCollection());
             const boundaryPolylines = [];
-            const boundaryAlt = (data.centroid_elevation || 0) + 5;
             if (data.geometry && data.geometry.coordinates) {
                 const rings = data.geometry.coordinates;
                 for (let i = 0; i < rings.length; i++) {
                     const positions = [];
                     for (const coord of rings[i]) {
-                        positions.push(Cesium.Cartesian3.fromDegrees(coord[0], coord[1], boundaryAlt));
+                        positions.push(Cesium.Cartesian3.fromDegrees(coord[0], coord[1]));
                     }
-                    boundaryPolylines.push(boundaryLineCollection.add({
-                        positions, width: 8,
-                        material: Cesium.Material.fromType('Color', { color: Cesium.Color.YELLOW }),
+                    boundaryPolylines.push(viewer.entities.add({
+                        polyline: {
+                            positions, 
+                            width: 8,
+                            material: Cesium.Color.YELLOW,
+                            clampToGround: true
+                        },
                         show: false
                     }));
                 }
@@ -212,12 +249,28 @@
                     viewer.scene.globe.show = true;
                     viewer.scene.backgroundColor = Cesium.Color.BLACK;
 
-                    await waitForTiles(viewer, tileset);
+                    let success = false;
+                    let retries = 0;
+                    while (!success && retries < 3) {
+                        console.log(`[BROWSER] Waiting for tiles for ${shot.name}...`);
+                        await waitForTiles(viewer, tileset);
+                        console.log(`[BROWSER] Tile loading finished (or timed out) for ${shot.name}.`);
 
-                    viewer.scene.render();
-                    await new Promise(r => setTimeout(r, 500));
-                    viewer.scene.render();
-                    await window.capturePass(shot.name, 'map');
+                        viewer.scene.render();
+                        await new Promise(r => setTimeout(r, 500));
+                        viewer.scene.render();
+                        
+                        window.renderComplete = true;
+                        success = await window.capturePass(shot.name, 'map');
+                        window.renderComplete = false;
+
+                        if (!success) {
+                            console.warn(`[BROWSER] ⚠️  Map pass for ${shot.name} failed validation! Retrying...`);
+                            await new Promise(r => setTimeout(r, 1000));
+                            await waitForTiles(viewer, tileset);
+                            retries++;
+                        }
+                    }
                 }
 
                 // Transparent Passes
@@ -231,7 +284,9 @@
                         viewer.scene.render();
                         await new Promise(r => setTimeout(r, 300));
                         viewer.scene.render();
+                        window.renderComplete = true;
                         await window.capturePass(shot.name, 'boundary');
+                        window.renderComplete = false;
                         boundaryPolylines.forEach(p => p.show = false);
                     }
 
@@ -243,7 +298,9 @@
                         viewer.scene.render();
                         await new Promise(r => setTimeout(r, 300));
                         viewer.scene.render();
+                        window.renderComplete = true;
                         await window.capturePass(shot.name, 'labels');
+                        window.renderComplete = false;
                         labelEntries.forEach(l => l.show = false);
                     }
 
@@ -253,7 +310,9 @@
                         viewer.scene.render();
                         await new Promise(r => setTimeout(r, 300));
                         viewer.scene.render();
+                        window.renderComplete = true;
                         await window.capturePass(shot.name, 'acreage');
+                        window.renderComplete = false;
                         acreageLabel.show = false;
                     }
                 }
@@ -272,14 +331,20 @@
                     const gLoaded = viewer.scene.globe.tilesLoaded;
                     if (tsLoaded && gLoaded) {
                         if (++stable >= 3) {
+                            console.log('[BROWSER] Tiles stable.');
                             clearInterval(timer);
                             resolve();
                         }
                     } else {
+                        if (stable > 0) console.log('[BROWSER] Tiles became unstable, resetting counter...');
                         stable = 0;
                     }
                 }, 300);
-                setTimeout(() => { clearInterval(timer); resolve(); }, 60000);
+                setTimeout(() => { 
+                    console.warn('[BROWSER] waitForTiles: TIMEOUT (60s)');
+                    clearInterval(timer); 
+                    resolve(); 
+                }, 60000);
             });
         }
 

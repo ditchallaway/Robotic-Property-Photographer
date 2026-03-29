@@ -3,51 +3,7 @@ import { useEffect, useRef } from 'react';
 export default function PhotoAgent({ viewer, Cesium }) {
     const isRunning = useRef(false);
 
-    // Wait until globe tiles and any 3D tilesets are fully loaded (with timeout safety)
-    const waitForTiles = (viewer) => new Promise(resolve => {
-        let stableCycles = 0;
-        let lastLog = Date.now();
-        console.log('[BROWSER] waitForTiles: Waiting 500ms before checking to allow tile requests to queue...');
 
-        let timeoutTimer;
-
-        setTimeout(() => {
-            const check = setInterval(() => {
-                const tileset = findTileset(viewer);
-                // Cesium3DTileset uses tilesLoaded/allTilesLoaded. Globe uses tilesLoaded.
-                const tilesetLoaded = tileset
-                    ? (tileset.tilesLoaded === true || tileset.allTilesLoaded === true)
-                    : true;
-
-                const globeLoaded = viewer.scene.globe.tilesLoaded === true;
-                const allLoaded = tilesetLoaded && globeLoaded;
-
-                // Console.log every 2 seconds to avoid spam but give feedback
-                if (Date.now() - lastLog > 2000) {
-                    console.log(`[BROWSER] waitForTiles status: tileset=${!!tileset}, tilesetLoaded=${tilesetLoaded}, globeLoaded=${globeLoaded}, stableCycles=${stableCycles}`);
-                    lastLog = Date.now();
-                }
-
-                if (allLoaded) {
-                    stableCycles++;
-                    if (stableCycles >= 3) { // Ensure multiple frames of complete loading
-                        console.log('[BROWSER] waitForTiles: Tiles completely loaded.');
-                        clearInterval(check);
-                        clearTimeout(timeoutTimer);
-                        resolve();
-                    }
-                } else {
-                    stableCycles = 0;
-                }
-            }, 300);
-
-            timeoutTimer = setTimeout(() => {
-                console.warn('[BROWSER] waitForTiles: TIMEOUT REACHED (90s). Capturing anyway.');
-                clearInterval(check);
-                resolve();
-            }, 90000);
-        }, 500); // Small initial delay so Cesium realizes the camera moved and starts requesting new tiles
-    });
 
     // Find the 3D tileset primitive (Google Photorealistic Tiles)
     const findTileset = (viewer) => {
@@ -92,6 +48,12 @@ export default function PhotoAgent({ viewer, Cesium }) {
 
             const tileset = findTileset(viewer);
             console.log(`[BROWSER] 3D Tileset found: ${!!tileset}`);
+            
+            if (tileset) {
+                tileset.allTilesLoaded.addEventListener(() => {
+                    window.renderComplete = true;
+                });
+            }
 
             // Boundary polylines — using PolylineCollection primitive so they render
             // in the transparent pass (entity clampToGround polylines need the globe visible).
@@ -220,6 +182,8 @@ export default function PhotoAgent({ viewer, Cesium }) {
             for (const shot of shotList) {
                 console.log(`[BROWSER] === Shot: ${shot.name} ===`);
 
+                window.renderComplete = false;
+
                 // Position camera
                 viewer.camera.flyToBoundingSphere(boundingSphere, {
                     offset: new Cesium.HeadingPitchRange(
@@ -239,13 +203,6 @@ export default function PhotoAgent({ viewer, Cesium }) {
                 if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = true;
                 viewer.scene.backgroundColor = Cesium.Color.BLACK;
 
-                // Only wait for tiles when the base (opaque satellite) pass is needed.
-                // Boundary/labels/acreage are transparent passes that hide the tileset, so waiting is both
-                // unnecessary and harmful — the tileset never reports tilesLoaded while hidden.
-                if (capabilities.includes('base')) {
-                    await waitForTiles(viewer);
-                }
-
                 // ── PASS 1: Map Background (opaque, no boundaries/labels) ──
                 if (capabilities.includes('base')) {
                     boundaryPolylines.forEach(p => p.show = false);
@@ -253,8 +210,7 @@ export default function PhotoAgent({ viewer, Cesium }) {
                     if (acreageLabel) acreageLabel.show = false;
 
                     viewer.scene.render();
-                    await new Promise(r => setTimeout(r, 500));
-                    viewer.scene.render();
+                    if (!tileset) window.renderComplete = true;
                     console.log(`[BROWSER] Capturing map pass...`);
                     await window.capturePass(shot.name, 'map');
                 }
@@ -278,14 +234,12 @@ export default function PhotoAgent({ viewer, Cesium }) {
                     viewer.scene.highDynamicRange = false;
                     viewer.scene.backgroundColor = TRANSPARENT;
                     viewer.scene.render();
-                    await new Promise(r => setTimeout(r, 300));
 
                     // ── PASS 2: Boundary (Transparent) ─────────────────────
                     if (capabilities.includes('boundary')) {
                         boundaryPolylines.forEach(p => p.show = true);
                         viewer.scene.render();
-                        await new Promise(r => setTimeout(r, 300));
-                        viewer.scene.render();
+                        window.renderComplete = true;
                         console.log(`[BROWSER] Capturing boundary pass...`);
                         await window.capturePass(shot.name, 'boundary');
                         boundaryPolylines.forEach(p => p.show = false);
@@ -299,8 +253,7 @@ export default function PhotoAgent({ viewer, Cesium }) {
                             l.rotation = (shot.name === 'nadir') ? l.roadAngle : 0;
                         });
                         viewer.scene.render();
-                        await new Promise(r => setTimeout(r, 300));
-                        viewer.scene.render();
+                        window.renderComplete = true;
                         console.log(`[BROWSER] Capturing labels pass...`);
                         await window.capturePass(shot.name, 'labels');
                         labelEntries.forEach(l => l.show = false);
@@ -312,9 +265,8 @@ export default function PhotoAgent({ viewer, Cesium }) {
                             acreageLabel.show = true;
                             acreageLabel.rotation = (shot.name === 'nadir') ? acreageLabel.roadAngle : 0;
                             viewer.scene.render();
-                            await new Promise(r => setTimeout(r, 300));
-                            viewer.scene.render();
                         }
+                        window.renderComplete = true;
                         console.log(`[BROWSER] Capturing acreage pass...`);
                         await window.capturePass(shot.name, 'acreage');
                         if (acreageLabel) acreageLabel.show = false;

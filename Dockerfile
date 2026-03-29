@@ -1,8 +1,6 @@
 FROM node:20-bookworm-slim
 
-# -----------------------------
 # System dependencies (Chromium + WebGL)
-# -----------------------------
 RUN apt-get update && apt-get install -y \
     chromium \
     chromium-driver \
@@ -22,45 +20,31 @@ RUN apt-get update && apt-get install -y \
     mesa-utils \
     libgl1 \
     libegl1 \
+    libgles2 \
     xdg-utils \
     ca-certificates \
     dumb-init \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# -----------------------------
-# Puppeteer hard guarantees
-# -----------------------------
+# Puppeteer config
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-ENV NODE_ENV=production
-
-# Prevent shared memory crashes
+ENV NODE_ENV=development
 ENV CHROME_DISABLE_GPU_SANDBOX=1
+ENV NODE_OPTIONS="--max-old-space-size=1024"
 
 WORKDIR /app
 
-# -----------------------------
-# Node deps
-# -----------------------------
+# Dependencies
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
+# Copy project
 COPY . .
 
-# -----------------------------
-# Cesium physical asset migration
-# -----------------------------
+# Pre-populate Cesium assets
 RUN node scripts/copy-assets.cjs
 
-# -----------------------------
-# Production Build
-# -----------------------------
-RUN npm run build
-
-# -----------------------------
-# Runtime safety
-# -----------------------------
 ENTRYPOINT ["dumb-init", "--"]
-
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]

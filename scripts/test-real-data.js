@@ -43,7 +43,7 @@ async function testRender() {
     console.log(`🆔 Order: ${realPropertyData.order_id} / ${realPropertyData.customer_id}\n`);
 
     try {
-        const response = await fetch('http://localhost:3001/api/render', {
+        const response = await fetch('http://127.0.0.1:3000/api/render', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(realPropertyData)

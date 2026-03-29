@@ -1,0 +1,32 @@
+# Dependencies (rebuilt inside image)
+node_modules
+
+# Babel config (not needed in dev mode, causes SWC conflicts)
+babel.config.js
+babel.config.cjs
+
+# Next.js build output (rebuilt inside image)
+.next
+out
+
+# Generated Cesium assets
+public/cesium
+public/snapshots
+
+# Render output / persistent data
+snapshots
+
+# Logs & debug files
+*.log
+logs
+npm-debug.log*
+*.txt
+
+# Docker / git internals
+.git
+.gitignore
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db

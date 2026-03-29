@@ -11,7 +11,7 @@ const fs = require('fs');
 
 const postData = JSON.stringify({
     customer_id: "cust_98765",
-    order_id: "order_12345",
+    order_id: "test",
     centroid: [-116.6662, 48.2647], // [lon, lat]
     centroid_elevation: 645,       // meters
     geometry: {
@@ -23,12 +23,13 @@ const postData = JSON.stringify({
             [-116.6680, 48.2630],
             [-116.6680, 48.2660]
         ]]
-    }
+    },
+    shots: ["nadir"]
 });
 
 const options = {
     hostname: '127.0.0.1',
-    port: 3001,
+    port: 3000,
     path: '/api/render',
     method: 'POST',
     headers: {

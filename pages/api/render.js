@@ -5,6 +5,7 @@ import sharp from 'sharp';
 import { fetchOsmRoads } from '../../lib/osmRoads.js';
 import { computeAcreageLabel } from '../../lib/acreageLabel.js';
 import { composePsd } from '../../lib/psdComposer.js';
+import * as Compositing from '../../lib/cesiumSceneCompositing.js';
 
 export const config = { api: { responseLimit: false } };
 
@@ -42,9 +43,9 @@ async function doRender(req, res) {
         capabilities
     } = req.body;
 
-    let snapshotDir = path.join(process.cwd(), 'tmp', 'snapshots', order_id, customer_id);
+    let snapshotDir = path.join(process.cwd(), 'public', 'snapshots', order_id, customer_id);
     if (order_id === 'test' || req.body.is_test) {
-        snapshotDir = path.join(process.cwd(), 'tmp', 'test');
+        snapshotDir = path.join(process.cwd(), 'tmp', 'test', order_id, customer_id);
     }
 
     // Create base dir to ensure log file writes
@@ -83,17 +84,38 @@ async function doRender(req, res) {
     // ── Puppeteer session ──────────────────────────────────────────
     let browser = null;
     try {
+        let serverReady = false;
+        for (let i = 0; i < 10; i++) {
+            try {
+                const fetchRes = await fetch('http://localhost:3000/render.html');
+                if (fetchRes.ok) {
+                    serverReady = true;
+                    await logToFile('[RENDERER] Next.js server is ready.');
+                    break;
+                }
+            } catch (e) {}
+            await new Promise(r => setTimeout(r, 1000));
+        }
+        if (!serverReady) {
+            throw new Error('Next.js server not ready at http://localhost:3000');
+        }
+
         browser = await puppeteer.launch({
-            headless: true,
+            headless: 'new',
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--enable-unsafe-swiftshader',
+                '--use-gl=angle',
+                '--use-angle=swiftshader',
                 '--ignore-gpu-blocklist'
             ]
         });
 
         const page = await browser.newPage();
+        page.setDefaultNavigationTimeout(60000);
         await page.setViewport({ width: 2048, height: 1536 });
 
         // Per-shot pass buffers
@@ -105,6 +127,11 @@ async function doRender(req, res) {
         // so the scene state is frozen while the screenshot is taken.
         await page.exposeFunction('capturePass', async (shotName, passName) => {
             try {
+                // Wait for the renderComplete flag set by the browser script
+                await page.waitForFunction('window.renderComplete === true', { timeout: 60000 }).catch(e => {
+                    console.warn(`[RENDERER] Timeout waiting for window.renderComplete on ${shotName}/${passName}`);
+                });
+
                 const buffer = await page.screenshot({
                     type: 'png',
                     omitBackground: passName !== 'map' // Only overlay passes need transparency
@@ -120,7 +147,26 @@ async function doRender(req, res) {
                 await fs.writeFile(passPngPath, buffer);
                 outputPaths.push(passPngPath);
 
-                await logToFile(`[RENDERER] Captured pass: ${shotName}/${passName} (${(buffer.length / 1024).toFixed(1)} KB)`);
+                // ── Black-frame detection ──
+                try {
+                    const integrity = await Compositing.validateFrameIntegrity(buffer, sharp);
+                    
+                    if (integrity.isBlack) {
+                        await logToFile(`[RENDERER] ⚠️  BLACK FRAME detected for ${shotName}/${passName}: only ${integrity.nonBlackPct.toFixed(1)}% non-black pixels. Tiles likely failed to load.`);
+                        // Return false to trigger retry in browser for map passes
+                        if (passName === 'map') {
+                            // Don't save the bad pass immediately, but we might if we exhaust retries.
+                            // We return false quickly
+                            return false;
+                        }
+                    } else {
+                        await logToFile(`[RENDERER] ✅ Frame OK for ${shotName}/${passName}: ${integrity.nonBlackPct.toFixed(1)}% non-black pixels`);
+                    }
+                } catch (err) {
+                    await logToFile(`[RENDERER] Error running integrity check: ${err.message}`);
+                }
+
+                await logToFile(`[RENDERER] PASS_CAPTURED_VERIFIED: ${shotName}/${passName} (${(buffer.length / 1024).toFixed(1)} KB)`);
                 return true;
             } catch (err) {
                 await logToFile(`[RENDERER] Pass capture error: ${err.message}`);
@@ -187,14 +233,17 @@ async function doRender(req, res) {
         });
 
         // Forward browser console to server logs
-        page.on('console', async (msg) => {
-            const text = msg.text();
-            if (!text.startsWith('[BROWSER]')) return;
-            await logToFile(text); // Standalone already includes [BROWSER] prefix
-        });
+        page.on('console', msg => console.log('BROWSER:', msg.text()));
 
         console.log(`[API] Navigating Puppeteer to: ${targetUrl}`);
         await page.goto(targetUrl, { waitUntil: 'load', timeout: 60000 });
+
+        // Visual Proof Debugging
+        await new Promise(r => setTimeout(r, 10000));
+        const debugDir = path.join(process.cwd(), 'data');
+        await fs.mkdir(debugDir, { recursive: true }).catch(() => {});
+        await page.screenshot({ path: path.join(debugDir, 'debug_screenshot.png') });
+        console.log('[API] Debug screenshot saved to data/debug_screenshot.png');
 
         // Wait for MISSION_COMPLETE or MISSION_ERROR
         await new Promise((resolve, reject) => {
