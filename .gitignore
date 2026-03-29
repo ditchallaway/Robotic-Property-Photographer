@@ -8,5 +8,10 @@ public/cesium/
 public/test-results/
 test-results/
 styles/*.code-workspace
+public/test-results/
+test-results/
+styles/*.code-workspace
 tmp/
 *.log
+.agents/
+data/debug_screenshot.png
