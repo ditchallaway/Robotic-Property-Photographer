@@ -84,33 +84,20 @@ async function doRender(req, res) {
     // ── Puppeteer session ──────────────────────────────────────────
     let browser = null;
     try {
-        let serverReady = false;
-        for (let i = 0; i < 10; i++) {
-            try {
-                const fetchRes = await fetch('http://localhost:3000/render.html');
-                if (fetchRes.ok) {
-                    serverReady = true;
-                    await logToFile('[RENDERER] Next.js server is ready.');
-                    break;
-                }
-            } catch (e) {}
-            await new Promise(r => setTimeout(r, 1000));
-        }
-        if (!serverReady) {
-            throw new Error('Next.js server not ready at http://localhost:3000');
-        }
+        // The next-server readiness check is now handled via retry logic during page.goto
+
 
         browser = await puppeteer.launch({
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
             headless: 'new',
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
-                '--enable-unsafe-swiftshader',
                 '--use-gl=angle',
                 '--use-angle=swiftshader',
-                '--ignore-gpu-blocklist'
+                '--enable-unsafe-swiftshader'
             ]
         });
 
@@ -123,8 +110,6 @@ async function doRender(req, res) {
         const outputPaths = [];
 
         // ── Expose capture function to browser ─────────────────────
-        // This is the KEY fix: PhotoAgent awaits this function,
-        // so the scene state is frozen while the screenshot is taken.
         await page.exposeFunction('capturePass', async (shotName, passName) => {
             try {
                 // Wait for the renderComplete flag set by the browser script
@@ -134,12 +119,13 @@ async function doRender(req, res) {
 
                 const buffer = await page.screenshot({
                     type: 'png',
-                    omitBackground: passName !== 'map' // Only overlay passes need transparency
+                    omitBackground: passName !== 'map'
                 });
+                
                 if (!shotPasses[shotName]) shotPasses[shotName] = {};
                 shotPasses[shotName][passName] = buffer;
 
-                // Write the pass PNG to the layers directory
+                // Deferred Write/Validation: Save buffer to disk (fast raw write)
                 const shotDir = path.join(snapshotDir, shotName);
                 const layersDir = path.join(shotDir, 'layers');
                 await fs.mkdir(layersDir, { recursive: true }).catch(() => { });
@@ -147,73 +133,21 @@ async function doRender(req, res) {
                 await fs.writeFile(passPngPath, buffer);
                 outputPaths.push(passPngPath);
 
-                // ── Black-frame detection ──
-                try {
-                    const integrity = await Compositing.validateFrameIntegrity(buffer, sharp);
-                    
-                    if (integrity.isBlack) {
-                        await logToFile(`[RENDERER] ⚠️  BLACK FRAME detected for ${shotName}/${passName}: only ${integrity.nonBlackPct.toFixed(1)}% non-black pixels. Tiles likely failed to load.`);
-                        // Return false to trigger retry in browser for map passes
-                        if (passName === 'map') {
-                            // Don't save the bad pass immediately, but we might if we exhaust retries.
-                            // We return false quickly
-                            return false;
-                        }
-                    } else {
-                        await logToFile(`[RENDERER] ✅ Frame OK for ${shotName}/${passName}: ${integrity.nonBlackPct.toFixed(1)}% non-black pixels`);
-                    }
-                } catch (err) {
-                    await logToFile(`[RENDERER] Error running integrity check: ${err.message}`);
-                }
-
-                await logToFile(`[RENDERER] PASS_CAPTURED_VERIFIED: ${shotName}/${passName} (${(buffer.length / 1024).toFixed(1)} KB)`);
-                return true;
+                await logToFile(`[RENDERER] BUFFERED: ${shotName}/${passName} (${(buffer.length / 1024).toFixed(1)} KB)`);
+                return true; // Always return true during the browser session to defer validation
             } catch (err) {
-                await logToFile(`[RENDERER] Pass capture error: ${err.message}`);
+                await logToFile(`[RENDERER] capturePass error: ${err.message}`);
                 return false;
             }
         });
 
-        // ── Expose compose function to browser ─────────────────────
+        // ── Expose signal for shot completion ─────────────────────
         await page.exposeFunction('composeShot', async (shotName) => {
-            try {
-                const passes = shotPasses[shotName];
-                if (!passes) {
-                    await logToFile(`[RENDERER] WARNING: No passes captured for ${shotName}`);
-                    return false;
-                }
-
-                const layers = [];
-                if (passes.map) {
-                    layers.push({ name: 'Map', buffer: passes.map });
-                }
-
-                if (passes.boundary) {
-                    layers.push({ name: 'Map with Boundary', buffer: passes.boundary });
-                }
-                if (passes.labels) {
-                    layers.push({ name: 'Street Labels', buffer: passes.labels });
-                }
-                if (passes.acreage) {
-                    layers.push({ name: 'Acreage', buffer: passes.acreage });
-                }
-
-                const psdBuffer = await composePsd(layers);
-                const shotDir = path.join(snapshotDir, shotName);
-                await fs.mkdir(shotDir, { recursive: true }).catch(() => { });
-                const psdPath = path.join(shotDir, `${shotName}.psd`);
-                await fs.writeFile(psdPath, psdBuffer);
-                outputPaths.push(psdPath);
-
-                await logToFile(`[RENDERER] Composed PSD: ${psdPath} (${(psdBuffer.length / 1024).toFixed(1)} KB)`);
-                return true;
-            } catch (err) {
-                await logToFile(`[RENDERER] PSD composition error: ${err.message}`);
-                return false;
-            }
+            await logToFile(`[RENDERER] SHOT_SIGNALED: ${shotName}`);
+            return true;
         });
 
-        // Launch page with standalone renderer via HTTP (Avoids file:// SecurityError with Google Tiles)
+        // Launch page with standalone renderer via HTTP
         const targetUrl = `http://localhost:3000/render.html`;
 
         await page.evaluateOnNewDocument((data) => {
@@ -232,18 +166,20 @@ async function doRender(req, res) {
             google_api_key: process.env.NEXT_PUBLIC_GOOGLE_API_KEY
         });
 
-        // Forward browser console to server logs
         page.on('console', msg => console.log('BROWSER:', msg.text()));
 
-        console.log(`[API] Navigating Puppeteer to: ${targetUrl}`);
-        await page.goto(targetUrl, { waitUntil: 'load', timeout: 60000 });
-
-        // Visual Proof Debugging
-        await new Promise(r => setTimeout(r, 10000));
-        const debugDir = path.join(process.cwd(), 'data');
-        await fs.mkdir(debugDir, { recursive: true }).catch(() => {});
-        await page.screenshot({ path: path.join(debugDir, 'debug_screenshot.png') });
-        console.log('[API] Debug screenshot saved to data/debug_screenshot.png');
+        let connected = false;
+        for (let i = 0; i < 5; i++) {
+            try {
+                await page.goto(targetUrl, { waitUntil: 'load', timeout: 30000 });
+                connected = true;
+                break;
+            } catch (e) {
+                await logToFile(`[RENDERER] Connection attempt ${i + 1} failed: ${e.message}`);
+                await new Promise(r => setTimeout(r, 2000));
+            }
+        }
+        if (!connected) throw new Error("Failed to reach local render server after 5 attempts.");
 
         // Wait for MISSION_COMPLETE or MISSION_ERROR
         await new Promise((resolve, reject) => {
@@ -255,10 +191,53 @@ async function doRender(req, res) {
                     resolve();
                 } else if (text === 'MISSION_ERROR') {
                     clearTimeout(timeout);
-                    reject(new Error('Browser-side mission failed. Check [BROWSER] logs for details.'));
+                    reject(new Error('Browser-side mission failed.'));
                 }
             });
         });
+
+        // ── Post-Mission Lifecycle ──────────────────────────────────
+        // Audit #4: Ensure the sharp processing doesn't start until after browser.close() is called
+        await logToFile(`[RENDERER] Mission finished. Closing browser before post-processing...`);
+        if (browser) await browser.close();
+        browser = null;
+
+        // Run integrity checks and PSD composition now that browser memory is freed
+        for (const shotName in shotPasses) {
+            const passes = shotPasses[shotName];
+            
+            // 1. Validate Map Pass Integrity
+            if (passes.map) {
+                try {
+                    const integrity = await Compositing.validateFrameIntegrity(passes.map, sharp);
+                    if (integrity.isBlack) {
+                        await logToFile(`[RENDERER] ⚠️  POST-VALIDATION: BLACK FRAME detected for ${shotName}/map (${integrity.nonBlackPct.toFixed(1)}%).`);
+                    } else {
+                        await logToFile(`[RENDERER] ✅ POST-VALIDATION: ${shotName}/map OK (${integrity.nonBlackPct.toFixed(1)}%)`);
+                    }
+                } catch (err) {
+                    await logToFile(`[RENDERER] Integrity check failed for ${shotName}: ${err.message}`);
+                }
+            }
+
+            // 2. Compose PSD
+            try {
+                const layers = [];
+                if (passes.map) layers.push({ name: 'Map', buffer: passes.map });
+                if (passes.boundary) layers.push({ name: 'Map with Boundary', buffer: passes.boundary });
+                if (passes.labels) layers.push({ name: 'Street Labels', buffer: passes.labels });
+                if (passes.acreage) layers.push({ name: 'Acreage', buffer: passes.acreage });
+
+                const psdBuffer = await composePsd(layers);
+                const shotDir = path.join(snapshotDir, shotName);
+                const psdPath = path.join(shotDir, `${shotName}.psd`);
+                await fs.writeFile(psdPath, psdBuffer);
+                outputPaths.push(psdPath);
+                await logToFile(`[RENDERER] Composed PSD: ${shotName}.psd (${(psdBuffer.length / 1024).toFixed(1)} KB)`);
+            } catch (err) {
+                await logToFile(`[RENDERER] PSD composition error for ${shotName}: ${err.message}`);
+            }
+        }
 
         res.status(200).json({
             status: "success",

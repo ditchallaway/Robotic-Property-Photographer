@@ -24,12 +24,11 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     ca-certificates \
     dumb-init \
+    libvulkan1 \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Puppeteer config
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+# Puppeteer config (No skip - ensure version match)
 ENV NODE_ENV=development
 ENV CHROME_DISABLE_GPU_SANDBOX=1
 ENV NODE_OPTIONS="--max-old-space-size=1024"

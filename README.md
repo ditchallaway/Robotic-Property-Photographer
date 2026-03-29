@@ -4,19 +4,44 @@ A headless rendering microservice built on Next.js and CesiumJS, designed to gen
 
 ## **1\. System Overview**
 
-**Goal:** Render deterministic aerial property images with layered PSD output using CesiumJS.
 
-**High-level flow**
+## 2. README.md
+The system overview and output contract for the drone-scale engine.
 
-1. n8n sends JSON payload (centroid + elevation + GeoJSON + acreage)
-2. Renderer fetches road geometry from OSM Overpass API (`way[highway]`)
-3. Renderer computes acreage label placement via Turf.js
-4. Renderer boots Cesium in headless Chromium
-5. For each shot, 4 passes are captured: Map, Boundary, Street Labels, Acreage
-6. Overlay passes use a magenta chroma-key tile, which is removed server-side
-7. All passes are composed into a layered PSD file via ag-psd
-8. PSD + preview PNG files are written to disk
-9. Renderer returns asset references to n8n
+System Goal: Render 5 deterministic aerial property images (4 cardinal oblique + 1 nadir overhead) with consistent yellow boundary styling.
+
+Architecture Pillars:
+
+Yellow Boundary: All shots must use a yellow property polyline (width: 3) with clampToGround: true to follow terrain contours.
+
+Deterministic Shot List:
+
+North: Heading 0°, Pitch -24°.
+
+East: Heading 90°, Pitch -24°.
+
+South: Heading 180°, Pitch -24°.
+
+West: Heading 270°, Pitch -24°.
+
+Nadir: Heading 0°, Pitch -90°.
+
+Output Contract:
+
+JSON
+
+{
+    "status": "success",
+    "order_id": "order_12345",
+    "images": [
+        "/snapshots/north.png",
+        "/snapshots/east.png",
+        "/snapshots/south.png",
+        "/snapshots/west.png",
+        "/snapshots/nadir.png"
+    ]
+}
+---
 
 Renderer is **stateless** and **geometry-agnostic**.
 
@@ -47,8 +72,7 @@ Deterministic camera sequence triggered via `/api/render`.
 * `0°` \= faces North  
 * `90°` \= faces East  
 * `180°` \= faces South
-
-* #### `270°` \= faces West   **Oblique Views**
+* `270°` \= faces West   **Oblique Views**
 
 * **North-facing view**: Heading `0°`, Pitch `-24°`  
 * **East-facing view**: Heading `90°`, Pitch `-24°`  
@@ -66,26 +90,11 @@ Deterministic camera sequence triggered via `/api/render`.
 * **Why**: Clamping ensures lines follow 3D terrain perfectly and prevents lines from "burying" into hills or "floating" over valleys.
 
 
-**Pillar 4: Multi-Pass PSD Compositing**
-For each shot, the renderer captures 4 separate passes and composes them into a layered PSD file:
-
-| Pass | Imagery | Entities | Result |
-|------|---------|----------|--------|
-| Map | Satellite tiles | None | Opaque base layer |
-| Boundary | Chroma magenta | Yellow polyline | Transparent overlay |
-| Labels | Chroma magenta | Cesium LabelCollection | Transparent overlay |
-| Acreage | Chroma magenta | Turf-positioned text | Transparent overlay |
-
-* **Chroma-key:** 1×1 magenta tile via `SingleTileImageryProvider`, removed by `sharp` post-capture.
-* **Composition:** `ag-psd` stacks passes as named layers in a `.psd` file.
-* **Preview:** A flat `.png` of the map pass is saved alongside for quick reference.
-
-## **🔌 API Interface (POST /api/render)**
 
 **Config Requirements:**
 
 * **Resolution**: 2048 x 1536 px (4:3 aspect ratio).  
-* **Source**: Google API Direct (via .env) with no Cesium ion middleman.
+* **Source**: Google API key (via .env or .env.local) with no Cesium ion middleman.
 
 **Input JSON:**
 
@@ -102,21 +111,6 @@ JSON
 
 Renderer performs **no** terrain sampling or centroid computation.
 
-## **3\. Renderer Responsibilities**
-
-The renderer functions as a stateless worker.  
-Renderer does:
-
-* Accept HTTP POST JSON  
-* Initialize Cesium Viewer  
-* Convert GeoJSON → Cesium entities  
-* Apply material styling  
-* Solve camera positions  
-* Capture PNG frames  
-* Fetch road data from OSM Overpass (`way[highway]`)
-* Compute acreage label anchor via Turf.js
-* Execute multi-pass capture (map, boundary, labels, acreage) per shot
-* Chroma-key overlay passes and compose into layered PSD via ag-psd
 
 Renderer does **not**:
 
@@ -144,11 +138,6 @@ Tileset:
 
 ---
 
-## **5\. Boundary Rendering**
-
-### **5.1 Geometry Conversion**
-
-* Extract outer ring only  
 * **Do not set heights manually**  
 * Geometry must be clamped to terrain
 
@@ -286,11 +275,16 @@ npm run test:api
 
 ## **🤖 The "Director" (Renderer) Workflow**
 
-The renderer follows this stateless cycle for every job to prevent common headless failures:
+Instant Framing: Use viewer.camera.flyToBoundingSphere() with duration: 0.
 
-1. **Initialize**: Boot with preserveDrawingBuffer: true and 2048 x 1536 viewport.  
-2. **Ingest**: Load GeoJSON, create Bounding Sphere, and apply clampToGround.  
-3. **Position**: Loop through Headings (0, 90, 180, 270\) at **\-24° pitch**.  
+Logic: This calculates the "fit-to-frame" distance for the property size (from 1 to 1,000+ acres) and teleports the camera instantly without animation frames.
+
+The "Director" Workflow:
+
+1. **Initialize**: Boot Chromium with preserveDrawingBuffer: true.
+
+2. **Ingest**: Load GeoJSON and create the Bounding Sphere.
+3. **Position**: Loop through the 5 shots (4 Cardinal + 1 Nadir), snapping the camera instantly to each view.  
 4. **Refine**: Set viewer.scene.globe.maximumScreenSpaceError \= 1.0 to force maximum high-res detail.  
 5. **Validate**: Wait until viewer.scene.globe.tilesLoaded \=== true before capture.  
 6. **Capture**: Execute canvas.toDataURL() and write to local /app/public/snapshots/ path.

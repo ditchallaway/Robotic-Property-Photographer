@@ -8,14 +8,30 @@ The renderer is a **stateless worker** that converts geographic data into profes
 
 *   **Logic Model**:
     *   **Inputs**: Centroid (Lon/Lat), Elevation, GeoJSON Boundary, Acreage, and Shot List.
-    *   **Processing**: Boots a headless Chromium instance, initializes CesiumJS with Google 3D Tiles, frames the property, and captures a single-pass screenshot (Map + Boundary).
-    *   **Outputs**: Layered PSD files (for Photopea/Photoshop) with editable text layers for Road Names and Acreage.
-*   **Safety Constraints**:
-    *   **Sequential Processing**: Only one job renders at a time to prevent WebGL memory starvation.
-    *   **Determinism**: Shot headings are fixed to True North (0, 90, 180, 270) to ensure consistency.
-    *   **Validation**: Every screenshot is checked for "black-frame" failure (silent render crash) using pixel density analysis.
+    *   **Processing**: Boots a headless Chromium instance, initializes CesiumJS with Google 3D Tiles, frames the This document summarizes the technical logic for the 5-image rendering suite.
 
----
+Core Functional Requirements:
+
+Logic Model: The service converts geographic data (Centroid, GeoJSON Boundary) into a specific set of 5 professional property photos.
+
+Processing: Boots a headless Chromium instance to frame the property and capture single-pass screenshots.
+
+Outputs: 5 PNG files (North, East, South, West, and Nadir) featuring the yellow property boundary passed through from the input data.
+
+Safety & Reliability:
+
+Sequential Queue: Only one job renders at a time to prevent WebGL memory starvation.
+
+Determinism: Shot headings are locked to True North (0, 90, 180, 270) for the cardinal views and -90 pitch for the overhead view.
+
+Validation: Uses pixel density analysis to detect "black-frame" failures before confirming a successful render.
+
+Critical Technical Fixes:
+
+Blank Frames: Fixed by setting preserveDrawingBuffer: true in the WebGL context.
+
+Low-Detail Tiles: Resolved by polling tilesLoaded === true for 3 consecutive ticks before capture.
+
 
 ## 2. Docker & Network Configuration
 

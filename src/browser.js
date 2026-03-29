@@ -5,16 +5,16 @@ let browserPromise;
 export function getBrowser() {
     if (!browserPromise) {
         browserPromise = puppeteer.launch({
-            executablePath: "/usr/bin/chromium",
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
             headless: "new",
             args: [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
-                "--enable-unsafe-swiftshader",
                 "--use-gl=angle",
-                "--use-angle=swiftshader"
+                "--use-angle=swiftshader",
+                "--enable-unsafe-swiftshader"
             ]
         });
     }

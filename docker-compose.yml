@@ -3,6 +3,7 @@ services:
     build: .
     # CRITICAL: Offloads Chromium's shared memory to prevent "Aw Snap" crashes
     shm_size: '2gb'
+    mem_limit: '2gb'
     ports:
       - "3000:3000"
     volumes:

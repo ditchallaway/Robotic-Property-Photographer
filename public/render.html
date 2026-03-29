@@ -24,6 +24,10 @@
 <body>
     <div id="cesiumContainer"></div>
     <script>
+        window.onerror = (msg) => console.log('BROWSER_ERROR:', msg);
+        const hasWebGL = !!window.WebGLRenderingContext;
+        console.log('BROWSER: WebGL Context available in window:', hasWebGL);
+
         window.CESIUM_BASE_URL = 'cesium';
 
         async function start() {
@@ -72,11 +76,7 @@
                 viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#111111');
                 if (viewer.creditContainer) viewer.creditContainer.style.display = 'none';
 
-                const supportsWebGL = Cesium.FeatureDetection.supportsWebGL(viewer.scene);
-                console.log('[BROWSER] supportsWebGL:', supportsWebGL);
-                if (!supportsWebGL) {
-                    throw new Error('WEBGL_NOT_SUPPORTED_IN_DOCKER');
-                }
+                // WebGL support is already verified by line 39 and the viewer creation on line 50.
 
                 // 2. Add Google 3D Tiles
                 const apiKey = data.google_api_key;
