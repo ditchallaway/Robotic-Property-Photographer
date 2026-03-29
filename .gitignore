@@ -10,5 +10,3 @@ test-results/
 styles/*.code-workspace
 tmp/
 *.log
-.agents/
-data/debug_screenshot.png
