@@ -91,7 +91,7 @@
 | Cloudflare R2 | `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` | PSD upload for remote access |
 | ntfy.sh | `NTFY_TOPIC`, `NTFY_URL` | Push notification when shots are ready |
 | Photopea | `PHOTOPEA_URL` | Self-hosted PSD editor (default: `app.brokertricks.com`) |
-| Google Maps | `NEXT_PUBLIC_GOOGLE_API_KEY` | 3D tiles + static map reference |
+| Google Maps | `GOOGLE_API_KEY` | 3D tiles + static map reference |
 
 All services gracefully no-op when not configured.
 

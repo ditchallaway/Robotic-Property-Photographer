@@ -7,7 +7,7 @@
 ---
 
 ## ✅ Phase 1 — Rendering Foundation
-- [x] Next.js app scaffolded in Docker (`moonshot` container)
+- [x] HTTP server scaffolded in Docker (`moonshot` container) using Node.js built-in `http` module (`src/server.js`)
 - [x] **High-Performance Standalone Renderer**: Bypassed React hydration for Puppeteer using `public/render.html`.
 - [x] CesiumJS integrated with headless Chromium via Puppeteer
 - [x] Viewer initialized with `preserveDrawingBuffer: true`
@@ -181,7 +181,7 @@ docker compose exec moonshot node tests/nadir.js
 | Layer | Technology |
 |-------|-----------|
 | Rendering engine | CesiumJS (headless, via Puppeteer) |
-| Web framework | Next.js |
+| Web framework | Node.js HTTP (`src/server.js`) |
 | Container | Docker / Docker Compose |
 | 3D tiles | Google Photorealistic 3D Tiles |
 | Terrain | CesiumWorldTerrain |

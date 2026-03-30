@@ -1,6 +1,6 @@
 # Robotic Property Photographer 🚀
 
-A headless rendering microservice built on Next.js and CesiumJS, designed to generate deterministic 3D property imagery via API for n8n-driven workflows.
+A headless rendering microservice built on Node.js and CesiumJS, designed to generate deterministic 3D property imagery via API for n8n-driven workflows.
 
 ---
 
@@ -188,7 +188,7 @@ Snapshots folder must be mounted: `./snapshots:/app/public/snapshots`
 ## 6. Local Development
 
 **Check Map Tile Key:**
-Verify `NEXT_PUBLIC_GOOGLE_API_KEY` in `.env`. 403 errors → IP restriction.
+Verify `GOOGLE_API_KEY` in `.env`. 403 errors → IP restriction.
 
 **Run inside Docker container (moonshot):**
 ```bash

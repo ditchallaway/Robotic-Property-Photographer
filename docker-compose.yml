@@ -1,7 +1,9 @@
 services:
-  renderer:
+  moonshot:
     build: .
     shm_size: '2gb'
+    ports:
+      - "3000:3000"
     volumes:
       - .:/app
       - /app/node_modules
@@ -11,4 +13,4 @@ services:
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
       - CESIUM_ION_TOKEN=${CESIUM_ION_TOKEN}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-    command: ["node", "bin/render.js"]
+    command: ["node", "src/server.js"]

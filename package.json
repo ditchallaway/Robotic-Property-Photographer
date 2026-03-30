@@ -6,9 +6,10 @@
     "render": "./bin/render.js"
   },
   "scripts": {
+    "start": "node src/server.js",
     "render": "node bin/render.js",
     "test": "node test-gl.js",
-    "clean": "rm -rf .next node_modules package-lock.json"
+    "clean": "rm -rf node_modules package-lock.json"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1004.0",

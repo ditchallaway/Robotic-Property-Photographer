@@ -43,11 +43,10 @@ services:
   moonshot:
     build: .
     shm_size: '2gb' # CRITICAL: Prevents Chromium "Aw Snap" during 4K texture operations
-    ports: ["3001:3000"]
+    ports: ["3000:3000"]
     volumes:
       - .:/app
       - /app/node_modules # Protect internal build artifacts
-      - /app/.next
       - /app/public/cesium
 ```
 
