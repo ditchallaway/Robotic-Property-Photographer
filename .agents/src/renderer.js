@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const fs = require('fs');
 const path = require('path');
 
@@ -88,6 +88,7 @@ async function launchBrowser() {
     ];
 
     const browser = await puppeteer.launch({
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
         headless: 'new',
         args,
         defaultViewport: null,
@@ -118,7 +119,7 @@ async function renderPropertyPhoto(job) {
         const page = await browser.newPage();
 
         // Set viewport for consistent output
-        await page.setViewport({ width: 1920, height: 1080 });
+        await page.setViewport({ width: 2048, height: 1536 });
 
         // Inject Cesium initialization script
         await page.goto('about:blank');
@@ -191,8 +192,8 @@ async function renderPropertyPhoto(job) {
         return {
             pngBuffer,
             metadata: {
-                width: 1920,
-                height: 1080,
+                width: 2048,
+                height: 1536,
                 centroid,
                 elevation,
                 acreage,

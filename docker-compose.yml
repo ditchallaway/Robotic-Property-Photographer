@@ -1,31 +1,14 @@
 services:
-  moonshot:
+  renderer:
     build: .
     shm_size: '2gb'
-    ports:
-      - "3001:3000"
     volumes:
-      # 1. Sync your code (The "Bind Mount")
       - .:/app
-
-      # 2. PROTECT THE GENERATED ASSETS (The "Anonymous Volumes")
-      # These lines tell Docker: "Keep using the internal version of these folders
-      # that we created during the 'Build' step, don't use my computer's version."
       - /app/node_modules
-      - /app/.next
       - /app/public/cesium
-
-      # 3. Persistent data
-      - ./public/snapshots:/app/public/snapshots
+      - ./output:/app/output
     environment:
-      - WATCHPACK_POLLING=true
-      - NODE_ENV=production
-      - NEXT_PUBLIC_GOOGLE_API_KEY=${NEXT_PUBLIC_GOOGLE_API_KEY:-}
-      - R2_ENDPOINT=${R2_ENDPOINT:-}
-      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID:-}
-      - R2_SECRET_KEY=${R2_SECRET_KEY:-}
-      - R2_BUCKET=${R2_BUCKET:-}
-      - R2_PUBLIC_URL=${R2_PUBLIC_URL:-}
-      - NTFY_TOPIC=${NTFY_TOPIC:-}
-      - NTFY_URL=${NTFY_URL:-}
-      - PHOTOPEA_URL=${PHOTOPEA_URL:-https://app.brokertricks.com}
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - CESIUM_ION_TOKEN=${CESIUM_ION_TOKEN}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    command: ["node", "bin/render.js"]

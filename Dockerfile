@@ -1,11 +1,8 @@
 FROM node:20-bookworm-slim
 
-# -----------------------------
-# System dependencies (Chromium + WebGL)
-# -----------------------------
+# Install system dependencies (Chromium + WebGL)
 RUN apt-get update && apt-get install -y \
     chromium \
-    chromium-driver \
     fonts-liberation \
     libasound2 \
     libatk-bridge2.0-0 \
@@ -28,39 +25,24 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# -----------------------------
-# Puppeteer hard guarantees
-# -----------------------------
+# Set Chrome path for Puppeteer & WebGL settings
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV NODE_ENV=production
-
-# Prevent shared memory crashes
 ENV CHROME_DISABLE_GPU_SANDBOX=1
 
 WORKDIR /app
 
-# -----------------------------
-# Node deps
-# -----------------------------
-COPY package.json package-lock.json* ./
-RUN npm install
+# Install dependencies
+COPY package*.json ./
+RUN npm ci --prefer-offline
 
+# Copy application source
 COPY . .
 
-# -----------------------------
-# Cesium physical asset migration
-# -----------------------------
+# Run assets management (Cesium workers/assets)
 RUN node scripts/copy-assets.cjs
 
-# -----------------------------
-# Production Build
-# -----------------------------
-RUN npm run build
-
-# -----------------------------
-# Runtime safety
-# -----------------------------
+# CLI entry point via tini for process stability
 ENTRYPOINT ["/usr/bin/tini", "--"]
-
-CMD ["npm", "start"]
+CMD ["node", "bin/render.js"]
