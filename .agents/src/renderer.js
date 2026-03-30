@@ -43,7 +43,7 @@ async function detectBlackFrame(pngBuffer, threshold = 0.95) {
  * Precision tile-loading settle
  * Ensures Cesium globe + tileset are fully loaded before capture
  */
-async function waitForTiles(viewer, tileset, timeoutMs = 120000) {
+async function waitForTiles(viewer, tileset, timeoutMs = 240000) {
     return new Promise((resolve, reject) => {
         let stable = 0;
         const timer = setInterval(() => {
@@ -91,7 +91,7 @@ async function launchBrowser() {
         headless: 'new',
         args,
         defaultViewport: null,
-        timeout: 30000
+        timeout: 60000
     });
 
     return browser;
@@ -131,7 +131,7 @@ async function renderPropertyPhoto(job) {
         await page.setContent(htmlContent, { waitUntil: 'networkidle2' });
 
         // Wait for viewer to initialize
-        await page.waitForFunction(() => window.viewer !== undefined, { timeout: 30000 });
+        await page.waitForFunction(() => window.viewer !== undefined, { timeout: 60000 });
         console.log('[Renderer] Viewer initialized');
 
         // Get viewer & tileset references
@@ -167,7 +167,7 @@ async function renderPropertyPhoto(job) {
                 setTimeout(() => {
                     clearInterval(timer);
                     reject(new Error('Tile loading timeout'));
-                }, 120000);
+                }, 240000);
             });
         });
 
