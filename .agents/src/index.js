@@ -61,6 +61,21 @@ app.post('/render', async (req, res) => {
             });
         }
 
+        const { writeOutput, getTimestampedPath } = require('../../lib/outputWriter');
+        
+        let fileResults = {};
+        if (job.is_test) {
+            const shotName = (job.shots && job.shots[0]) || 'render';
+            let outputPath = path.join(process.cwd(), 'test-results', `${shotName}.png`);
+            outputPath = getTimestampedPath(outputPath);
+            
+            await writeOutput(result.pngBuffer, result.metadata, outputPath);
+            fileResults = {
+                png_path: outputPath,
+                psd_path: outputPath.replace('.png', '.psd') // Mocking for now
+            };
+        }
+
         // Generate PSD metadata
         const psdMeta = exportToPholopea(result.pngBuffer, {
             acreage: job.acreage || 0,
@@ -74,7 +89,8 @@ app.post('/render', async (req, res) => {
             success: true,
             png: result.pngBuffer.toString('base64'),
             psd: psdMeta,
-            metadata: result.metadata
+            metadata: result.metadata,
+            ...fileResults
         });
 
     } catch (err) {

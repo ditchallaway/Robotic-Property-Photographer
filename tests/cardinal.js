@@ -47,10 +47,8 @@ async function run() {
         const result = await response.json();
         console.log("✅ Render complete!");
 
-        // Validate response schema
-        if (!result.shots?.cardinal) throw new Error("Missing 'cardinal' in shot results");
-
-        const bgPath = path.join(process.cwd(), 'test-results', 'cardinal_layers', 'cardinal_background.png');
+        const bgPath = result.png_path;
+        if (!bgPath) throw new Error("Missing 'png_path' in response");
 
         console.log(`📄 Checking output at: ${bgPath}`);
 

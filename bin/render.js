@@ -4,7 +4,6 @@ const fs = require('fs');
 const path = require('path');
 const { renderPropertyPhoto } = require('../.agents/src/renderer');
 const { normalizeJob } = require('../lib/jobParser');
-const { writeOutput } = require('../lib/outputWriter');
 
 /**
  * Robotic Property Photographer CLI
@@ -59,15 +58,22 @@ async function main() {
             process.exit(1);
         }
 
+        const { writeOutput, getTimestampedPath } = require('../lib/outputWriter');
         const normalizedJob = normalizeJob(jobRaw);
+        
+        let finalPath = outputPath;
+        if ((args.includes('--timestamp') || jobRaw.is_test) && finalPath !== '-') {
+            finalPath = getTimestampedPath(finalPath);
+        }
+
         console.log(`[CLI] Initializing renderer...`);
 
         const result = await renderPropertyPhoto(normalizedJob);
         
-        await writeOutput(result.pngBuffer, result.metadata, outputPath);
+        await writeOutput(result.pngBuffer, result.metadata, finalPath);
 
-        if (outputPath !== '-') {
-            console.log(`[CLI] Successfully rendered to ${outputPath}`);
+        if (finalPath !== '-') {
+            console.log(`[CLI] Successfully rendered to ${finalPath}`);
         }
         
         process.exit(0);
