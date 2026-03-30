@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 
 async function test(glArg, angleArg) {
     const args = [
@@ -13,7 +13,7 @@ async function test(glArg, angleArg) {
     console.log(`Testing args: ${glArg || 'default'}, ${angleArg || 'default'}`);
 
     try {
-        const browser = await puppeteer.launch({ args });
+        const browser = await puppeteer.launch({ executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined, args });
         const page = await browser.newPage();
         const webglInfo = await page.evaluate(() => {
             const canvas = document.createElement('canvas');
