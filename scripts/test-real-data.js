@@ -12,13 +12,16 @@ import path from 'path';
 // Native fetch is available in Node.js 18+
 // If running on older Node, install node-fetch manually
 // Real property data from n8n (actual payload structure)
+// This payload uses the flat lat/lon + acres format produced by the upstream workflow.
 const realPropertyData = {
-    "ap parcel number": "RP58N01W327600A",
-    "owner": "",
-    "centroid": [-116.4869477327835, 48.33225928561425],
+    "acres": "6.5",
+    "owner": "KISTING, WARREN V & MARIA T",
+    "elevation": 655,
     "lat": "48.332259",
     "lon": "-116.486948",
-    "ll_gisacre": 6.1944,
+    "county": "Bonner County",
+    "customer_id": "cust_12345",
+    "order_id": "order_12345",
     "geometry": {
         "type": "Polygon",
         "coordinates": [[
@@ -31,11 +34,7 @@ const realPropertyData = {
             [-116.4868255, 48.3317135]
         ]]
     },
-    "county": "Bonner County",
-    "elevation": 655,
-    "customer_id": "cust_12345",
-    "order_id": "order_12345",
-    "centroid_elevation": 655,
+    "srcmap": "https://maps.googleapis.com/maps/api/staticmap?size=1200x1200&scale=2&maptype=satellite&path=color:0xffff00ff|weight:4|48.3317135,-116.4868255|48.3317135,-116.4855530|48.3328070,-116.4855585|48.3328055,-116.4883350|48.3320940,-116.4883410|48.3317135,-116.4883485|48.3317135,-116.4868255&key=AIzaSyBH98WxAx5gUHvvKSwhoKpyfQQiBS5dUJ0",
     is_test: true,
     shots: ['nadir', 'cardinal'],
     // Street labels are now fetched from OSM server-side (no longer passed in payload)
@@ -44,7 +43,7 @@ const realPropertyData = {
 async function testRender() {
     console.log('🚀 Testing photographer with real property data...');
     console.log(`📍 Location: ${realPropertyData.county}`);
-    console.log(`📐 Acreage: ${realPropertyData.ll_gisacre} acres`);
+    console.log(`📐 Acreage: ${realPropertyData.acres} acres`);
     console.log(`🆔 Order: ${realPropertyData.order_id} / ${realPropertyData.customer_id}\n`);
 
     try {
