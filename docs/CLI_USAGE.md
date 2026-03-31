@@ -1,6 +1,8 @@
-# Rendering API
+# Rendering CLI
 
 ## Usage
+
+The CLI tool accepts a job JSON and generates **exactly 5 PNG images** (North, East, South, West, and Nadir).
 
 ### Via stdin:
 ```bash
@@ -9,26 +11,28 @@ cat job.json | node bin/render.js
 
 ### Via file argument:
 ```bash
-node bin/render.js ./job.json --output ./output/photo.png
+node bin/render.js ./job.json --output ./results/
 ```
 
 ### Via Docker:
 ```bash
 docker run --rm \
-  -e CESIUM_ION_TOKEN=$TOKEN \
   -e GOOGLE_API_KEY=$KEY \
-  -v $(pwd)/output:/app/output \
+  -v $(pwd)/results:/app/results \
   renderer:latest \
-  node bin/render.js ./job.json --output /app/output/photo.png
+  node bin/render.js ./job.json --output /app/results/
 ```
 
 ## Job Schema
 ```json
 {
-  "centroid": { "lon": -120.5, "lat": 45.5 },
-  "elevation": 850,
-  "boundary": [[lon1, lat1], [lon2, lat2], ...],
-  "acreage": "5.00 ACRES",
-  "shotList": [...]
+  "customer_id": "cust_123",
+  "order_id": "order_456",
+  "centroid": [-116.4869, 48.3322],
+  "centroid_elevation": 655,
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [[[...]]]
+  }
 }
 ```

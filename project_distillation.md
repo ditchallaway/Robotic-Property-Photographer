@@ -6,31 +6,17 @@ This document provides a technical summary of the "Moonshot" renderer, a statele
 
 The renderer is a **stateless worker** that converts geographic data into professional-grade property photos.
 
-*   **Logic Model**:
-    *   **Inputs**: Centroid (Lon/Lat), Elevation, GeoJSON Boundary, Acreage, and Shot List.
-    *   **Processing**: Boots a headless Chromium instance, initializes CesiumJS with Google 3D Tiles, frames the This document summarizes the technical logic for the 5-image rendering suite.
+*   **Logic Model**: The service converts geographic data (Centroid, GeoJSON Boundary) into a specific set of 5 professional property photos.
+*   **Processing**: Boots a headless Chromium instance to frame the property using CesiumJS with Google 3D Tiles and capture single-pass screenshots.
+*   **Outputs**: Exactly 5 PNG files (North, East, South, West, and Nadir) featuring the yellow property boundary.
+*   **Safety & Reliability**:
+    *   **Sequential Queue**: Only one job renders at a time to prevent WebGL memory starvation.
+    *   **Determinism**: Shot headings are locked to True North (0, 90, 180, 270) for cardinal views and -90 pitch for the overhead view.
+    *   **Validation**: Uses pixel density analysis to detect "black-frame" failures before confirming a successful render.
 
-Core Functional Requirements:
-
-Logic Model: The service converts geographic data (Centroid, GeoJSON Boundary) into a specific set of 5 professional property photos.
-
-Processing: Boots a headless Chromium instance to frame the property and capture single-pass screenshots.
-
-Outputs: 5 PNG files (North, East, South, West, and Nadir) featuring the yellow property boundary passed through from the input data.
-
-Safety & Reliability:
-
-Sequential Queue: Only one job renders at a time to prevent WebGL memory starvation.
-
-Determinism: Shot headings are locked to True North (0, 90, 180, 270) for the cardinal views and -90 pitch for the overhead view.
-
-Validation: Uses pixel density analysis to detect "black-frame" failures before confirming a successful render.
-
-Critical Technical Fixes:
-
-Blank Frames: Fixed by setting preserveDrawingBuffer: true in the WebGL context.
-
-Low-Detail Tiles: Resolved by polling tilesLoaded === true for 3 consecutive ticks before capture.
+### Critical Technical Fixes:
+*   **Blank Frames**: Fixed by setting `preserveDrawingBuffer: true` in the WebGL context.
+*   **Low-Detail Tiles**: Resolved by polling `tilesLoaded === true` for 3 consecutive ticks before capture.
 
 
 ## 2. Docker & Network Configuration
@@ -79,55 +65,10 @@ args: [
 
 ---
 
-## 4. Most Complex Functions ("Clean" Versions)
+## 4. Sequential Queue Wrapper
 
-### A. The Precision Settle (`waitForTiles`)
-Ensures the map is fully high-res before the "shutter" clicks.
-```javascript
-async function waitForTiles(viewer, tileset) {
-    return new Promise(resolve => {
-        let stable = 0;
-        const timer = setInterval(() => {
-            const tsLoaded = tileset ? (tileset.tilesLoaded || tileset.allTilesLoaded) : true;
-            const gLoaded = viewer.scene.globe.tilesLoaded;
-            if (tsLoaded && gLoaded) {
-                if (++stable >= 3) { // Must be stable for 3 ticks (900ms)
-                    clearInterval(timer);
-                    resolve();
-                }
-            } else {
-                stable = 0;
-            }
-        }, 300);
-        setTimeout(() => { clearInterval(timer); resolve(); }, 120000); // 2-minute safety timeout
-    });
-}
-```
+Ensures the server doesn't crash with multiple concurrent jobs.
 
-### B. PSD Text Layer Generation
-Creates editable text in a PSD without requiring the browser to render typography.
-```javascript
-function createTextLayer({ name, text, fontSize, color, x, y }) {
-    return {
-        name,
-        left: Math.round(x),
-        top: Math.round(y),
-        opacity: 1,
-        text: {
-            text: text,
-            style: {
-                font: { name: 'ArialMT' },
-                fontSize: fontSize,
-                fillColor: color,
-            },
-            styleRuns: [{ length: text.length, style: { fontSize, fillColor: color } }],
-        }
-    };
-}
-```
-
-### C. Sequential Queue Wrapper
-Ensures the 3080/4090 (or Server GPU) doesn't catch fire with multiple concurrent jobs.
 ```javascript
 let renderQueue = Promise.resolve();
 
@@ -139,16 +80,4 @@ await (renderQueue = renderQueue.then(async () => {
         console.error('[QUEUE] Job failed:', err.message);
     }
 }));
-5. Branch-Specific Execution Logic
-Branch: main (HITL - Photopea Workflow)
-
-Focus: Stability of the .psd output and URL parameter encoding.
-
-Agent Role: Debugging layer generation and ensuring createTextLayer properties are compatible with Photopea's parser.
-
-Branch: feature/full-auto (Autonomous Workflow)
-
-Focus: Eliminating the PSD/Photopea step entirely through automated rendering.
-
-Agent Role: Stress-testing the Sequential Queue and refining the "Black-pixel detection" for 100% headless reliability.
 ```

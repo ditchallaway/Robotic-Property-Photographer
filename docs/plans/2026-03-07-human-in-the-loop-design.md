@@ -1,4 +1,8 @@
-# Human-in-the-Loop PSD Workflow
+# [DEPRECATED] Human-in-the-Loop PSD Workflow
+
+> [!CAUTION]
+> This design document is **DEPRECATED**. The project objective has been simplified to focus exclusively on generating **5 deterministic PNG images**. Features described here (PSD output, editable layers, road label fetching, and acreage labels) have been removed from the core engine.
+
 
 ## Problem
 
