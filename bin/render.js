@@ -70,10 +70,25 @@ async function main() {
 
         const result = await renderPropertyPhoto(normalizedJob);
         
-        await writeOutput(result.pngBuffer, result.metadata, finalPath);
+        for (const shot of result.shots) {
+            let shotPath = finalPath;
+            if (finalPath !== '-') {
+                const ext = path.extname(finalPath);
+                const base = finalPath.slice(0, -ext.length);
+                shotPath = `${base}_${shot.id}${ext}`;
+            }
 
-        if (finalPath !== '-') {
-            console.log(`[CLI] Successfully rendered to ${finalPath}`);
+            console.log(`[CLI] Writing shot: ${shot.id}`);
+            await writeOutput(shot.pngBuffer, { 
+                ...result.metadata, 
+                shot: shot.id, 
+                heading: shot.heading, 
+                pitch: shot.pitch 
+            }, shotPath);
+
+            if (shotPath !== '-') {
+                console.log(`[CLI] Successfully rendered shot to ${shotPath}`);
+            }
         }
         
         process.exit(0);

@@ -135,62 +135,89 @@ async function renderPropertyPhoto(job) {
         await page.waitForFunction(() => window.viewer !== undefined, { timeout: 60000 });
         console.log('[Renderer] Viewer initialized');
 
-        // Get viewer & tileset references
-        const tilesetRef = await page.evaluate(() => {
-            return window.tileset ? { id: window.tileset.id || 'google-3d' } : null;
-        });
+        // Define the 5 required shots
+        const shots = [
+            { id: 'north', heading: 0, pitch: -45 },
+            { id: 'east', heading: 90, pitch: -45 },
+            { id: 'south', heading: 180, pitch: -45 },
+            { id: 'west', heading: 270, pitch: -45 },
+            { id: 'overhead', heading: 0, pitch: -90 }
+        ];
 
-        // Wait for tiles to load
-        await page.evaluate(waitForTiles.toString()); // Inject function
-        await page.evaluate(() => {
-            return new Promise((resolve, reject) => {
-                let stable = 0;
-                const timer = setInterval(() => {
-                    try {
-                        const tsLoaded = window.tileset 
-                            ? (window.tileset.tilesLoaded || window.tileset.allTilesLoaded) 
-                            : true;
-                        const gLoaded = window.viewer.scene.globe.tilesLoaded;
-                        
-                        if (tsLoaded && gLoaded) {
-                            if (++stable >= 3) {
-                                clearInterval(timer);
-                                resolve();
+        const results = [];
+
+        // Sequential rendering (1 at a time) to prevent WebGL memory crashes
+        for (const shot of shots) {
+            console.log(`[Renderer] Rendering shot: ${shot.id} (heading: ${shot.heading}°)`);
+            
+            await page.evaluate((s) => {
+                const heading = window.Cesium.Math.toRadians(s.heading);
+                const pitch = window.Cesium.Math.toRadians(s.pitch);
+                
+                window.viewer.camera.setView({
+                    orientation: {
+                        heading: heading,
+                        pitch: pitch,
+                        roll: 0.0
+                    }
+                });
+            }, shot);
+
+            // Wait for tiles to settle for this specific view
+            await page.evaluate(() => {
+                return new Promise((resolve, reject) => {
+                    let stable = 0;
+                    const timer = setInterval(() => {
+                        try {
+                            const tsLoaded = window.tileset 
+                                ? (window.tileset.tilesLoaded || window.tileset.allTilesLoaded) 
+                                : true;
+                            const gLoaded = window.viewer.scene.globe.tilesLoaded;
+                            
+                            if (tsLoaded && gLoaded) {
+                                if (++stable >= 3) {
+                                    clearInterval(timer);
+                                    resolve();
+                                }
+                            } else {
+                                stable = 0;
                             }
-                        } else {
+                        } catch (err) {
                             stable = 0;
                         }
-                    } catch (err) {
-                        stable = 0;
-                    }
-                }, 300);
+                    }, 300);
 
-                setTimeout(() => {
-                    clearInterval(timer);
-                    reject(new Error('Tile loading timeout'));
-                }, 240000);
+                    setTimeout(() => {
+                        clearInterval(timer);
+                        reject(new Error('Tile loading timeout'));
+                    }, 120000);
+                });
             });
-        });
 
-        console.log('[Renderer] Tiles loaded, capturing screenshot');
+            const pngBuffer = await page.screenshot({ type: 'png' });
 
-        // Capture screenshot
-        const pngBuffer = await page.screenshot({ type: 'png' });
+            // Check for black-frame failure
+            const isBlackFrame = await detectBlackFrame(
+                pngBuffer,
+                parseFloat(process.env.BLACK_FRAME_THRESHOLD || '0.95')
+            );
 
-        // Check for black-frame failure
-        const isBlackFrame = await detectBlackFrame(
-            pngBuffer,
-            parseFloat(process.env.BLACK_FRAME_THRESHOLD || '0.95')
-        );
+            if (isBlackFrame) {
+                throw new Error(`Black-frame detected on shot ${shot.id}`);
+            }
 
-        if (isBlackFrame) {
-            throw new Error('Black-frame detected: WebGL context loss or silent render crash');
+            results.push({
+                id: shot.id,
+                pngBuffer,
+                heading: shot.heading,
+                pitch: shot.pitch
+            });
         }
 
         await browser.close();
 
         return {
-            pngBuffer,
+            shots: results,
             metadata: {
                 width: 2048,
                 height: 1536,
@@ -245,11 +272,18 @@ function generateCesiumHTML(job) {
                 // Add Google 3D Tiles
                 const tileset = await Cesium.Cesium3DTileset.fromUrl(
                     'https://tile.googleapis.com/v1/3dtiles/root.json?key=${googleApiKey}',
-                    { maximumScreenSpaceError: 16 }
+                    { maximumScreenSpaceError: 1.0 }
                 );
                 window.tileset = tileset;
                 viewer.scene.primitives.add(tileset);
-                console.log('[CesiumJS] 3D Tileset added');
+
+                // Set globe detail
+                viewer.scene.globe.maximumScreenSpaceError = 1.0;
+
+                // Set FOV to 100 degrees
+                viewer.camera.frustum.fov = Cesium.Math.toRadians(100);
+
+                console.log('[CesiumJS] 3D Tileset added and quality settings applied');
 
                 // Frame the property
                 const lon = ${centroid.lon};

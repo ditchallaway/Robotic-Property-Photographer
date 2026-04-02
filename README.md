@@ -26,41 +26,40 @@ No other overlays are produced.
 
 ---
 
-## API
+## CLI Usage
 
-### `POST /api/render`
+The renderer is a Node.js CLI tool — no HTTP server.
 
-**Minimum input:**
+**Input:** A JSON job spec provided via file path, inline argument, or stdin.
+
 ```json
 {
-  "customer_id": "cust_123",
-  "order_id": "order_456",
   "centroid": [-116.4869, 48.3322],
   "centroid_elevation": 655,
   "geometry": {
     "type": "Polygon",
-    "coordinates": [[[...]]]
+    "coordinates": [[[-116.486, 48.331], ...]]
   }
 }
 ```
 
-**Output shape:**
-```json
-{
-  "status": "success",
-  "customer_id": "cust_123",
-  "order_id": "order_456",
-  "shots": {
-    "north": { "png_path": "/app/results/north.png", "png_url": "https://example.com/north.png" },
-    "east":  { "png_path": "/app/results/east.png",  "png_url": "https://example.com/east.png"  },
-    "south": { "png_path": "/app/results/south.png", "png_url": "https://example.com/south.png" },
-    "west":  { "png_path": "/app/results/west.png",  "png_url": "https://example.com/west.png"  },
-    "nadir": { "png_path": "/app/results/nadir.png", "png_url": "https://example.com/nadir.png" }
-  }
-}
+**Invocation:**
+
+```bash
+# From a file
+node bin/render.js job.json --output output/photo.png
+
+# Piped via stdin
+cat job.json | node bin/render.js --output output/photo.png
+
+# Inline JSON
+node bin/render.js '{"centroid":{"lon":-116.48,"lat":48.33},"boundary":[[...]]}' --output output/photo.png
+
+# In Docker
+docker compose run renderer node bin/render.js < job.json > output/photo.png
 ```
 
-The shot list is **not configurable**. The service always returns these 5.
+**Output:** PNG written to the path specified by `--output`, or to stdout if omitted. A `.json` metadata sidecar is written alongside the PNG.
 
 ---
 
@@ -77,13 +76,15 @@ The shot list is **not configurable**. The service always returns these 5.
 ## Dev / run
 
 ```bash
-# Start the service
+# Build and run in Docker
 docker compose up --build
 
-# Fire a render
-curl -X POST http://localhost:3000/api/render \
-  -H "Content-Type: application/json" \
-  -d @payload.json
+# Run a render job
+docker compose run renderer node bin/render.js < job.json --output /app/output/photo.png
+
+# Run tests
+docker compose run renderer node test-gl.js
+docker compose run renderer node test-api.cjs
 ```
 
 ---

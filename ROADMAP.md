@@ -4,17 +4,16 @@
 >
 > **Current Objective:** Stateless headless renderer that converts parcel geometry into **exactly 5 deterministic PNG images**.
 >
-> **Architecture constraint:** This service is a stateless rendering engine. It receives a JSON payload and returns PNG assets. Long-term storage, job queuing, and notifications are handled by upstream n8n.
+> **Architecture constraint:** This service is a stateless rendering engine. It receives a JSON payload (via CLI stdin or file arg) and returns PNG assets. Long-term storage, job queuing, and notifications are handled by upstream n8n.
 
 ---
 
 ## ✅ Phase 1 — Rendering Foundation (Completed)
-- [x] Next.js app scaffolded in Docker (`moonshot` container)
-- [x] **High-Performance Standalone Renderer**: Bypassed React hydration for Puppeteer using `public/render.html`.
-- [x] CesiumJS integrated with headless Chromium via Puppeteer.
+- [x] Headless CesiumJS renderer running in Docker via Puppeteer.
+- [x] **High-Performance Standalone Renderer**: Puppeteer loads an inline HTML page with CesiumJS — no web framework involved.
 - [x] Viewport locked at **2048 × 1536 px** (4:3 aspect ratio).
 - [x] Sequential render queue (1 job at a time) — prevents WebGL OOM crashes.
-- [x] `/api/render` POST endpoint accepting centroid and GeoJSON.
+- [x] **CLI entrypoint** (`bin/render.js`) accepts job JSON via stdin, file path, or inline argument.
 
 ## ✅ Phase 2 — Camera & Boundary System (Completed)
 - [x] **Deterministic headings:** 0°, 90°, 180°, 270° (True North aligned).
@@ -29,12 +28,19 @@
 - [x] Black-frame detection: warns when tiles fail to load (< 5% non-black pixels).
 
 ## ✅ Phase 4 — Test Infrastructure (Completed)
-- [x] `test-api.cjs` — End-to-end API integration test verifying the 5-PNG output.
+- [x] `test-api.cjs` — End-to-end integration test verifying the 5-PNG output.
 - [x] `test-gl.js` — WebGL diagnostic script for headless environment.
 
+## ✅ Phase 4.5 — Next.js Removal (Completed)
+- [x] Removed Next.js, React, and all web-server dependencies.
+- [x] Replaced HTTP API with plain Node.js CLI (`bin/render.js`).
+- [x] Added `lib/jobParser.js` for flexible input normalization.
+- [x] Added `lib/outputWriter.js` for PNG + metadata output to disk or stdout.
+- [x] Updated Dockerfile to `CMD ["node", "bin/render.js"]` — no server process.
+
 ## 🔜 Phase 5 — Production Hardening
-- [ ] Render timeout: kill job and return `{ status: "timeout" }` after N seconds.
-- [ ] Health check endpoint (`/api/health`) for Docker + n8n polling.
+- [ ] Render timeout: kill job and return error after N seconds.
+- [ ] Health check script for Docker + n8n polling.
 - [ ] Graceful Puppeteer teardown on container SIGTERM.
 
 ---
@@ -42,6 +48,7 @@
 ## Removed / Deprecated Features
 *The following features were part of previous project goals and have been removed to simplify the engine and improve reliability:*
 
+*   **Next.js / Express API:** HTTP server replaced by CLI entrypoint.
 *   **PSD Compositing:** Layered PSD output with editable text layers.
 *   **Street Label Data:** OSM road name fetching and overlay.
 *   **Acreage Overlay:** Calculation and rendering of parcel acreage.
@@ -54,9 +61,9 @@
 ## Tech Stack Reference
 
 | Layer | Technology |
-|-------|-----------|
+|-------|------------|
 | Rendering engine | CesiumJS (headless, via Puppeteer) |
-| Web framework | Next.js |
+| Runtime | Node.js CLI (`bin/render.js`) |
 | Container | Docker / Docker Compose |
 | 3D tiles | Google Photorealistic 3D Tiles |
 | Terrain | CesiumWorldTerrain |

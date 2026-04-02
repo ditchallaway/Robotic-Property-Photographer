@@ -7,7 +7,7 @@
   },
   "scripts": {
     "render": "node bin/render.js",
-    "test": "node test-gl.js",
+    "test": "node test-cli.cjs",
     "clean": "rm -rf .next node_modules package-lock.json"
   },
   "dependencies": {
