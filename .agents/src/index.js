@@ -3,7 +3,6 @@ const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
 const { renderPropertyPhoto } = require('./renderer');
-const { exportToPholopea } = require('./psd-generator');
 const RenderQueue = require('./queue');
 
 const app = express();
@@ -69,26 +68,21 @@ app.post('/render', async (req, res) => {
             let outputPath = path.join(process.cwd(), 'test-results', `${shotName}.png`);
             outputPath = getTimestampedPath(outputPath);
             
-            await writeOutput(result.pngBuffer, result.metadata, outputPath);
+            await writeOutput(result.shots[0].pngBuffer, result.metadata, outputPath);
             fileResults = {
-                png_path: outputPath,
-                psd_path: outputPath.replace('.png', '.psd') // Mocking for now
+                png_path: outputPath
             };
         }
 
-        // Generate PSD metadata
-        const psdMeta = exportToPholopea(result.pngBuffer, {
-            acreage: job.acreage || 0,
-            roadName: job.roadName || 'Unknown Road',
-            centroid: job.centroid,
-            timestamp: result.metadata.timestamp
-        });
+        // Return PNG shots metadata
+        const pngShots = result.shots.map(shot => ({
+            id: shot.id,
+            png: shot.pngBuffer.toString('base64')
+        }));
 
-        // Return both PNG and PSD metadata
         res.json({
             success: true,
-            png: result.pngBuffer.toString('base64'),
-            psd: psdMeta,
+            shots: pngShots,
             metadata: result.metadata,
             ...fileResults
         });
@@ -133,7 +127,7 @@ app.post('/render-batch', async (req, res) => {
                 results.push({
                     index: i,
                     success: true,
-                    png: result.pngBuffer.toString('base64'),
+                    shots: result.shots.map(s => s.id),
                     metadata: result.metadata
                 });
             } catch (err) {
@@ -172,7 +166,6 @@ app.get('/queue/status', (req, res) => {
 app.listen(PORT, () => {
     console.log(`[Server] Moonshot Renderer listening on port ${PORT}`);
     console.log(`[Config] Google API Key: ${process.env.GOOGLE_API_KEY ? '✓ set' : '✗ missing'}`);
-    console.log(`[Config] Cesium Token: ${process.env.CESIUM_ION_TOKEN ? '✓ set' : '✗ missing'}`);
     console.log(`[Config] Black Frame Threshold: ${process.env.BLACK_FRAME_THRESHOLD || '0.95'}`);
 });
 

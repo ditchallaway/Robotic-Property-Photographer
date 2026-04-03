@@ -43,7 +43,7 @@ class RenderQueue {
         return {
             activeJob: this.activeJob,
             totalJobs: this.jobCount,
-            queued: this.queue !== Promise.resolve()
+            queued: this.activeJob !== null
         };
     }
 }

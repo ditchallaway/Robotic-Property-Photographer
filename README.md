@@ -84,7 +84,7 @@ docker compose run renderer node bin/render.js < job.json --output /app/output/p
 
 # Run tests
 docker compose run renderer node test-gl.js
-docker compose run renderer node test-api.cjs
+docker compose run renderer node test-cli.cjs
 ```
 
 ---

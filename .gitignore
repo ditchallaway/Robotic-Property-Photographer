@@ -8,5 +8,4 @@ output/
 tmp/
 test-results/
 *.log
-.agents/
 data/debug_screenshot.png

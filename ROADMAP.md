@@ -28,7 +28,7 @@
 - [x] Black-frame detection: warns when tiles fail to load (< 5% non-black pixels).
 
 ## ✅ Phase 4 — Test Infrastructure (Completed)
-- [x] `test-api.cjs` — End-to-end integration test verifying the 5-PNG output.
+- [x] `test-cli.cjs` — End-to-end integration test verifying the 5-PNG output.
 - [x] `test-gl.js` — WebGL diagnostic script for headless environment.
 
 ## ✅ Phase 4.5 — Next.js Removal (Completed)

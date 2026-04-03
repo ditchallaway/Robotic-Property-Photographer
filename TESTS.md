@@ -27,42 +27,34 @@ WebGL Renderer: Google SwiftShader
 
 ---
 
-## 2. API Integration Test (`test-api.cjs`)
+## 2. API Integration Test (`test-cli.cjs`)
 
-**Purpose**: Performs an end-to-end functional test of the rendering pipeline by sending a sample job request to the application's `/api/render` endpoint and verifying the generation of 5 PNG images.
+**Purpose**: Performs an end-to-end functional test of the rendering pipeline by invoking the CLI and verifying the generation of 5 PNG images.
 
 ### How to Run
 ```bash
 # Direct execution (inside container)
-node test-api.cjs
+node test-cli.cjs
 
 # OR via npm script (from host)
-npm run test:api
+npm run test
 ```
 
 ### What it Does
-1.  Constructs a JSON payload containing:
+1.  Constructs a JSON job payload containing:
     - `centroid`: Coordinates for the property center.
-    - `geometry`: A GeoJSON polygon defining the property boundary.
-2.  Dispatches an HTTP POST request to `http://127.0.0.1:3000/api/render`.
-3.  Waits for the rendering sequence (5 shots) to complete.
-4.  Logs the JSON response containing paths to the 5 generated PNGs.
+    - `boundary`: A polygon defining the property boundary.
+2.  Writes the payload to a temporary file (`tmp_job.json`).
+3.  Executes the renderer via CLI (`node bin/render.js tmp_job.json --output output/test_render.png --timestamp`).
+4.  Scans the `output/` directory for the 5 generation outputs.
 
 ### Expected Output
-A successful response from the server with the 5 shots:
-```json
-✅ Response Received:
-{
-  "status": "success",
-  "customer_id": "cust_123",
-  "order_id": "order_456",
-  "shots": {
-    "north": { "png_path": "/app/results/north.png", "png_url": "..." },
-    "east":  { "png_path": "/app/results/east.png",  "png_url": "..." },
-    "south": { "png_path": "/app/results/south.png", "png_url": "..." },
-    "west":  { "png_path": "/app/results/west.png",  "png_url": "..." },
-    "nadir": { "png_path": "/app/results/nadir.png", "png_url": "..." }
-  }
-}
+A successful response logged to the console confirming the execution and file outputs:
+```text
+🚀 Launching CLI Render Mission...
+...
+✅ CLI Execution Finished.
+Checking for output files...
+Found 5 matching PNG files in output/
+✨ Success! All 5 deterministic shots were (likely) generated.
 ```
-

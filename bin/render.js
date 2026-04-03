@@ -91,6 +91,19 @@ async function main() {
             }
         }
         
+        if (finalPath !== '-') {
+            try {
+                await fetch('https://ntfy.sh/to-human-bt-test', {
+                    method: 'POST',
+                    body: `Successfully rendered and wrote ${result.shots.length} images to ${path.dirname(finalPath)}`,
+                    headers: { 'Title': 'Robotic Property Photographer - Job Complete' }
+                });
+                console.log(`[CLI] Sent completion notification`);
+            } catch (e) {
+                console.error(`[CLI] Failed to send notification: ${e.message}`);
+            }
+        }
+        
         process.exit(0);
     } catch (err) {
         console.error(err.stack || err.message);

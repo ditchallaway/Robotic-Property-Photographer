@@ -73,7 +73,7 @@
 | Google Maps | `NEXT_PUBLIC_GOOGLE_API_KEY` | 3D tiles + satellite imagery source |
 
 ## 8. Testing Strategy
-* **Test script:** `test-api.cjs` (standard API integration test).
-* **Run inside container:** `docker compose exec moonshot node test-api.cjs`
+* **Test script:** `test-cli.cjs` (standard API integration test).
+* **Run inside container:** `docker compose exec renderer node test-cli.cjs`
 * **Verification:** Tests verify the response JSON has `shots` with 5 valid PNG paths.
 * **Black-frame detection:** Automatically logs warnings for mostly-black screenshots.

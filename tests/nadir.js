@@ -1,9 +1,7 @@
-import fs from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
-import sharp from 'sharp';
-import { readPsd } from 'ag-psd';
-
+const fs = require('fs/promises');
+const { existsSync } = require('fs');
+const path = require('path');
+const sharp = require('sharp');
 const TEST_PAYLOAD = {
     "ap_parcel_number": "RP58N01W327600A",
     "centroid": [-116.4869477327835, 48.33225928561425],
@@ -31,7 +29,7 @@ async function run() {
         const timeout = setTimeout(() => controller.abort(), 600000);
 
         console.log("📍 Sending render request (Mocking JSON Payload)...");
-        const response = await fetch('http://localhost:3000/api/render', {
+        const response = await fetch('http://localhost:3000/render', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(TEST_PAYLOAD),

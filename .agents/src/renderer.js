@@ -12,6 +12,7 @@ async function detectBlackFrame(pngBuffer, threshold = 0.95) {
         const metadata = await sharp(pngBuffer).metadata();
         const { width, height } = metadata;
         const raw = await sharp(pngBuffer)
+            .ensureAlpha()
             .raw()
             .toBuffer();
 
@@ -137,11 +138,11 @@ async function renderPropertyPhoto(job) {
 
         // Define the 5 required shots
         const shots = [
-            { id: 'north', heading: 0, pitch: -45 },
-            { id: 'east', heading: 90, pitch: -45 },
-            { id: 'south', heading: 180, pitch: -45 },
-            { id: 'west', heading: 270, pitch: -45 },
-            { id: 'overhead', heading: 0, pitch: -90 }
+            { id: 'north', heading: 0, pitch: -24 },
+            { id: 'east', heading: 90, pitch: -24 },
+            { id: 'south', heading: 180, pitch: -24 },
+            { id: 'west', heading: 270, pitch: -24 },
+            { id: 'overhead', heading: 0, pitch: -89.9 }
         ];
 
         const results = [];
@@ -246,8 +247,8 @@ function generateCesiumHTML(job) {
 <html>
 <head>
     <meta charset="utf-8">
-    <script src="https://cesium.com/downloads/cesiumjs/releases/1.110/Cesium.js"></script>
-    <link href="https://cesium.com/downloads/cesiumjs/releases/1.110/Widgets/widgets.css" rel="stylesheet">
+    <script src="file://${process.cwd()}/public/cesium/Cesium.js"></script>
+    <link href="file://${process.cwd()}/public/cesium/Widgets/widgets.css" rel="stylesheet">
     <style>
         body { margin: 0; padding: 0; overflow: hidden; }
         #cesiumContainer { width: 100%; height: 100%; }
@@ -257,8 +258,6 @@ function generateCesiumHTML(job) {
 <body>
     <div id="cesiumContainer"></div>
     <script>
-        Cesium.Ion.defaultAccessToken = '${process.env.CESIUM_ION_TOKEN || ''}';
-
         const container = document.getElementById('cesiumContainer');
         const viewer = new Cesium.Viewer(container, {
             terrainProvider: Cesium.CesiumTerrainProvider.fromIonAsyncResource(),
@@ -294,13 +293,20 @@ function generateCesiumHTML(job) {
                     destination: Cesium.Cartesian3.fromDegrees(lon, lat, height * 2),
                     orientation: {
                         heading: Cesium.Math.toRadians(0),
-                        pitch: Cesium.Math.toRadians(-45),
+                        pitch: Cesium.Math.toRadians(-24),
                         roll: 0.0
                     }
                 });
 
                 // Draw boundary polygon
                 const boundaryCoords = ${JSON.stringify(boundary)};
+                if (boundaryCoords.length > 0) {
+                    const first = boundaryCoords[0];
+                    const last = boundaryCoords[boundaryCoords.length - 1];
+                    if (first[0] !== last[0] || first[1] !== last[1]) {
+                        boundaryCoords.push([...first]);
+                    }
+                }
                 const positions = Cesium.Cartesian3.fromDegreesArray(
                     boundaryCoords.flat()
                 );
@@ -309,7 +315,7 @@ function generateCesiumHTML(job) {
                     polyline: {
                         positions: positions,
                         width: 3,
-                        material: Cesium.Color.RED,
+                        material: Cesium.Color.YELLOW,
                         clampToGround: true
                     }
                 });
