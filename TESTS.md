@@ -2,6 +2,13 @@
 
 This document describes the diagnostic and functional tests available in the Robotic Property Photographer repository.
 
+## How to Perform Tests
+To quickly run all automated tests and verify the renderer configuration, you can use the built-in npm test script:
+```bash
+npm test
+```
+This will run the end-to-end integration tests. For specific modular tests, refer to the sections below.
+
 ## 1. WebGL Diagnostic (`test-gl.js`)
 
 **Purpose**: Verifies that the browser environment (Puppeteer) correctly initializes WebGL using software rendering. This is critical for environments without a physical GPU (like Docker or WSL).
