@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { renderPropertyPhoto } = require('../.agents/src/renderer');
+const { renderPropertyPhoto } = require('../src/renderer');
 const { normalizeJob } = require('../lib/jobParser');
 
 /**

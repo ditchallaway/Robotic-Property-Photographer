@@ -33,9 +33,9 @@ ENV CHROME_DISABLE_GPU_SANDBOX=1
 
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies (ignore-scripts to skip postinstall until code is copied)
 COPY package*.json ./
-RUN npm ci --prefer-offline
+RUN npm ci --ignore-scripts --prefer-offline
 
 # Copy application source
 COPY . .

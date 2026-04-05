@@ -1,0 +1,19 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+
+# Temp
+*.tmp
+*.bak
+
+# Zone.Identifier (Windows WSL)
+*:Zone.Identifier
