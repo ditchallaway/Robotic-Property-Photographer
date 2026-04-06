@@ -1,13 +1,25 @@
 services:
+  # The main application service that performs the property rendering
   renderer:
+    # Build the image using the Dockerfile in the current directory
     build: .
+    # Increase shared memory size to prevent Chrome crashes during heavy WebGL rendering
     shm_size: '2gb'
+    # Define volume mounts for code and data access
     volumes:
+      # Mount the current directory to /app in the container for live code reloading
       - .:/app
+      # Create an anonymous volume for node_modules to prevent local host modules from overriding container modules
       - /app/node_modules
+      # Create an anonymous volume for the cesium directory
       - /app/public/cesium
+      # Mount the host 'output' directory to the container so generated images are accessible on the host machine
       - ./output:/app/output
+    # Define environment variables available to the container
     environment:
+      # Instruct Puppeteer to use the OS-level Chromium installed in the Dockerfile
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      # Pass through the Google API key from the host environment to the container
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    # Specify the default command to run when the container starts
     command: ["node", "bin/render.js"]

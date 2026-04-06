@@ -1,0 +1,37 @@
+services:
+  # The main application service we are testing, which includes both the
+  # worker queue for managing render tasks and the core rendering engine
+  renderer:
+    # Inherit configuration (build, environment, ports, etc.) from the main docker-compose.yml
+    extends:
+      file: docker-compose.yml
+      service: renderer
+    # Override the command to ensure it starts normally instead of any dev/watch modes
+    command: ["npm", "start"]
+
+  # A mock service that acts like the production n8n integration 
+  # by sending automated requests to our renderer
+  n8n-simulator:
+    # Use a lightweight image with curl installed
+    image: curlimages/curl
+    # Ensure the renderer service starts before this simulator runs
+    depends_on:
+      - renderer
+    # Mount our test data file into the container so curl can access it
+    volumes:
+      - ./test-job.json:/data/test-job.json
+    # The script that executes the test
+    command: >
+      sh -c '
+        echo "Waiting for renderer API to be ready..."
+        # Loop until the renderer healthcheck endpoint returns success
+        while ! curl -s http://renderer:3000/health > /dev/null; do
+          sleep 2
+        done
+        echo "Renderer API is up! Simulating n8n by sending POST request..."
+        # Send the payload to trigger the rendering process, exactly as n8n would
+        curl -sS -X POST http://renderer:3000/render \
+          -H "Content-Type: application/json" \
+          -d @/data/test-job.json
+        echo "\nFinished n8n simulation."
+      '

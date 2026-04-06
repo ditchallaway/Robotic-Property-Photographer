@@ -82,7 +82,8 @@ async function launchBrowser() {
         '--no-sandbox',
         '--disable-dev-shm-usage',
         '--use-gl=angle',
-        '--use-angle=swiftshader'
+        '--use-angle=swiftshader',
+        '--allow-file-access-from-files'
     ];
 
     const browser = await puppeteer.launch({
@@ -98,6 +99,9 @@ async function launchBrowser() {
 
 /**
  * Render a property photo
+ * This function forms the core of the rendering engine. 
+ * It is designed to be executed within the isolated environment provided by the worker queue
+ * to ensure that heavy WebGL operations do not overlap and crash the server.
  * @param {Object} job - Job spec with centroid, elevation, boundary, acreage, shotList
  * @returns {Object} { pngBuffer, metadata }
  */
@@ -119,15 +123,22 @@ async function renderPropertyPhoto(job) {
         // Set viewport for consistent output
         await page.setViewport({ width: 2048, height: 1536 });
 
-        // Inject Cesium initialization script
-        await page.goto('about:blank');
-        await page.evaluate(() => {
-            window.Cesium = window.Cesium || {};
+        // Save the HTML to a temporary file to bypass Chromium origin restrictions for file:// resources
+        const os = require('os');
+        const fsPromises = require('fs').promises;
+        const tempHtmlPath = path.join(os.tmpdir(), `render_${Date.now()}.html`);
+        const htmlContent = generateCesiumHTML(job);
+        await fsPromises.writeFile(tempHtmlPath, htmlContent);
+
+        page.on('console', msg => console.log('[Puppeteer Console]', msg.type(), msg.text()));
+        page.on('pageerror', err => console.log('[Puppeteer Error]', err.message));
+        page.on('requestfailed', request => {
+            const fail = request.failure();
+            console.log('[Puppeteer Request Failed]', request.url(), fail ? fail.errorText : 'Unknown Error');
         });
 
-        // Load the HTML with CesiumJS & initialization
-        const htmlContent = generateCesiumHTML(job);
-        await page.setContent(htmlContent, { waitUntil: 'networkidle2' });
+        // Load the HTML file via file protocol
+        await page.goto(`file://${tempHtmlPath}`, { waitUntil: 'networkidle2' });
 
         // Wait for viewer to initialize
         await page.waitForFunction(() => window.viewer !== undefined, { timeout: 60000 });
@@ -205,7 +216,7 @@ async function renderPropertyPhoto(job) {
  * Generate HTML with CesiumJS initialization
  */
 function generateCesiumHTML(job) {
-    const { centroid, elevation, boundary, acreage } = job;
+    const { centroid, elevation, boundary, boundaryRings, acreage } = job;
     const googleApiKey = process.env.GOOGLE_API_KEY;
 
     return `
@@ -226,7 +237,6 @@ function generateCesiumHTML(job) {
     <script>
         const container = document.getElementById('cesiumContainer');
         const viewer = new Cesium.Viewer(container, {
-            terrainProvider: Cesium.CesiumTerrainProvider.fromIonAsyncResource(),
             contextOptions: { webgl: { preserveDrawingBuffer: true } }
         });
 
@@ -234,6 +244,12 @@ function generateCesiumHTML(job) {
 
         (async () => {
             try {
+                try {
+                    viewer.terrainProvider = await Cesium.createWorldTerrainAsync();
+                } catch (e) {
+                    console.log('Using default terrain due to error:', e.message);
+                }
+
                 // Add Google 3D Tiles
                 const tileset = await Cesium.Cesium3DTileset.fromUrl(
                     'https://tile.googleapis.com/v1/3dtiles/root.json?key=${googleApiKey}',

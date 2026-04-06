@@ -37,12 +37,15 @@ class RenderQueue {
     }
 
     /**
-     * Get current queue status
+     * Get current queue status, which provides visibility into the worker's state
      */
     getStatus() {
         return {
+            // ID of the job currently being processed by the worker queue
             activeJob: this.activeJob,
+            // Total number of jobs that have been submitted to the queue
             totalJobs: this.jobCount,
+            // Boolean indicating if the worker queue is currently busy
             queued: this.activeJob !== null
         };
     }

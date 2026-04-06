@@ -40,7 +40,7 @@ app.post('/render', async (req, res) => {
     try {
         const job = req.body;
 
-        // Validate required fields
+        // Validate required fields payload to prevent silent failures later in the pipeline
         if (!job.centroid || !job.boundary) {
             return res.status(400).json({
                 error: 'Missing required fields: centroid, boundary'
@@ -49,11 +49,15 @@ app.post('/render', async (req, res) => {
 
         let result;
         try {
+            // Push the render job into the processing queue.
+            // The worker queue ensures only one heavy WebGL rendering engine instance runs at a time
+            // This sequencing prevents Out of Memory errors and stabilizes background processing
             result = await queue.enqueue(async () => {
+                // The actual call to the rendering engine which spins up Puppeteer for the job
                 return await renderPropertyPhoto(job);
             });
         } catch (err) {
-            console.error('[API] Render failed:', err.message);
+            console.error('[API] Render failed in the worker queue or rendering engine:', err.message);
             return res.status(500).json({
                 error: 'Render failed',
                 message: err.message
@@ -63,6 +67,7 @@ app.post('/render', async (req, res) => {
         const { writeOutput, getTimestampedPath } = require('../lib/outputWriter');
         
         let fileResults = {};
+        // If the request is marked as a test, also write the output to the disk side-by-side
         if (job.is_test) {
             const shotName = (job.shots && job.shots[0]) || 'render';
             let outputPath = path.join(process.cwd(), 'test-results', `${shotName}.png`);
@@ -74,7 +79,7 @@ app.post('/render', async (req, res) => {
             };
         }
 
-        // Return PNG shots metadata
+        // Return PNG shots metadata, including base64-encoded image data for immediate use by clients (e.g., n8n)
         const pngShots = result.shots.map(shot => ({
             id: shot.id,
             png: shot.pngBuffer.toString('base64')
