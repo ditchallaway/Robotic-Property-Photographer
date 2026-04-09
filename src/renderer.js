@@ -147,14 +147,19 @@ async function renderPropertyPhoto(job) {
                                 var tsLoaded = window.tileset
                                     ? (window.tileset.tilesLoaded || window.tileset.allTilesLoaded)
                                     : false;
+                                
+                                // Also check globe tiles if enabled (user rule: never capture until tilesLoaded === true)
+                                var globeLoaded = window.viewer.scene.globe 
+                                    ? window.viewer.scene.globe.tilesLoaded 
+                                    : true;
 
-                                if (tsLoaded) {
+                                if (tsLoaded && globeLoaded) {
                                     if (++stable >= 3) {
                                         console.log('[Cesium] Tiles stable (3/3). Ready for capture.');
                                         clearInterval(timer);
                                         resolve();
                                     } else {
-                                        console.log('[Cesium] Tiles loaded, stabilizing... (' + stable + '/3)');
+                                        console.log('[Cesium] Tiles loaded (TS:' + tsLoaded + ', Globe:' + globeLoaded + '), stabilizing... (' + stable + '/3)');
                                     }
                                 } else {
                                     if (stable > 0) {
@@ -163,7 +168,7 @@ async function renderPropertyPhoto(job) {
                                     stable = 0;
                                     // Log every 10 checks (~3s)
                                     if (checks % 10 === 0) {
-                                        console.log('[Cesium] Waiting for tiles... (Tileset:' + tsLoaded + ', check:' + checks + ')');
+                                        console.log('[Cesium] Waiting for tiles... (Tileset:' + tsLoaded + ', Globe:' + globeLoaded + ', check:' + checks + ')');
                                     }
                                 }
                             } catch (err) {
@@ -280,8 +285,7 @@ function generateCesiumHTML(job) {
         '            infoBox: false,',
         '            selectionIndicator: false,',
         '            creditContainer: document.createElement("div"),',
-        '            imageryProvider: false,',
-        '            globe: false',
+        '            baseLayer: false',
         '        });',
         '        window.viewer = viewer;',
         '        (async function() {',
