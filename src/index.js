@@ -4,12 +4,55 @@ const fs = require('fs').promises;
 const path = require('path');
 const { renderPropertyPhoto } = require('./renderer');
 const RenderQueue = require('./queue');
+const config = require('./config');
+const { normalizeJob } = require('../lib/jobParser');
 
 const app = express();
 const queue = new RenderQueue();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 9876;
 
 app.use(express.json());
+
+// Serve static assets for manual verification in browser
+app.use('/test-results', express.static(path.join(process.cwd(), 'test-results')));
+app.use('/output', express.static(path.join(process.cwd(), 'output')));
+
+/**
+ * simple gallery for development verification
+ */
+app.get('/', async (req, res) => {
+    try {
+        const dirs = ['test-results', 'output'];
+        let html = '<h1>Robotic Property Photographer - Dev Gallery</h1><div style="display:flex; flex-wrap:wrap; gap:20px;">';
+        
+        for (const dir of dirs) {
+            try {
+                const files = await fs.readdir(path.join(process.cwd(), dir));
+                const images = files.filter(f => f.endsWith('.png')).sort().reverse();
+                
+                html += `<div style="width:100%"><h2>${dir}/</h2></div>`;
+                if (images.length === 0) html += '<p>No images found yet.</p>';
+                
+                for (const img of images.slice(0, 10)) { // show last 10
+                    html += `
+                        <div style="border:1px solid #ccc; padding:10px; border-radius:8px;">
+                            <p style="font-size:12px; margin:0 0 10px 0;">${img}</p>
+                            <a href="/${dir}/${img}" target="_blank">
+                                <img src="/${dir}/${img}" style="max-width:400px; display:block; border-radius:4px;">
+                            </a>
+                        </div>`;
+                }
+            } catch (e) {
+                // ignore missing directories
+            }
+        }
+        
+        html += '</div>';
+        res.send(html);
+    } catch (err) {
+        res.status(500).send('Error loading gallery: ' + err.message);
+    }
+});
 
 /**
  * Health check endpoint
@@ -38,7 +81,17 @@ app.get('/health', (req, res) => {
  */
 app.post('/render', async (req, res) => {
     try {
-        const job = req.body;
+        let job = req.body;
+
+        // Apply normalization to handle different input formats (e.g., n8n, flat fields)
+        try {
+            job = normalizeJob(job);
+        } catch (normError) {
+            return res.status(400).json({
+                success: false,
+                error: `Job normalization failed: ${normError.message}`
+            });
+        }
 
         // Validate required fields payload to prevent silent failures later in the pipeline
         if (!job.centroid || !job.boundary) {
@@ -47,14 +100,18 @@ app.post('/render', async (req, res) => {
             });
         }
 
+        console.log(`[API] Received /render request for ${job.customer_id || 'unknown'} (Order: ${job.order_id || 'unknown'})`);
+        
         let result;
         try {
-            // Push the render job into the processing queue.
-            // The worker queue ensures only one heavy WebGL rendering engine instance runs at a time
-            // This sequencing prevents Out of Memory errors and stabilizes background processing
+            console.log(`[API] Enqueuing job...`);
             result = await queue.enqueue(async () => {
-                // The actual call to the rendering engine which spins up Puppeteer for the job
-                return await renderPropertyPhoto(job);
+                console.log(`[API] Job started processing in queue`);
+                const startTime = Date.now();
+                const renderResult = await renderPropertyPhoto(job);
+                const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+                console.log(`[API] Rendering completed in ${duration}s`);
+                return renderResult;
             });
         } catch (err) {
             console.error('[API] Render failed in the worker queue or rendering engine:', err.message);
@@ -62,21 +119,6 @@ app.post('/render', async (req, res) => {
                 error: 'Render failed',
                 message: err.message
             });
-        }
-
-        const { writeOutput, getTimestampedPath } = require('../lib/outputWriter');
-        
-        let fileResults = {};
-        // If the request is marked as a test, also write the output to the disk side-by-side
-        if (job.is_test) {
-            const shotName = (job.shots && job.shots[0]) || 'render';
-            let outputPath = path.join(process.cwd(), 'test-results', `${shotName}.png`);
-            outputPath = getTimestampedPath(outputPath);
-            
-            await writeOutput(result.shots[0].pngBuffer, result.metadata, outputPath);
-            fileResults = {
-                png_path: outputPath
-            };
         }
 
         // Return PNG shots metadata, including base64-encoded image data for immediate use by clients (e.g., n8n)
@@ -88,8 +130,7 @@ app.post('/render', async (req, res) => {
         res.json({
             success: true,
             shots: pngShots,
-            metadata: result.metadata,
-            ...fileResults
+            metadata: result.metadata
         });
 
     } catch (err) {
@@ -120,12 +161,15 @@ app.post('/render-batch', async (req, res) => {
             });
         }
 
+        console.log(`[API] Received batch request for ${jobs.length} jobs`);
         const results = [];
         const errors = [];
 
         for (let i = 0; i < jobs.length; i++) {
             try {
+                console.log(`[API] Batch job ${i+1}/${jobs.length}: Enqueuing...`);
                 const result = await queue.enqueue(async () => {
+                    console.log(`[API] Batch job ${i+1}/${jobs.length}: Started`);
                     return await renderPropertyPhoto(jobs[i]);
                 });
 
@@ -135,7 +179,9 @@ app.post('/render-batch', async (req, res) => {
                     shots: result.shots.map(s => s.id),
                     metadata: result.metadata
                 });
+                console.log(`[API] Batch job ${i+1}/${jobs.length}: Success`);
             } catch (err) {
+                console.error(`[API] Batch job ${i+1}/${jobs.length}: Failed:`, err.message);
                 errors.push({
                     index: i,
                     success: false,
@@ -168,10 +214,31 @@ app.get('/queue/status', (req, res) => {
     res.json(queue.getStatus());
 });
 
-app.listen(PORT, () => {
-    console.log(`[Server] Moonshot Renderer listening on port ${PORT}`);
+const server = app.listen(PORT, () => {
+    console.log(`[Server] Robotic Property Photographer listening on port ${PORT}`);
     console.log(`[Config] Google API Key: ${process.env.GOOGLE_API_KEY ? '✓ set' : '✗ missing'}`);
     console.log(`[Config] Black Frame Threshold: ${process.env.BLACK_FRAME_THRESHOLD || '0.95'}`);
+    console.log(`[Config] Render Timeout: ${config.RENDER_TIMEOUT_MS / 1000}s`);
 });
+
+/**
+ * Handle graceful shutdown (Kubernetes / Docker SIGTERM)
+ */
+const shutdown = () => {
+    console.log('[Server] Graceful shutdown initiated...');
+    server.close(() => {
+        console.log('[Server] HTTP server closed.');
+        process.exit(0);
+    });
+
+    // Force exit after 10s if server.close() hangs
+    setTimeout(() => {
+        console.error('[Server] Could not close connections in time, forceful shutdown');
+        process.exit(1);
+    }, 10000);
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 module.exports = app;

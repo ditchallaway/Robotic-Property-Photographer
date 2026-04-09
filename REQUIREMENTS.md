@@ -9,16 +9,17 @@
 * **Assumption:** An upstream **n8n** instance handles all triggers, rate limiting, permanent storage, and error notifications.
 
 ## 2. API Contract
-* **Input:** The app exposes a single HTTP POST endpoint (`/api/render`).
+* **Input:** The app exposes a single HTTP POST endpoint (`/render`).
 
 ```json
 {
-    "centroid": [-116.4869, 48.3322],
-    "centroid_elevation": 655,
-    "geometry": {
-        "type": "Polygon",
-        "coordinates": [[[-116.486, 48.331], ...]]
-    },
+    "centroid": { "lon": -116.4869, "lat": 48.3322 },
+    "elevation": 655,
+    "boundary": [
+        [-116.486, 48.331],
+        [-116.487, 48.331],
+        ...
+    ],
     "customer_id": "cust_12345",
     "order_id": "order_12345"
 }
@@ -70,7 +71,7 @@
 ## 7. External Services (Optional, Env-Gated)
 | Service | Env Vars | Purpose |
 |---------|----------|---------|
-| Google Maps | `NEXT_PUBLIC_GOOGLE_API_KEY` | 3D tiles + satellite imagery source |
+| Google Maps | `GOOGLE_API_KEY` | 3D tiles + satellite imagery source |
 
 ## 8. Testing Strategy
 * **Test script:** `test-cli.cjs` (standard API integration test).

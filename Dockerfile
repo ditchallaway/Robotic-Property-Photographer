@@ -45,4 +45,9 @@ RUN node scripts/copy-assets.cjs
 
 # CLI entry point via tini for process stability
 ENTRYPOINT ["/usr/bin/tini", "--"]
+
+# Verify that the service is running and ready to process jobs
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD ["node", "bin/healthcheck.js"]
+
 CMD ["node", "bin/render.js"]

@@ -1,1 +1,0 @@
-All commands (npm, node, tests) must be executed inside the moonshot container using the integrated terminal or docker exec.

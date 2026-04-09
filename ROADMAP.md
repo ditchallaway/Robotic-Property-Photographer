@@ -38,10 +38,12 @@
 - [x] Added `lib/outputWriter.js` for PNG + metadata output to disk or stdout.
 - [x] Updated Dockerfile to `CMD ["node", "bin/render.js"]` — no server process.
 
-## 🔜 Phase 5 — Production Hardening
-- [ ] Render timeout: kill job and return error after N seconds.
-- [ ] Health check script for Docker + n8n polling.
-- [ ] Graceful Puppeteer teardown on container SIGTERM.
+## ✅ Phase 5 — Production Hardening (Completed)
+- [x] Render timeout: kill job and return error after 300 seconds.
+- [x] Health check script for Docker + n8n polling (`bin/healthcheck.js`).
+- [x] Graceful Puppeteer teardown on container SIGTERM / SIGINT.
+- [x] Smart Auto-Framing: Centering and sizing camera via `flyToBoundingSphere` logic.
+
 
 ---
 

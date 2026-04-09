@@ -24,18 +24,26 @@ const TEST_PAYLOAD = {
 console.log("\n🚀 Nadir Test (Puppeteer E2E & Visual Regression)");
 
 async function run() {
+    const startTime = Date.now();
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 600000);
 
+        console.log(`\n📋 Test Payload: ${JSON.stringify(TEST_PAYLOAD, null, 2)}`);
+        console.log(`🔗 Target: http://localhost:9876/render`);
         console.log("📍 Sending render request (Mocking JSON Payload)...");
-        const response = await fetch('http://localhost:3000/render', {
+
+        const fetchStart = Date.now();
+        const response = await fetch('http://localhost:9876/render', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(TEST_PAYLOAD),
             signal: controller.signal
         });
         clearTimeout(timeout);
+
+        const fetchDuration = ((Date.now() - fetchStart) / 1000).toFixed(1);
+        console.log(`⏱️  Request took ${fetchDuration}s (Status: ${response.status})`);
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -44,6 +52,7 @@ async function run() {
 
         const result = await response.json();
         console.log("✅ Render complete!");
+        console.log(`📦 Response Summary:`, JSON.stringify(result, null, 2));
 
         const bgPath = result.png_path;
         if (!bgPath) throw new Error("Missing 'png_path' in response");
@@ -52,9 +61,11 @@ async function run() {
 
         // ── 1. WebGL Context Loss Validation (Black Screen Check) ──
         console.log("🔍 Validating WebGL Context (Black Screen detection)...");
+        const analysisStart = Date.now();
         const bgBuffer = await fs.readFile(bgPath);
         const image = sharp(bgBuffer);
         const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
+        console.log(`🖼️  Image loaded: ${info.width}x${info.height}, ${info.channels} channels`);
 
         let blackPixels = 0;
         const totalPixels = info.width * info.height;
@@ -67,7 +78,7 @@ async function run() {
         if (blackPct > 0.95) {
             throw new Error(`❌ WebGL Context Loss: Screenshot is >95% black (${(blackPct * 100).toFixed(1)}%). Cesium tiles likely failed to load.`);
         }
-        console.log(`✅ WebGL OK: Frame is ${(100 - blackPct * 100).toFixed(1)}% visible.`);
+        console.log(`✅ WebGL OK: Frame is ${(100 - blackPct * 100).toFixed(1)}% visible (${blackPixels} black pixels / ${totalPixels} total).`);
 
         // ── 2. Dynamic Visual Assertions ──
         console.log("📸 Running Dynamic Visual Validation (Boundaries, Terrain)...");
@@ -88,20 +99,21 @@ async function run() {
                 }
 
                 // Terrain Variance Check (Whole image for nadir)
-                // Reduce color depth slightly so very close colors merge, making standard solid map tiles very low variance
                 const rgbString = `${Math.floor(r / 8)},${Math.floor(g / 8)},${Math.floor(b / 8)}`;
                 colorSet.add(rgbString);
             }
         }
 
+        const analysisDuration = ((Date.now() - analysisStart) / 1000).toFixed(1);
         console.log(`🟨 Yellow Boundary Pixels: ${yellowBoundaryPixels}`);
         console.log(`🌍 Terrain Unique Colors: ${colorSet.size}`);
+        console.log(`⏱️  Visual analysis took ${analysisDuration}s`);
 
-        if (yellowBoundaryPixels < 100) { // Expecting at least some yellow line
+        if (yellowBoundaryPixels < 100) {
             throw new Error(`❌ Dynamic Validation Failed: Missing Boundary Lines.`);
         }
 
-        if (colorSet.size < 1000) { // Solid color backgrounds or gray tiles have very few unique colors
+        if (colorSet.size < 1000) {
             throw new Error(`❌ Dynamic Validation Failed: Low terrain variance (${colorSet.size} colors). Empty map tile?`);
         }
 
@@ -110,6 +122,9 @@ async function run() {
         console.log("======================================================\n");
         console.log("✅ Dynamic Image Validation Passed.");
         console.log("✅ Render and PNG generation verified successfully.");
+
+        const totalDuration = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`🏁 Total Test Execution Time: ${totalDuration}s`);
 
     } catch (error) {
         console.error("\n❌ TEST FAILED:");

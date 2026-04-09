@@ -6,32 +6,66 @@ services:
     extends:
       file: docker-compose.yml
       service: renderer
-    # Override the command to ensure it starts normally instead of any dev/watch modes
     command: ["npm", "start"]
+    ports:
+      - "9876:9876"
+    environment:
+      - PORT=9876
 
-  # A mock service that acts like the production n8n integration 
+  # A mock service that acts like the production n8n integration
   # by sending automated requests to our renderer
   n8n-simulator:
-    # Use a lightweight image with curl installed
-    image: curlimages/curl
-    # Ensure the renderer service starts before this simulator runs
+    # Alpine gives us curl, jq, and base64 for decoding images
+    image: alpine:3.20
     depends_on:
       - renderer
-    # Mount our test data file into the container so curl can access it
     volumes:
       - ./test-job.json:/data/test-job.json
-    # The script that executes the test
-    command: >
-      sh -c '
-        echo "Waiting for renderer API to be ready..."
-        # Loop until the renderer healthcheck endpoint returns success
-        while ! curl -s http://renderer:3000/health > /dev/null; do
-          sleep 2
-        done
-        echo "Renderer API is up! Simulating n8n by sending POST request..."
-        # Send the payload to trigger the rendering process, exactly as n8n would
-        curl -sS -X POST http://renderer:3000/render \
+      - ./test-results:/results
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache curl jq > /dev/null 2>&1
+
+        echo "🔄 Rotating batches (current -> last)..."
+        rm -rf /results/last
+        if [ -d /results/current ]; then
+          mv /results/current /results/last
+          echo "   📂 Archived previous successful batch to /test-results/last/"
+        fi
+        mkdir -p /results/current
+        # Clean up any stray files in root
+        rm -f /results/*.png /results/*.json /results/*.log
+
+        echo "⏳ Waiting for renderer API..."
+        until curl -sf http://renderer:9876/health > /dev/null 2>&1; do sleep 2; done
+        echo "✅ Renderer is up."
+
+        echo "📤 Sending job (simulating n8n POST)..."
+        RESPONSE=$$(curl -sS -X POST http://renderer:9876/render \
           -H "Content-Type: application/json" \
-          -d @/data/test-job.json
-        echo "\nFinished n8n simulation."
-      '
+          -d @/data/test-job.json)
+
+        SUCCESS=$$(echo "$$RESPONSE" | jq -r '.success')
+        if [ "$$SUCCESS" != "true" ]; then
+          echo "❌ Render failed:"
+          echo "$$RESPONSE" | jq '.'
+          exit 1
+        fi
+
+        echo "✅ Render succeeded. Saving shots to /test-results/current/ ..."
+
+        # Decode each base64 shot into /results/current/
+        SHOT_COUNT=$$(echo "$$RESPONSE" | jq '.shots | length')
+        i=0
+        while [ $$i -lt $$SHOT_COUNT ]; do
+          SHOT_ID=$$(echo "$$RESPONSE" | jq -r ".shots[$$i].id")
+          FILENAME="$${SHOT_ID}.png"
+          echo "$$RESPONSE" | jq -r ".shots[$$i].png" | base64 -d > "/results/current/$${FILENAME}"
+          echo "   🖼️  Saved /test-results/current/$${FILENAME}"
+          i=$$((i + 1))
+        done
+
+        echo ""
+        echo "🎉 Done. View new images in ./test-results/current/ and compare with ./test-results/last/"

@@ -93,7 +93,8 @@ async function main() {
         
         if (finalPath !== '-') {
             try {
-                await fetch('https://ntfy.sh/to-human-bt-test', {
+                const topic = process.env.NTFY_TOPIC || 'to-human-bt-test';
+                await fetch(`https://ntfy.sh/${topic}`, {
                     method: 'POST',
                     body: `Successfully rendered and wrote ${result.shots.length} images to ${path.dirname(finalPath)}`,
                     headers: { 'Title': 'Robotic Property Photographer - Job Complete' }

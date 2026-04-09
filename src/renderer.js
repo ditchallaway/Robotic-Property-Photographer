@@ -42,39 +42,6 @@ async function detectBlackFrame(pngBuffer, threshold = config.BLACK_FRAME_THRESH
 }
 
 /**
- * Precision tile-loading settle helper (injected into page context)
- */
-const TILE_WAIT_POLL = `
-    new Promise((resolve, reject) => {
-        let stable = 0;
-        const timer = setInterval(() => {
-            try {
-                const tsLoaded = window.tileset 
-                    ? (window.tileset.tilesLoaded || window.tileset.allTilesLoaded) 
-                    : true;
-                const gLoaded = window.viewer.scene.globe.tilesLoaded;
-                
-                if (tsLoaded && gLoaded) {
-                    if (++stable >= 3) { // 3 consecutive stable ticks (~900ms)
-                        clearInterval(timer);
-                        resolve();
-                    }
-                } else {
-                    stable = 0;
-                }
-            } catch (err) {
-                stable = 0;
-            }
-        }, 300);
-
-        setTimeout(() => {
-            clearInterval(timer);
-            reject(new Error('Tile loading timeout exceeded (120s)'));
-        }, 120000);
-    })
-`;
-
-/**
  * Launch Puppeteer with WebGL-optimized flags
  */
 async function launchBrowser() {
@@ -83,9 +50,11 @@ async function launchBrowser() {
         '--disable-dev-shm-usage',
         '--use-gl=angle',
         '--use-angle=swiftshader',
+        '--enable-unsafe-swiftshader',
         '--allow-file-access-from-files'
     ];
 
+    console.log(`[Browser] Launching Puppeteer with args: ${args.join(' ')}`);
     const browser = await puppeteer.launch({
         executablePath: config.PUPPETEER_EXECUTABLE_PATH,
         headless: 'new',
@@ -93,20 +62,16 @@ async function launchBrowser() {
         defaultViewport: null,
         timeout: 60000
     });
+    console.log(`[Browser] Launched successfully (PID: ${browser.process()?.pid || 'unknown'})`);
 
     return browser;
 }
 
 /**
  * Render a property photo
- * This function forms the core of the rendering engine. 
- * It is designed to be executed within the isolated environment provided by the worker queue
- * to ensure that heavy WebGL operations do not overlap and crash the server.
- * @param {Object} job - Job spec with centroid, elevation, boundary, acreage, shotList
- * @returns {Object} { pngBuffer, metadata }
  */
 async function renderPropertyPhoto(job) {
-    const { centroid, elevation, boundary, boundaryRings, acreage, shotList } = job;
+    const { centroid, elevation, boundary, acreage } = job;
     
     if (!centroid || !centroid.lon || !centroid.lat) {
         throw new Error('Invalid centroid: requires { lon, lat }');
@@ -117,199 +82,272 @@ async function renderPropertyPhoto(job) {
 
     let browser;
     try {
-        browser = await launchBrowser();
-        const page = await browser.newPage();
-
-        // Set viewport for consistent output
-        await page.setViewport({ width: 2048, height: 1536 });
-
-        // Save the HTML to a temporary file to bypass Chromium origin restrictions for file:// resources
-        const os = require('os');
-        const fsPromises = require('fs').promises;
-        const tempHtmlPath = path.join(os.tmpdir(), `render_${Date.now()}.html`);
-        const htmlContent = generateCesiumHTML(job);
-        await fsPromises.writeFile(tempHtmlPath, htmlContent);
-
-        page.on('console', msg => console.log('[Puppeteer Console]', msg.type(), msg.text()));
-        page.on('pageerror', err => console.log('[Puppeteer Error]', err.message));
-        page.on('requestfailed', request => {
-            const fail = request.failure();
-            console.log('[Puppeteer Request Failed]', request.url(), fail ? fail.errorText : 'Unknown Error');
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new Error('Render job timed out after ' + (config.RENDER_TIMEOUT_MS / 1000) + 's'));
+            }, config.RENDER_TIMEOUT_MS);
         });
 
-        // Load the HTML file via file protocol
-        await page.goto(`file://${tempHtmlPath}`, { waitUntil: 'networkidle2' });
+        const renderTask = (async function() {
+            browser = await launchBrowser();
+            const page = await browser.newPage();
+            console.log(`[Renderer] New page created`);
+            await page.setViewport({ width: 2048, height: 1536 });
 
-        // Wait for viewer to initialize
-        await page.waitForFunction(() => window.viewer !== undefined, { timeout: 60000 });
-        console.log('[Renderer] Viewer initialized');
+            const os = require('os');
+            const fsPromises = require('fs').promises;
+            const tempHtmlPath = path.join(os.tmpdir(), 'render_' + Date.now() + '.html');
+            console.log(`[Renderer] Generating HTML and writing to ${tempHtmlPath}`);
+            const htmlContent = generateCesiumHTML(job);
+            await fsPromises.writeFile(tempHtmlPath, htmlContent);
 
-        // Define the 5 required shots
-        const shots = [
-            { id: 'north', heading: 0, pitch: -24 },
-            { id: 'east', heading: 90, pitch: -24 },
-            { id: 'south', heading: 180, pitch: -24 },
-            { id: 'west', heading: 270, pitch: -24 },
-            { id: 'overhead', heading: 0, pitch: -89.9 }
-        ];
-
-        const results = [];
-
-        // Sequential rendering (1 at a time) to prevent WebGL memory crashes
-        for (const shot of shots) {
-            console.log(`[Renderer] Rendering shot: ${shot.id} (heading: ${shot.heading}°)`);
-            
-            await page.evaluate((s) => {
-                const heading = window.Cesium.Math.toRadians(s.heading);
-                const pitch = window.Cesium.Math.toRadians(s.pitch);
-                
-                window.viewer.camera.setView({
-                    orientation: {
-                        heading: heading,
-                        pitch: pitch,
-                        roll: 0.0
-                    }
-                });
-            }, shot);
-
-            // Wait for tiles to settle for this specific view
-            await page.evaluate(TILE_WAIT_POLL);
-
-            const pngBuffer = await page.screenshot({ type: 'png' });
-
-            // Check for black-frame failure
-            const isBlackFrame = await detectBlackFrame(pngBuffer);
-
-            if (isBlackFrame) {
-                throw new Error(`Black-frame detected on shot ${shot.id}`);
-            }
-
-            results.push({
-                id: shot.id,
-                pngBuffer,
-                heading: shot.heading,
-                pitch: shot.pitch
+            page.on('console', msg => console.log('[Puppeteer Console]', msg.type(), msg.text()));
+            page.on('pageerror', err => console.error('[Puppeteer Error]', err.message));
+            page.on('requestfailed', request => console.warn('[Puppeteer Request Failed]', request.url(), request.failure()?.errorText));
+            page.on('response', response => {
+                if (response.status() >= 400) {
+                    console.error('[Puppeteer HTTP Error]', response.status(), response.url());
+                }
             });
-        }
 
-        await browser.close();
+            console.log(`[Renderer] Navigating to ${tempHtmlPath}`);
+            await page.goto('file://' + tempHtmlPath, { waitUntil: 'domcontentloaded' });
+            console.log(`[Renderer] Navigation complete, waiting for viewer...`);
+            await page.waitForFunction(function() { return window.viewer !== undefined; }, { timeout: 60000 });
+            console.log('[Renderer] Viewer initialized');
 
-        return {
-            shots: results,
-            metadata: {
-                width: 2048,
-                height: 1536,
-                centroid,
-                elevation,
-                acreage,
-                timestamp: new Date().toISOString()
+            const shots = [
+                { id: 'north', heading: 0, pitch: -24 },
+                { id: 'east', heading: 90, pitch: -24 },
+                { id: 'south', heading: 180, pitch: -24 },
+                { id: 'west', heading: 270, pitch: -24 },
+                { id: 'overhead', heading: 0, pitch: -89.9 }
+            ];
+
+            const results = [];
+            for (const shot of shots) {
+                console.log('[Renderer] Rendering shot: ' + shot.id + ' (heading: ' + shot.heading + ' degrees)');
+                
+                await page.evaluate(function(s) {
+                    const h = window.Cesium.Math.toRadians(s.heading);
+                    const p = window.Cesium.Math.toRadians(s.pitch);
+                    window.viewer.camera.setView({
+                        orientation: { heading: h, pitch: p, roll: 0.0 }
+                    });
+                }, shot);
+
+                // Wait for tiles to stabilize: 3 consecutive stable ticks (~900ms)
+                await page.evaluate(function() {
+                    return new Promise(function(resolve, reject) {
+                        var stable = 0;
+                        var checks = 0;
+                        var timer = setInterval(function() {
+                            try {
+                                checks++;
+                                var tsLoaded = window.tileset
+                                    ? (window.tileset.tilesLoaded || window.tileset.allTilesLoaded)
+                                    : false;
+
+                                if (tsLoaded) {
+                                    if (++stable >= 3) {
+                                        console.log('[Cesium] Tiles stable (3/3). Ready for capture.');
+                                        clearInterval(timer);
+                                        resolve();
+                                    } else {
+                                        console.log('[Cesium] Tiles loaded, stabilizing... (' + stable + '/3)');
+                                    }
+                                } else {
+                                    if (stable > 0) {
+                                        console.log('[Cesium] Tiles became unstable. Resetting.');
+                                    }
+                                    stable = 0;
+                                    // Log every 10 checks (~3s)
+                                    if (checks % 10 === 0) {
+                                        console.log('[Cesium] Waiting for tiles... (Tileset:' + tsLoaded + ', check:' + checks + ')');
+                                    }
+                                }
+                            } catch (err) {
+                                stable = 0;
+                            }
+                        }, 300);
+
+                        setTimeout(function() {
+                            clearInterval(timer);
+                            reject(new Error('Tile loading timeout exceeded (120s)'));
+                        }, 120000);
+                    });
+                });
+
+                const buffer = await page.screenshot({ type: 'png' });
+                const isBlack = await detectBlackFrame(buffer);
+                if (isBlack) throw new Error('Black-frame detected on shot ' + shot.id);
+
+                results.push({ id: shot.id, pngBuffer: buffer, heading: shot.heading, pitch: shot.pitch });
             }
-        };
+
+            // Optional: Fetch reference map from srcmap URL if provided
+            if (job.srcmap) {
+                console.log(`[Renderer] Fetching reference srcmap from: ${job.srcmap}`);
+                try {
+                    const response = await fetch(job.srcmap);
+                    if (response.ok) {
+                        const arrayBuffer = await response.arrayBuffer();
+                        results.push({
+                            id: 'reference_overhead',
+                            pngBuffer: Buffer.from(arrayBuffer),
+                            isReference: true
+                        });
+                        console.log(`[Renderer] Reference srcmap downloaded successfully`);
+                    } else {
+                        console.warn(`[Renderer] Failed to fetch srcmap: ${response.status} ${response.statusText}`);
+                    }
+                } catch (e) {
+                    console.error(`[Renderer] Error fetching srcmap: ${e.message}`);
+                }
+            }
+
+            await browser.close();
+            return {
+                shots: results,
+                metadata: { 
+                    width: 2048, 
+                    height: 1536, 
+                    centroid, 
+                    elevation, 
+                    acreage, 
+                    timestamp: new Date().toISOString(),
+                    has_reference: results.some(r => r.id === 'reference_overhead')
+                }
+            };
+        })();
+
+        return await Promise.race([renderTask, timeoutPromise]);
 
     } catch (err) {
-        if (browser) await browser.close();
+        if (browser) await browser.close().catch(() => {});
         throw err;
     }
 }
 
-/**
- * Generate HTML with CesiumJS initialization
- */
 function generateCesiumHTML(job) {
     const { centroid, elevation, boundary, boundaryRings, acreage } = job;
-    const googleApiKey = process.env.GOOGLE_API_KEY;
+    const googleApiKey = (process.env.GOOGLE_API_KEY || '').trim();
+    const ringsJson = JSON.stringify(boundaryRings || [boundary]);
+    const cesiumPath = process.cwd() + '/public/cesium/Cesium.js';
+    const widgetPath = process.cwd() + '/public/cesium/Widgets/widgets.css';
 
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <script src="file://${process.cwd()}/public/cesium/Cesium.js"></script>
-    <link href="file://${process.cwd()}/public/cesium/Widgets/widgets.css" rel="stylesheet">
-    <style>
-        body { margin: 0; padding: 0; overflow: hidden; }
-        #cesiumContainer { width: 100%; height: 100%; }
-        #info { display: none; }
-    </style>
-</head>
-<body>
-    <div id="cesiumContainer"></div>
-    <script>
-        const container = document.getElementById('cesiumContainer');
-        const viewer = new Cesium.Viewer(container, {
-            contextOptions: { webgl: { preserveDrawingBuffer: true } }
-        });
+    if (googleApiKey) {
+        const sanitizedKey = `${googleApiKey.substring(0, 4)}...${googleApiKey.substring(googleApiKey.length - 4)}`;
+        console.log(`[Renderer] Map Tile Auth: API Key found (Prefix: ${googleApiKey.substring(0, 4)}, Length: ${googleApiKey.length})`);
+    } else {
+        console.error(`[Renderer] Map Tile Auth: CRITICAL - GOOGLE_API_KEY environment variable is NOT SET.`);
+    }
 
-        window.viewer = viewer;
-
-        (async () => {
-            try {
-                try {
-                    viewer.terrainProvider = await Cesium.createWorldTerrainAsync();
-                } catch (e) {
-                    console.log('Using default terrain due to error:', e.message);
-                }
-
-                // Add Google 3D Tiles
-                const tileset = await Cesium.Cesium3DTileset.fromUrl(
-                    'https://tile.googleapis.com/v1/3dtiles/root.json?key=${googleApiKey}',
-                    { maximumScreenSpaceError: 1.0 }
-                );
-                window.tileset = tileset;
-                viewer.scene.primitives.add(tileset);
-
-                // Set globe detail
-                viewer.scene.globe.maximumScreenSpaceError = 1.0;
-
-                // Set FOV to 100 degrees
-                viewer.camera.frustum.fov = Cesium.Math.toRadians(100);
-
-                console.log('[CesiumJS] 3D Tileset added and quality settings applied');
-
-                // Frame the property
-                const lon = ${centroid.lon};
-                const lat = ${centroid.lat};
-                const height = ${elevation || 100};
-
-                viewer.camera.setView({
-                    destination: Cesium.Cartesian3.fromDegrees(lon, lat, height * 2),
-                    orientation: {
-                        heading: Cesium.Math.toRadians(0),
-                        pitch: Cesium.Math.toRadians(-24),
-                        roll: 0.0
-                    }
-                });
-
-                // Draw boundary polylines (supporting holes)
-                const rings = ${JSON.stringify(boundaryRings || [boundary])};
-                rings.forEach(ring => {
-                    if (ring.length > 0) {
-                        const first = ring[0];
-                        const last = ring[ring.length - 1];
-                        if (first[0] !== last[0] || first[1] !== last[1]) {
-                            ring.push([...first]);
-                        }
-                    }
-                    const positions = Cesium.Cartesian3.fromDegreesArray(ring.flat());
-                    viewer.entities.add({
-                        polyline: {
-                            positions: positions,
-                            width: 3,
-                            material: Cesium.Color.YELLOW,
-                            clampToGround: true
-                        }
-                    });
-                });
-
-                console.log('[CesiumJS] Scene initialized with ' + rings.length + ' ring(s)');
-            } catch (err) {
-                console.error('[CesiumJS] Initialization error:', err);
-            }
-        })();
-    </script>
-</body>
-</html>
-    `;
+    return [
+        '<!DOCTYPE html>',
+        '<html>',
+        '<head>',
+        '    <meta charset="utf-8">',
+        '    <script src="file://' + cesiumPath + '"></script>',
+        '    <link href="file://' + widgetPath + '" rel="stylesheet">',
+        '    <style>',
+        '        html, body { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; }',
+        '        #cesiumContainer { width: 100%; height: 100%; }',
+        '        /* Hide all Cesium UI widgets for clean screenshots */',
+        '        .cesium-viewer-toolbar,',
+        '        .cesium-viewer-animationContainer,',
+        '        .cesium-viewer-timelineContainer,',
+        '        .cesium-viewer-bottom,',
+        '        .cesium-viewer-fullscreenContainer,',
+        '        .cesium-viewer-infoPanel { display: none !important; }',
+        '    </style>',
+        '</head>',
+        '<body>',
+        '    <div id="cesiumContainer"></div>',
+        '    <script>',
+        '        console.log("[Cesium] Script starting...");',
+        '        const container = document.getElementById("cesiumContainer");',
+        '        const viewer = new Cesium.Viewer(container, {',
+        '            contextOptions: { webgl: { preserveDrawingBuffer: true } },',
+        '            animation: false,',
+        '            timeline: false,',
+        '            navigationHelpButton: false,',
+        '            homeButton: false,',
+        '            sceneModePicker: false,',
+        '            baseLayerPicker: false,',
+        '            geocoder: false,',
+        '            fullscreenButton: false,',
+        '            infoBox: false,',
+        '            selectionIndicator: false,',
+        '            creditContainer: document.createElement("div"),',
+        '            imageryProvider: false,',
+        '            globe: false',
+        '        });',
+        '        window.viewer = viewer;',
+        '        (async function() {',
+        '            console.log("[Cesium] Initializing Google Photorealistic 3D Tileset...");',
+        '            const apiKey = "' + (googleApiKey || '') + '";',
+        '            if (!apiKey) {',
+        '                console.error("[Cesium] CRITICAL: Google API Key is missing!");',
+        '            }',
+        '            try {',
+        '                console.log("[Cesium] Calling createGooglePhotorealistic3DTileset...");',
+        '                const tileset = await Cesium.createGooglePhotorealistic3DTileset({',
+        '                    key: apiKey',
+        '                });',
+        '                console.log("[Cesium] Tileset created successfully.");',
+        '                window.tileset = tileset;',
+        '                viewer.scene.primitives.add(tileset);',
+        '                tileset.maximumScreenSpaceError = 1.0;',
+        '',
+        '                // Camera setup: position above the property centroid',
+        '                var centroidLon = ' + centroid.lon + ';',
+        '                var centroidLat = ' + centroid.lat + ';',
+        '                var elev = ' + (elevation || 100) + ';',
+        '',
+        '                // Calculate camera altitude from boundary extent',
+        '                var rings = ' + ringsJson + ';',
+        '                var lons = rings[0].map(function(c) { return c[0]; });',
+        '                var lats = rings[0].map(function(c) { return c[1]; });',
+        '                var lonSpan = Math.max.apply(null, lons) - Math.min.apply(null, lons);',
+        '                var latSpan = Math.max.apply(null, lats) - Math.min.apply(null, lats);',
+        '                var spanDeg = Math.max(lonSpan, latSpan);',
+        '                // Convert to meters (~111km per degree), then use as camera height offset',
+        '                var spanMeters = spanDeg * 111000;',
+        '                var cameraAlt = elev + Math.max(spanMeters * 0.8, 150);',
+        '',
+        '                console.log("[Cesium] Camera altitude: " + cameraAlt + "m (elevation: " + elev + ", span: " + spanMeters.toFixed(0) + "m)");',
+        '',
+        '                viewer.camera.setView({',
+        '                    destination: Cesium.Cartesian3.fromDegrees(centroidLon, centroidLat, cameraAlt),',
+        '                    orientation: {',
+        '                        heading: Cesium.Math.toRadians(0),',
+        '                        pitch: Cesium.Math.toRadians(' + (job.varying_pitch || -24) + '),',
+        '                        roll: 0.0',
+        '                    }',
+        '                });',
+        '',
+        '                viewer.camera.frustum.fov = Cesium.Math.toRadians(100);',
+        '',
+        '                // Draw boundary lines at property elevation',
+        '                rings.forEach(function(ring) {',
+        '                    var coords = [];',
+        '                    ring.forEach(function(c) { coords.push(c[0], c[1], elev + 2); });',
+        '                    var pos = Cesium.Cartesian3.fromDegreesArrayHeights(coords);',
+        '                    viewer.entities.add({ polyline: { positions: pos, width: 3, material: Cesium.Color.YELLOW } });',
+        '                });',
+        '                console.log("[Cesium] Scene setup complete.");',
+        '            } catch (e) { ',
+        '                console.error("[CesiumJS Error] Failed to initialize tileset:", e); ',
+        '                if (e.message && e.message.includes("401")) {',
+        '                    console.error("[CesiumJS Error] Authentication failed (401). Check your Google API Key.");',
+        '                }',
+        '            }',
+        '        })();',
+        '    </script>',
+        '</body>',
+        '</html>'
+    ].join('\n');
 }
 
 module.exports = {
