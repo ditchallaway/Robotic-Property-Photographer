@@ -6,6 +6,5 @@ node_modules/
 public/
 output/
 tmp/
-test-results/
 *.log
 data/debug_screenshot.png
