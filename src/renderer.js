@@ -51,10 +51,10 @@ async function launchBrowser() {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--use-gl=swiftshader',
-        '--use-angle=swiftshader-webgl',
-        '--enable-webgl',
-        '--disable-gpu',
+        '--use-gl=angle',
+        '--use-angle=swiftshader',
+        '--enable-unsafe-swiftshader',
+        '--disable-gpu-sandbox',
         '--allow-file-access-from-files'
     ];
 
