@@ -149,8 +149,8 @@ async function renderPropertyPhoto(job) {
                                     : false;
                                 
                                 // Also check globe tiles if enabled (user rule: never capture until tilesLoaded === true)
-                                var globeLoaded = window.viewer.scene.globe 
-                                    ? window.viewer.scene.globe.tilesLoaded 
+                                var globeLoaded = (window.viewer.scene.globe && window.viewer.scene.imageryLayers.length > 0)
+                                    ? window.viewer.scene.globe.tilesLoaded
                                     : true;
 
                                 if (tsLoaded && globeLoaded) {
@@ -285,7 +285,9 @@ function generateCesiumHTML(job) {
         '            infoBox: false,',
         '            selectionIndicator: false,',
         '            creditContainer: document.createElement("div"),',
-        '            baseLayer: false',
+        '            imageryProvider: new Cesium.OpenStreetMapImageryProvider({',
+        '                url: "https://tile.openstreetmap.org/"',
+        '            }),',
         '        });',
         '        window.viewer = viewer;',
         '        (async function() {',
@@ -303,6 +305,7 @@ function generateCesiumHTML(job) {
         '                window.tileset = tileset;',
         '                viewer.scene.primitives.add(tileset);',
         '                tileset.maximumScreenSpaceError = 1.0;',
+        '                viewer.scene.globe.maximumScreenSpaceError = 1.0;',
         '',
         '                // Camera setup: position above the property centroid',
         '                var centroidLon = ' + centroid.lon + ';',
