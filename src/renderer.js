@@ -49,10 +49,9 @@ async function detectBlackFrame(pngBuffer, threshold = config.BLACK_FRAME_THRESH
 async function launchBrowser() {
     const args = [
         '--no-sandbox',
+        '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--use-gl=angle',
-        '--use-angle=swiftshader',
-        '--enable-unsafe-swiftshader',
+        '--ignore-gpu-blocklist',
         '--allow-file-access-from-files'
     ];
 
