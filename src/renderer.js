@@ -1,6 +1,8 @@
 const puppeteer = require('puppeteer-core');
 const fs = require('fs');
+const http = require('http');
 const path = require('path');
+const express = require('express');
 const config = require('./config');
 
 /**
@@ -81,6 +83,7 @@ async function renderPropertyPhoto(job) {
     }
 
     let browser;
+    let server;
     try {
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => {
@@ -94,12 +97,20 @@ async function renderPropertyPhoto(job) {
             console.log(`[Renderer] New page created`);
             await page.setViewport({ width: 2048, height: 1536 });
 
-            const os = require('os');
-            const fsPromises = require('fs').promises;
-            const tempHtmlPath = path.join(os.tmpdir(), 'render_' + Date.now() + '.html');
-            console.log(`[Renderer] Generating HTML and writing to ${tempHtmlPath}`);
+            console.log(`[Renderer] Generating HTML`);
             const htmlContent = generateCesiumHTML(job);
-            await fsPromises.writeFile(tempHtmlPath, htmlContent);
+
+            // Serve the render HTML and Cesium assets over HTTP to avoid file:// CORS restrictions
+            const app = express();
+            app.get('/render.html', (req, res) => {
+                res.setHeader('Content-Type', 'text/html');
+                res.send(htmlContent);
+            });
+            app.use('/cesium', express.static(path.join(process.cwd(), 'public/cesium')));
+            server = http.createServer(app);
+            await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+            const port = server.address().port;
+            console.log(`[Renderer] Serving render HTML on http://127.0.0.1:${port}/render.html`);
 
             page.on('console', msg => console.log('[Puppeteer Console]', msg.type(), msg.text()));
             page.on('pageerror', err => console.error('[Puppeteer Error]', err.message));
@@ -110,8 +121,8 @@ async function renderPropertyPhoto(job) {
                 }
             });
 
-            console.log(`[Renderer] Navigating to ${tempHtmlPath}`);
-            await page.goto('file://' + tempHtmlPath, { waitUntil: 'domcontentloaded' });
+            console.log(`[Renderer] Navigating to http://127.0.0.1:${port}/render.html`);
+            await page.goto(`http://127.0.0.1:${port}/render.html`, { waitUntil: 'domcontentloaded' });
             console.log(`[Renderer] Navigation complete, waiting for viewer...`);
             await page.waitForFunction(function() { return window.viewer !== undefined; }, { timeout: 60000 });
             console.log('[Renderer] Viewer initialized');
@@ -212,6 +223,7 @@ async function renderPropertyPhoto(job) {
             }
 
             await browser.close();
+            server.close();
             return {
                 shots: results,
                 metadata: { 
@@ -230,6 +242,7 @@ async function renderPropertyPhoto(job) {
 
     } catch (err) {
         if (browser) await browser.close().catch(() => {});
+        if (server) server.close();
         throw err;
     }
 }
@@ -238,8 +251,6 @@ function generateCesiumHTML(job) {
     const { centroid, elevation, boundary, boundaryRings, acreage } = job;
     const googleApiKey = (process.env.GOOGLE_API_KEY || '').trim();
     const ringsJson = JSON.stringify(boundaryRings || [boundary]);
-    const cesiumPath = process.cwd() + '/public/cesium/Cesium.js';
-    const widgetPath = process.cwd() + '/public/cesium/Widgets/widgets.css';
 
     if (googleApiKey) {
         const sanitizedKey = `${googleApiKey.substring(0, 4)}...${googleApiKey.substring(googleApiKey.length - 4)}`;
@@ -253,8 +264,8 @@ function generateCesiumHTML(job) {
         '<html>',
         '<head>',
         '    <meta charset="utf-8">',
-        '    <script src="file://' + cesiumPath + '"></script>',
-        '    <link href="file://' + widgetPath + '" rel="stylesheet">',
+        '    <script src="/cesium/Cesium.js"></script>',
+        '    <link href="/cesium/Widgets/widgets.css" rel="stylesheet">',
         '    <style>',
         '        html, body { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; }',
         '        #cesiumContainer { width: 100%; height: 100%; }',
