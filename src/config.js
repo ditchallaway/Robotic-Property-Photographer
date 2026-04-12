@@ -8,7 +8,7 @@ const config = {
     BLACK_FRAME_THRESHOLD: parseFloat(process.env.BLACK_FRAME_THRESHOLD || '0.95'),
     PUPPETEER_EXECUTABLE_PATH: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
     VARYING_PITCH: parseFloat(process.env.VARYING_PITCH || '-24'),
-    RENDER_TIMEOUT_MS: parseInt(process.env.RENDER_TIMEOUT_MS || '300000'), // 5 minutes
+    RENDER_TIMEOUT_MS: parseInt(process.env.RENDER_TIMEOUT_MS || '600000'), // 10 minutes
 };
 
 // Fail fast if critical environment variables are missing

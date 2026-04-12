@@ -150,51 +150,46 @@ async function renderPropertyPhoto(job) {
                 }, shot);
 
                 // Wait for tiles to stabilize: 3 consecutive stable ticks (~900ms)
-                await page.evaluate(function() {
-                    return new Promise(function(resolve, reject) {
-                        var stable = 0;
-                        var checks = 0;
-                        var timer = setInterval(function() {
-                            try {
-                                checks++;
-                                var tsLoaded = window.tileset
-                                    ? (window.tileset.tilesLoaded || window.tileset.allTilesLoaded)
-                                    : false;
-                                
-                                // Also check globe tiles if enabled (user rule: never capture until tilesLoaded === true)
-                                var globeLoaded = window.viewer.scene.globe 
-                                    ? window.viewer.scene.globe.tilesLoaded 
-                                    : true;
+                // We poll from Node side to avoid Puppeteer protocol timeouts on long-running evaluates
+                let stable = 0;
+                let checks = 0;
+                const maxChecks = 2000; // 600 seconds total
 
-                                if (tsLoaded && globeLoaded) {
-                                    if (++stable >= 3) {
-                                        console.log('[Cesium] Tiles stable (3/3). Ready for capture.');
-                                        clearInterval(timer);
-                                        resolve();
-                                    } else {
-                                        console.log('[Cesium] Tiles loaded (TS:' + tsLoaded + ', Globe:' + globeLoaded + '), stabilizing... (' + stable + '/3)');
-                                    }
-                                } else {
-                                    if (stable > 0) {
-                                        console.log('[Cesium] Tiles became unstable. Resetting.');
-                                    }
-                                    stable = 0;
-                                    // Log every 10 checks (~3s)
-                                    if (checks % 10 === 0) {
-                                        console.log('[Cesium] Waiting for tiles... (Tileset:' + tsLoaded + ', Globe:' + globeLoaded + ', check:' + checks + ')');
-                                    }
-                                }
-                            } catch (err) {
-                                stable = 0;
-                            }
-                        }, 300);
-
-                        setTimeout(function() {
-                            clearInterval(timer);
-                            reject(new Error('Tile loading timeout exceeded (120s)'));
-                        }, 120000);
+                while (checks < maxChecks) {
+                    const status = await page.evaluate(function() {
+                        var tsLoaded = window.tileset ? !!window.tileset.tilesLoaded : false;
+                        var globeLoaded = (window.viewer.scene.globe && window.viewer.scene.globe.tilesLoaded !== undefined)
+                            ? window.viewer.scene.globe.tilesLoaded 
+                            : true;
+                        
+                        return { tsLoaded: tsLoaded, globeLoaded: globeLoaded };
                     });
-                });
+
+                    checks++;
+
+                    if (status.tsLoaded && status.globeLoaded) {
+                        stable++;
+                        if (stable >= 3) {
+                            console.log(`[Renderer] Tiles stable (${stable}/3). Ready for capture.`);
+                            break;
+                        }
+                    } else {
+                        if (stable > 0) {
+                            console.log('[Renderer] Tiles became unstable. Resetting.');
+                        }
+                        stable = 0;
+                    }
+
+                    if (checks % 10 === 0) {
+                        console.log(`[Renderer] Waiting for tiles... (TS:${status.tsLoaded}, Globe:${status.globeLoaded}, check:${checks})`);
+                    }
+
+                    await new Promise(r => setTimeout(r, 300));
+                }
+
+                if (checks >= maxChecks) {
+                    throw new Error('Tile loading timeout exceeded (600s)');
+                }
 
                 const buffer = await page.screenshot({ type: 'png' });
                 const isBlack = await detectBlackFrame(buffer);
@@ -298,7 +293,8 @@ function generateCesiumHTML(job) {
         '            infoBox: false,',
         '            selectionIndicator: false,',
         '            creditContainer: document.createElement("div"),',
-        '            baseLayer: false',
+        '            baseLayer: false,',
+        '            globe: false',
         '        });',
         '        window.viewer = viewer;',
         '        (async function() {',
@@ -315,7 +311,7 @@ function generateCesiumHTML(job) {
         '                console.log("[Cesium] Tileset created successfully.");',
         '                window.tileset = tileset;',
         '                viewer.scene.primitives.add(tileset);',
-        '                tileset.maximumScreenSpaceError = 1.0;',
+        '                tileset.maximumScreenSpaceError = 16.0;',
         '',
         '                // Camera setup: position above the property centroid',
         '                var centroidLon = ' + centroid.lon + ';',
