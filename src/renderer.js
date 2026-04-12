@@ -99,14 +99,19 @@ async function renderPropertyPhoto(job) {
             console.log(`[Renderer] New page created`);
             await page.setViewport({ width: 2048, height: 1536 });
 
-            console.log(`[Renderer] Generating HTML`);
-            const htmlContent = generateCesiumHTML(job);
-
-            // Serve the render HTML and Cesium assets over HTTP to avoid file:// CORS restrictions
+            // Serve the static render HTML and Cesium assets over HTTP to avoid file:// CORS restrictions
             const app = express();
             app.get('/render.html', (req, res) => {
-                res.setHeader('Content-Type', 'text/html');
-                res.send(htmlContent);
+                res.sendFile(path.join(process.cwd(), 'public/index.html'));
+            });
+            app.get('/app.js', (req, res) => {
+                res.sendFile(path.join(process.cwd(), 'public/app.js'));
+            });
+            app.get('/api/job', (req, res) => {
+                res.json({
+                    job,
+                    googleApiKey: (process.env.GOOGLE_API_KEY || '').trim()
+                });
             });
             app.use('/cesium', express.static(path.join(process.cwd(), 'public/cesium')));
             server = http.createServer(app);
@@ -244,124 +249,6 @@ async function renderPropertyPhoto(job) {
     }
 }
 
-function generateCesiumHTML(job) {
-    const { centroid, elevation, boundary, boundaryRings, acreage } = job;
-    const googleApiKey = (process.env.GOOGLE_API_KEY || '').trim();
-    const ringsJson = JSON.stringify(boundaryRings || [boundary]);
-
-    if (googleApiKey) {
-        const sanitizedKey = `${googleApiKey.substring(0, 4)}...${googleApiKey.substring(googleApiKey.length - 4)}`;
-        console.log(`[Renderer] Map Tile Auth: API Key found (Prefix: ${googleApiKey.substring(0, 4)}, Length: ${googleApiKey.length})`);
-    } else {
-        console.error(`[Renderer] Map Tile Auth: CRITICAL - GOOGLE_API_KEY environment variable is NOT SET.`);
-    }
-
-    return [
-        '<!DOCTYPE html>',
-        '<html>',
-        '<head>',
-        '    <meta charset="utf-8">',
-        '    <script src="/cesium/Cesium.js"></script>',
-        '    <link href="/cesium/Widgets/widgets.css" rel="stylesheet">',
-        '    <style>',
-        '        html, body { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; }',
-        '        #cesiumContainer { width: 100%; height: 100%; }',
-        '        /* Hide all Cesium UI widgets for clean screenshots */',
-        '        .cesium-viewer-toolbar,',
-        '        .cesium-viewer-animationContainer,',
-        '        .cesium-viewer-timelineContainer,',
-        '        .cesium-viewer-bottom,',
-        '        .cesium-viewer-fullscreenContainer,',
-        '        .cesium-viewer-infoPanel { display: none !important; }',
-        '    </style>',
-        '</head>',
-        '<body>',
-        '    <div id="cesiumContainer"></div>',
-        '    <script>',
-        '        console.log("[Cesium] Script starting...");',
-        '        const container = document.getElementById("cesiumContainer");',
-        '        const viewer = new Cesium.Viewer(container, {',
-        '            contextOptions: { webgl: { preserveDrawingBuffer: true } },',
-        '            animation: false,',
-        '            timeline: false,',
-        '            navigationHelpButton: false,',
-        '            homeButton: false,',
-        '            sceneModePicker: false,',
-        '            baseLayerPicker: false,',
-        '            geocoder: false,',
-        '            fullscreenButton: false,',
-        '            infoBox: false,',
-        '            selectionIndicator: false,',
-        '            creditContainer: document.createElement("div"),',
-        '            baseLayer: false,',
-        '            globe: false',
-        '        });',
-        '        window.viewer = viewer;',
-        '        (async function() {',
-        '            console.log("[Cesium] Initializing Google Photorealistic 3D Tileset...");',
-        '            const apiKey = "' + (googleApiKey || '') + '";',
-        '            if (!apiKey) {',
-        '                console.error("[Cesium] CRITICAL: Google API Key is missing!");',
-        '            }',
-        '            try {',
-        '                console.log("[Cesium] Calling createGooglePhotorealistic3DTileset...");',
-        '                const tileset = await Cesium.createGooglePhotorealistic3DTileset({',
-        '                    key: apiKey',
-        '                });',
-        '                console.log("[Cesium] Tileset created successfully.");',
-        '                window.tileset = tileset;',
-        '                viewer.scene.primitives.add(tileset);',
-        '                tileset.maximumScreenSpaceError = 16.0;',
-        '',
-        '                // Camera setup: position above the property centroid',
-        '                var centroidLon = ' + centroid.lon + ';',
-        '                var centroidLat = ' + centroid.lat + ';',
-        '                var elev = ' + (elevation || 100) + ';',
-        '',
-        '                // Calculate camera altitude from boundary extent',
-        '                var rings = ' + ringsJson + ';',
-        '                var lons = rings[0].map(function(c) { return c[0]; });',
-        '                var lats = rings[0].map(function(c) { return c[1]; });',
-        '                var lonSpan = Math.max.apply(null, lons) - Math.min.apply(null, lons);',
-        '                var latSpan = Math.max.apply(null, lats) - Math.min.apply(null, lats);',
-        '                var spanDeg = Math.max(lonSpan, latSpan);',
-        '                // Convert to meters (~111km per degree), then use as camera height offset',
-        '                var spanMeters = spanDeg * 111000;',
-        '                var cameraAlt = elev + Math.max(spanMeters * 0.8, 150);',
-        '',
-        '                console.log("[Cesium] Camera altitude: " + cameraAlt + "m (elevation: " + elev + ", span: " + spanMeters.toFixed(0) + "m)");',
-        '',
-        '                viewer.camera.setView({',
-        '                    destination: Cesium.Cartesian3.fromDegrees(centroidLon, centroidLat, cameraAlt),',
-        '                    orientation: {',
-        '                        heading: Cesium.Math.toRadians(0),',
-        '                        pitch: Cesium.Math.toRadians(' + (job.varying_pitch || -24) + '),',
-        '                        roll: 0.0',
-        '                    }',
-        '                });',
-        '',
-        '                viewer.camera.frustum.fov = Cesium.Math.toRadians(100);',
-        '',
-        '                // Draw boundary lines at property elevation',
-        '                rings.forEach(function(ring) {',
-        '                    var coords = [];',
-        '                    ring.forEach(function(c) { coords.push(c[0], c[1], elev + 2); });',
-        '                    var pos = Cesium.Cartesian3.fromDegreesArrayHeights(coords);',
-        '                    viewer.entities.add({ polyline: { positions: pos, width: 3, material: Cesium.Color.YELLOW } });',
-        '                });',
-        '                console.log("[Cesium] Scene setup complete.");',
-        '            } catch (e) { ',
-        '                console.error("[CesiumJS Error] Failed to initialize tileset:", e); ',
-        '                if (e.message && e.message.includes("401")) {',
-        '                    console.error("[CesiumJS Error] Authentication failed (401). Check your Google API Key.");',
-        '                }',
-        '            }',
-        '        })();',
-        '    </script>',
-        '</body>',
-        '</html>'
-    ].join('\n');
-}
 
 module.exports = {
     renderPropertyPhoto,
