@@ -83,7 +83,7 @@ docker compose up --build
 docker compose run renderer node bin/render.js < job.json --output /app/output/photo.png
 
 # Run tests
-docker compose run renderer node test-gl.js
+docker compose run renderer node test_cesium.js
 docker compose run renderer node test-cli.cjs
 ```
 

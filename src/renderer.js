@@ -86,9 +86,10 @@ async function renderPropertyPhoto(job) {
 
     let browser;
     let server;
+    let timeoutId;
     try {
         const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
                 reject(new Error('Render job timed out after ' + (config.RENDER_TIMEOUT_MS / 1000) + 's'));
             }, config.RENDER_TIMEOUT_MS);
         });
@@ -259,7 +260,11 @@ async function renderPropertyPhoto(job) {
             };
         })();
 
-        return await Promise.race([renderTask, timeoutPromise]);
+        try {
+            return await Promise.race([renderTask, timeoutPromise]);
+        } finally {
+            if (timeoutId) clearTimeout(timeoutId);
+        }
 
     } catch (err) {
         if (browser) await browser.close().catch(() => {});
