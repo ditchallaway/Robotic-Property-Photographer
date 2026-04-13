@@ -149,19 +149,28 @@ async function renderPropertyPhoto(job) {
                 await page.evaluate(function(s) {
                     const h = window.Cesium.Math.toRadians(s.heading);
                     const p = window.Cesium.Math.toRadians(s.pitch);
+                    
+                    // High SSE during camera move for faster "coarse" loading
+                    if (window.tileset) window.tileset.maximumScreenSpaceError = 128.0;
+                    window.viewer.scene.globe.maximumScreenSpaceError = 128.0;
+
                     window.viewer.camera.setView({
                         orientation: { heading: h, pitch: p, roll: 0.0 }
                     });
                 }, shot);
 
                 // Wait for tiles to stabilize: 3 consecutive stable ticks (~900ms)
-                // We poll from Node side to avoid Puppeteer protocol timeouts on long-running evaluates
                 let stable = 0;
                 let checks = 0;
                 const maxChecks = 2000; // 600 seconds total
 
                 while (checks < maxChecks) {
                     const status = await page.evaluate(function() {
+                        // Force MAX detail (SSE 1.0) while checking for stability
+                        // as per quality.md requirements.
+                        if (window.tileset) window.tileset.maximumScreenSpaceError = 1.0;
+                        window.viewer.scene.globe.maximumScreenSpaceError = 1.0;
+
                         var tsLoaded = window.tileset ? !!window.tileset.tilesLoaded : false;
                         var globeLoaded = (window.viewer.scene.globe && window.viewer.scene.globe.tilesLoaded !== undefined)
                             ? window.viewer.scene.globe.tilesLoaded 
@@ -191,6 +200,7 @@ async function renderPropertyPhoto(job) {
 
                     await new Promise(r => setTimeout(r, 300));
                 }
+
 
                 if (checks >= maxChecks) {
                     throw new Error('Tile loading timeout exceeded (600s)');
