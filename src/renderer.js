@@ -86,9 +86,10 @@ async function renderPropertyPhoto(job) {
 
     let browser;
     let server;
+    let timeoutId;
     try {
         const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
                 reject(new Error('Render job timed out after ' + (config.RENDER_TIMEOUT_MS / 1000) + 's'));
             }, config.RENDER_TIMEOUT_MS);
         });
@@ -151,59 +152,68 @@ async function renderPropertyPhoto(job) {
                     const p = window.Cesium.Math.toRadians(s.pitch);
                     
                     // High SSE during camera move for faster "coarse" loading
-                    if (window.tileset) window.tileset.maximumScreenSpaceError = 128.0;
-                    window.viewer.scene.globe.maximumScreenSpaceError = 128.0;
+                    if (window.tileset) window.tileset.maximumScreenSpaceError = s.coarseSse;
+                    window.viewer.scene.globe.maximumScreenSpaceError = s.coarseSse;
 
                     window.viewer.camera.setView({
                         orientation: { heading: h, pitch: p, roll: 0.0 }
                     });
-                }, shot);
+                }, { ...shot, coarseSse: config.COARSE_SSE });
 
-                // Wait for tiles to stabilize: 3 consecutive stable ticks (~900ms)
+                // Wait for coarse load first, then enforce final quality stability gate (SSE 1.0)
                 let stable = 0;
                 let checks = 0;
-                const maxChecks = 2000; // 600 seconds total
+                let finalQualityMode = false;
+                const startedAt = Date.now();
 
-                while (checks < maxChecks) {
-                    const status = await page.evaluate(function() {
-                        // Force MAX detail (SSE 1.0) while checking for stability
-                        // as per quality.md requirements.
-                        if (window.tileset) window.tileset.maximumScreenSpaceError = 1.0;
-                        window.viewer.scene.globe.maximumScreenSpaceError = 1.0;
+                while (Date.now() - startedAt < config.SHOT_TILE_TIMEOUT_MS) {
+                    const status = await page.evaluate(function(state) {
+                        if (window.tileset) window.tileset.maximumScreenSpaceError = state.currentSse;
+                        window.viewer.scene.globe.maximumScreenSpaceError = state.currentSse;
 
-                        var tsLoaded = window.tileset ? !!window.tileset.tilesLoaded : false;
-                        var globeLoaded = (window.viewer.scene.globe && window.viewer.scene.globe.tilesLoaded !== undefined)
-                            ? window.viewer.scene.globe.tilesLoaded 
+                        const tsLoaded = window.tileset ? !!window.tileset.tilesLoaded : true;
+                        const globeLoaded = (window.viewer.scene.globe && window.viewer.scene.globe.tilesLoaded !== undefined)
+                            ? window.viewer.scene.globe.tilesLoaded
                             : true;
-                        
-                        return { tsLoaded: tsLoaded, globeLoaded: globeLoaded };
-                    });
 
-                    checks++;
+                        return { tsLoaded, globeLoaded };
+                    }, { currentSse: finalQualityMode ? config.FINAL_SSE : config.COARSE_SSE });
+
+                    checks += 1;
 
                     if (status.tsLoaded && status.globeLoaded) {
-                        stable++;
-                        if (stable >= 3) {
-                            console.log(`[Renderer] Tiles stable (${stable}/3). Ready for capture.`);
-                            break;
+                        if (!finalQualityMode) {
+                            finalQualityMode = true;
+                            stable = 0;
+                            console.log(`[Renderer] Coarse tiles loaded for ${shot.id}. Enforcing final quality gate (SSE ${config.FINAL_SSE}).`);
+                        } else {
+                            stable += 1;
+                            if (stable >= config.TILE_STABLE_TICKS_REQUIRED) {
+                                console.log(`[Renderer] Final tiles stable (${stable}/${config.TILE_STABLE_TICKS_REQUIRED}). Ready for capture.`);
+                                break;
+                            }
                         }
                     } else {
-                        if (stable > 0) {
-                            console.log('[Renderer] Tiles became unstable. Resetting.');
+                        if (stable > 0 && finalQualityMode) {
+                            console.log('[Renderer] Final-quality tiles became unstable. Resetting.');
                         }
                         stable = 0;
                     }
 
                     if (checks % 10 === 0) {
-                        console.log(`[Renderer] Waiting for tiles... (TS:${status.tsLoaded}, Globe:${status.globeLoaded}, check:${checks})`);
+                        const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
+                        const phase = finalQualityMode ? 'final' : 'coarse';
+                        console.log(`[Renderer] Waiting for tiles (${phase})... (TS:${status.tsLoaded}, Globe:${status.globeLoaded}, check:${checks}, elapsed:${elapsed}s)`);
                     }
 
-                    await new Promise(r => setTimeout(r, 300));
+                    await new Promise(r => setTimeout(r, config.TILE_CHECK_INTERVAL_MS));
                 }
 
 
-                if (checks >= maxChecks) {
-                    throw new Error('Tile loading timeout exceeded (600s)');
+                if (stable < config.TILE_STABLE_TICKS_REQUIRED) {
+                    throw new Error(
+                        `Tile loading timeout on shot ${shot.id} after ${Math.round(config.SHOT_TILE_TIMEOUT_MS / 1000)}s`
+                    );
                 }
 
                 const buffer = await page.screenshot({ type: 'png' });
@@ -250,7 +260,11 @@ async function renderPropertyPhoto(job) {
             };
         })();
 
-        return await Promise.race([renderTask, timeoutPromise]);
+        try {
+            return await Promise.race([renderTask, timeoutPromise]);
+        } finally {
+            if (timeoutId) clearTimeout(timeoutId);
+        }
 
     } catch (err) {
         if (browser) await browser.close().catch(() => {});
