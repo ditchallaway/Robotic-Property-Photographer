@@ -2,7 +2,19 @@
 
 Headless renderer that converts parcel boundary geometry into **5 PNG images** of the property — north, east, south, west, and overhead.
 
-This repo is a rendering engine. Upstream orchestration (n8n), long-term storage, notifications, and job scheduling happen outside this codebase.
+This repo is a rendering engine focused on one job: **automate the creation of 5 property-boundary images per request**.
+
+Upstream orchestration (n8n), long-term storage, notifications, and job scheduling happen outside this codebase.
+
+## Product north star
+
+Our immediate goal is simple and explicit:
+
+1. Given one property payload, render 5 usable PNGs (`north`, `east`, `south`, `west`, `nadir`) with the property boundary clearly visible.
+2. Keep the system simple and reliable enough to run a few times per day.
+3. Scale throughput only after the core 5-image workflow is consistently passing.
+
+This means we prioritize **working output and operational simplicity** over premature infrastructure complexity.
 
 ---
 
@@ -92,9 +104,51 @@ docker compose up --build
 docker compose run renderer node bin/render.js < job.json --output /app/output/photo.png
 
 # Run tests
-docker compose run renderer node test-gl.js
+docker compose run renderer node test_cesium.js
 docker compose run renderer node test-cli.cjs
 ```
+
+## Prevent hung renders (without waiting forever)
+
+The renderer now has **two timeout layers**:
+
+- `RENDER_TIMEOUT_MS` (default `600000`) is a hard timeout for the full job.
+- `SHOT_TILE_TIMEOUT_MS` (default `120000`) is a per-shot timeout for tile loading.
+
+This means a single stuck camera angle fails quickly instead of hanging for the full 10-minute job timeout.
+
+### Recommended production settings
+
+```bash
+RENDER_TIMEOUT_MS=420000
+SHOT_TILE_TIMEOUT_MS=90000
+TILE_CHECK_INTERVAL_MS=300
+TILE_STABLE_TICKS_REQUIRED=3
+COARSE_SSE=128
+FINAL_SSE=1.0
+```
+
+- `COARSE_SSE` speeds up initial loading while the camera settles.
+- `FINAL_SSE=1.0` preserves output quality before capture.
+
+## Speed tuning tips
+
+1. Keep rendering strictly sequential (already enforced in queue) to avoid WebGL memory contention.
+2. Use coarse-to-final SSE (implemented by default) instead of forcing max detail for the full wait.
+3. If your area has very dense 3D tiles, reduce `SHOT_TILE_TIMEOUT_MS` and retry upstream with backoff.
+4. Make sure host has enough CPU/RAM; software WebGL (`swiftshader`) is CPU-heavy.
+
+## Running `docker compose` tests in cloud
+
+Yes. The test stack works in cloud environments that support Docker Engine + Compose (for example: GitHub Actions runners, AWS EC2, GCP Compute Engine, Azure VM, Fly machines with Docker, etc.).
+
+Typical CI command:
+
+```bash
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from n8n-simulator
+```
+
+Then inspect artifacts in `./test-results/current/` (or publish that folder as CI artifacts).
 
 ---
 

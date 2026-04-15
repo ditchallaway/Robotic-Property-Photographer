@@ -1,5 +1,10 @@
 # Architecture: Headless Rendering Service
 
+## Guiding product goal
+* **North star:** Automate creation of 5 property PNGs per request (`north`, `east`, `south`, `west`, `nadir`) with the boundary visible and usable.
+* **Operating target (now):** Reliability for a low-volume workflow (a few runs per day).
+* **Scaling strategy:** Add throughput/infra complexity incrementally only after the 5-image workflow is consistently correct.
+
 ## 1. The "Headless Renderer" Pattern
 * **Role:** This repository is a **stateless rendering microservice**. It receives a JSON payload and returns **5 PNG images** of the property boundary — one from each cardinal direction and one overhead.
 * **Forbidden Scope:**
