@@ -139,22 +139,29 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
             // full 2048×1536 output resolution only before taking the screenshot.
             await page.setViewport({ width: 512, height: 384 });
 
-            // Serve the static render HTML and Cesium assets over HTTP to avoid file:// CORS restrictions.
+            // Serve the static render HTML and all assets in the public directory.
+            // This includes app.js, config.js, and Cesium library assets.
             // Uses a fixed port (ASSET_SERVER_PORT) so no new OS port is allocated per job.
             const assetApp = express();
-            assetApp.get('/render.html', (req, res) => {
-                res.sendFile(path.join(process.cwd(), 'public/index.html'));
-            });
-            assetApp.get('/app.js', (req, res) => {
-                res.sendFile(path.join(process.cwd(), 'public/app.js'));
-            });
+            
+            // Allow the job data to be fetched by the browser app
             assetApp.get('/api/job', (req, res) => {
                 res.json({
                     job,
                     googleApiKey: (process.env.GOOGLE_API_KEY || '').trim()
                 });
             });
-            assetApp.use('/cesium', express.static(path.join(process.cwd(), 'public/cesium')));
+
+            // Serve the public folder (index.html, app.js, config.js, etc.)
+            const publicPath = path.join(process.cwd(), 'public');
+            assetApp.use(express.static(publicPath));
+            
+            // Alias render.html to index.html for backward compatibility if needed,
+            // or just rely on index.html being served at root /
+            assetApp.get('/render.html', (req, res) => {
+                res.sendFile(path.join(publicPath, 'index.html'));
+            });
+
             server = http.createServer(assetApp);
 
             // Track connections for force-close on cleanup
@@ -197,11 +204,11 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
             // Overhead is rendered FIRST to warm the tile cache — its nadir view
             // loads the property's core tiles which the cardinal shots also need.
             const shots = [
-                { id: 'overhead', heading: 0,   pitch: -89.9, finalSSE: 1 },
-                { id: 'north',    heading: 0,   pitch: -24,   finalSSE: 4 },
-                { id: 'east',     heading: 90,  pitch: -24,   finalSSE: 4 },
-                { id: 'south',    heading: 180, pitch: -24,   finalSSE: 4 },
-                { id: 'west',     heading: 270, pitch: -24,   finalSSE: 4 }
+                { id: 'overhead', heading: 0,   pitch: -89.9, finalSSE: 1, rangeFactor: 2.0 },
+                { id: 'north',    heading: 0,   pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
+                { id: 'east',     heading: 90,  pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
+                { id: 'south',    heading: 180, pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
+                { id: 'west',     heading: 270, pitch: -35,   finalSSE: 4, rangeFactor: 2.5 }
             ];
 
             const results = [];
@@ -211,7 +218,7 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
                 const progressBase = 20 + (shotIndex - 1) * (70 / shots.length);
                 onProgress(progressBase, `Rendering shot: ${shot.id} (${shotIndex}/${shots.length})`);
                 
-                console.log(`[Renderer] [${elapsed()}] === Shot: ${shot.id} (heading: ${shot.heading}°, finalSSE: ${shot.finalSSE}) ===`);
+                console.log(`[Renderer] [${elapsed()}] === Shot: ${shot.id} (heading: ${shot.heading}°, pitch: ${shot.pitch}°, finalSSE: ${shot.finalSSE}) ===`);
                 const shotStart = Date.now();
                 
                 // Always start coarse (SSE=16) to avoid flooding SwiftShader with
@@ -222,6 +229,7 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
                 await page.evaluate(function(shot, initialSSE) {
                     const h = window.Cesium.Math.toRadians(shot.heading);
                     const p = window.Cesium.Math.toRadians(shot.pitch);
+                    const range = window.boundingSphere.radius * shot.rangeFactor;
                     
                     // Set SSE to target initially
                     if (window.tileset) {
@@ -230,8 +238,10 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
                     }
                     window.viewer.scene.globe.maximumScreenSpaceError = initialSSE;
 
-                    window.viewer.camera.setView({
-                        orientation: { heading: h, pitch: p, roll: 0.0 }
+                    // Use flyToBoundingSphere for orbital framing (keeps property centered)
+                    window.viewer.camera.flyToBoundingSphere(window.boundingSphere, {
+                        offset: new window.Cesium.HeadingPitchRange(h, p, range),
+                        duration: 0
                     });
                 }, shot, targetSSE);
 
