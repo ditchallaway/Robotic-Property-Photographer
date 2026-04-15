@@ -11,6 +11,15 @@ const app = express();
 const queue = new RenderQueue();
 const PORT = process.env.PORT || 9876;
 
+// Parse global defaults from command line arguments
+const args = process.argv.slice(2);
+const globalFast = args.includes('--fast');
+const globalSkipValidation = args.includes('--no-validate');
+const progressFlagIndex = args.indexOf('--progress-file');
+const globalProgressPath = progressFlagIndex !== -1 ? args[progressFlagIndex + 1] : null;
+
+console.log(`[Config] Global Flags: fast=${globalFast}, skipValidation=${globalSkipValidation}, progressFile=${globalProgressPath}`);
+
 app.use(express.json());
 
 // Serve static assets for manual verification in browser
@@ -105,10 +114,28 @@ app.post('/render', async (req, res) => {
         let result;
         try {
             console.log(`[API] Enqueuing job...`);
-            result = await queue.enqueue(async () => {
+            result = await queue.enqueue(async (updateProgress) => {
                 console.log(`[API] Job started processing in queue`);
                 const startTime = Date.now();
-                const renderResult = await renderPropertyPhoto(job);
+                
+                // Wrap updateProgress to also write to globalProgressPath if set
+                const progressHandler = (percent, status) => {
+                    updateProgress(percent, status);
+                    if (globalProgressPath) {
+                        try {
+                            const fs = require('fs');
+                            fs.writeFileSync(globalProgressPath, JSON.stringify({ percent: Math.round(percent), status, timestamp: new Date().toISOString() }));
+                        } catch (e) { /* ignore write errors */ }
+                    }
+                };
+
+                // Pass the fast/skipValidation options from the query/body if available, falling back to global defaults
+                const renderOptions = {
+                    fast: !!req.query.fast || !!req.body.fast || globalFast,
+                    skipValidation: !!req.query['no-validate'] || !!req.body.skipValidation || globalSkipValidation
+                };
+                const renderResult = await renderPropertyPhoto(job, progressHandler, renderOptions);
+                
                 const duration = ((Date.now() - startTime) / 1000).toFixed(1);
                 console.log(`[API] Rendering completed in ${duration}s`);
                 return renderResult;

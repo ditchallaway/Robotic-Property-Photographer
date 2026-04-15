@@ -1,7 +1,7 @@
 # Architecture: Headless Rendering Service
 
 ## 1. The "Headless Renderer" Pattern
-* **Role:** This repository is a **stateless rendering microservice**. It receives a JSON payload and returns **exactly 5 deterministic PNG images** of a property boundary.
+* **Role:** This repository is a **stateless rendering microservice**. It receives a JSON payload and returns **5 PNG images** of the property boundary — one from each cardinal direction and one overhead.
 * **Forbidden Scope:**
     * Do **NOT** implement long-term file storage (S3, GCS, etc.).
     * Do **NOT** implement email/notification logic (SendGrid, SMTP).
@@ -51,6 +51,8 @@
 * **Headless Config:** Always set `contextOptions: { webgl: { preserveDrawingBuffer: true } }` to prevent blank PNGs.
 * **Concurrency:** Render exactly 1 job at a time (sequential) to prevent WebGL memory crashes.
 * **Black-Frame Detection:** After each screenshot, automatically check for mostly-black frames (< 5% non-black pixels) and log a warning. This prevents silently saving empty renders.
+* **Performance Baseline:** Rendering is a high-fidelity synchronous operation. 100% CPU/GPU utilization is expected. The system is tuned for quality (SSE 1.0) over raw speed. 
+* **Intentional Latency:** A 10-minute (600s) hard timeout is configured to handle cold-starts and heavy tileset loading.
 * **Dependency Management:** If a new npm package is installed, you **MUST** suggest running `docker-compose up --build` immediately.
 
 ## 4. Rendering Rules

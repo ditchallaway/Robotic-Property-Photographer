@@ -7,11 +7,14 @@ class RenderQueue {
         this.queue = Promise.resolve();
         this.activeJob = null;
         this.jobCount = 0;
+        this.currentProgress = 0;
+        this.currentStatus = 'Idle';
     }
 
     /**
      * Enqueue a render job
-     * @param {Function} jobFn - Async function that performs the render
+     * @param {Function} jobFn - Async function that performs the render. 
+     *                           Receives an updateProgress(percent, status) callback.
      * @returns {Promise} Resolves with job result
      */
     async enqueue(jobFn) {
@@ -20,10 +23,17 @@ class RenderQueue {
         return new Promise((resolve, reject) => {
             this.queue = this.queue.then(async () => {
                 this.activeJob = jobId;
+                this.currentProgress = 0;
+                this.currentStatus = 'Started';
                 console.log(`[Queue] Job #${jobId} started`);
                 
+                const updateProgress = (percent, status) => {
+                    this.currentProgress = Math.round(percent);
+                    this.currentStatus = status;
+                };
+
                 try {
-                    const result = await jobFn();
+                    const result = await jobFn(updateProgress);
                     console.log(`[Queue] Job #${jobId} completed`);
                     resolve(result);
                 } catch (err) {
@@ -31,6 +41,8 @@ class RenderQueue {
                     reject(err);
                 } finally {
                     this.activeJob = null;
+                    this.currentProgress = 0;
+                    this.currentStatus = 'Idle';
                 }
             }).catch(reject);
         });
@@ -46,7 +58,11 @@ class RenderQueue {
             // Total number of jobs that have been submitted to the queue
             totalJobs: this.jobCount,
             // Boolean indicating if the worker queue is currently busy
-            queued: this.activeJob !== null
+            queued: this.activeJob !== null,
+            // Real-time progress percentage of the active job
+            progress: this.currentProgress,
+            // Current status message from the renderer
+            status: this.currentStatus
         };
     }
 }

@@ -1,6 +1,6 @@
 # Robotic Property Photographer
 
-Stateless headless renderer that converts parcel geometry into **exactly 5 deterministic PNG images**.
+Headless renderer that converts parcel boundary geometry into **5 PNG images** of the property — north, east, south, west, and overhead.
 
 This repo is a rendering engine. Upstream orchestration (n8n), long-term storage, notifications, and job scheduling happen outside this codebase.
 
@@ -67,9 +67,18 @@ docker compose run renderer node bin/render.js < job.json > output/photo.png
 
 - **Stateless worker** — no internal database, no durable queues, no mandatory external services.
 - **Sequential rendering** — one render job at a time (WebGL/Chromium stability).
-- **Deterministic camera** — fixed headings (True North aligned) for reproducible outputs.
+- **Fixed camera headings** — True North aligned (0°, 90°, 180°, 270°) for consistent framing.
 - **Tiles-loaded wait** — capture only after `viewer.scene.globe.tilesLoaded === true` (stable across N ticks).
 - **Black-frame detection** — reject renders where < 5% of pixels are non-black.
+
+---
+
+## Performance & Timeouts
+
+- **Render Time**: Expect 1-3 minutes per job. High-fidelity 3D rendering in a headless environment is computationally intensive.
+- **Intentional Timeout**: `RENDER_TIMEOUT_MS` defaults to **1,200,000ms (20 minutes)**. This is unconventional but necessary to ensure consistent tile loading across high-latency network conditions and software-rendering environments.
+- **Visibility**: Use the `--progress-file` flag or the `/queue/status` endpoint to monitor real-time progress.
+- **Fast Mode**: The `--fast` flag skips the SSE=4 intermediate step (`16→1` instead of `16→4→1`), reducing render time while still loading coarse tiles first to avoid flooding SwiftShader.
 
 ---
 

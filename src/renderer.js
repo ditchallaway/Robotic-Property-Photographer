@@ -73,8 +73,15 @@ async function launchBrowser() {
 
 /**
  * Render a property photo
+ * @param {Object} job - Render job specification
+ * @param {Function} onProgress - Progress callback (percent, status)
+ * @param {Object} options - Render options (fast: boolean)
  */
-async function renderPropertyPhoto(job) {
+// Fixed internal port for the per-job Cesium asset server.
+// Safe to reuse because jobs run sequentially (conserve.md).
+const ASSET_SERVER_PORT = 9877;
+
+async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
     const { centroid, elevation, boundary, acreage } = job;
     
     if (!centroid || !centroid.lon || !centroid.lat) {
@@ -86,6 +93,30 @@ async function renderPropertyPhoto(job) {
 
     let browser;
     let server;
+    // Track every socket the asset server opens so we can force-close them
+    // if the job times out or fails (preventing server.close() hang).
+    const openSockets = new Set();
+
+    /**
+     * Forcefully tears down the asset server and browser.
+     * Destroys all tracked sockets so server.close() resolves immediately
+     * rather than waiting for Puppeteer's keep-alive connections to drain.
+     */
+    async function cleanup() {
+        if (browser) {
+            await browser.close().catch(() => {});
+            browser = null;
+        }
+        if (server) {
+            for (const socket of openSockets) {
+                socket.destroy();
+            }
+            openSockets.clear();
+            await new Promise(resolve => server.close(resolve));
+            server = null;
+        }
+    }
+
     try {
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => {
@@ -94,28 +125,48 @@ async function renderPropertyPhoto(job) {
         });
 
         const renderTask = (async function() {
+            const jobStart = Date.now();
+            const elapsed = () => ((Date.now() - jobStart) / 1000).toFixed(1) + 's';
+
+            onProgress(0, 'Launching browser...');
             browser = await launchBrowser();
             const page = await browser.newPage();
-            console.log(`[Renderer] New page created`);
-            await page.setViewport({ width: 2048, height: 1536 });
+            onProgress(5, 'Browser page created');
+            console.log(`[Renderer] [${elapsed()}] Browser launched, page created`);
+            // Start at a tiny viewport for tile loading — SwiftShader renders
+            // every frame in software, so 512×384 (1/16th of output) makes each
+            // scene.render() in the polling loop ~16× faster. We resize to the
+            // full 2048×1536 output resolution only before taking the screenshot.
+            await page.setViewport({ width: 512, height: 384 });
 
-            // Serve the static render HTML and Cesium assets over HTTP to avoid file:// CORS restrictions
-            const app = express();
-            app.get('/render.html', (req, res) => {
+            // Serve the static render HTML and Cesium assets over HTTP to avoid file:// CORS restrictions.
+            // Uses a fixed port (ASSET_SERVER_PORT) so no new OS port is allocated per job.
+            const assetApp = express();
+            assetApp.get('/render.html', (req, res) => {
                 res.sendFile(path.join(process.cwd(), 'public/index.html'));
             });
-            app.get('/app.js', (req, res) => {
+            assetApp.get('/app.js', (req, res) => {
                 res.sendFile(path.join(process.cwd(), 'public/app.js'));
             });
-            app.get('/api/job', (req, res) => {
+            assetApp.get('/api/job', (req, res) => {
                 res.json({
                     job,
                     googleApiKey: (process.env.GOOGLE_API_KEY || '').trim()
                 });
             });
-            app.use('/cesium', express.static(path.join(process.cwd(), 'public/cesium')));
-            server = http.createServer(app);
-            await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+            assetApp.use('/cesium', express.static(path.join(process.cwd(), 'public/cesium')));
+            server = http.createServer(assetApp);
+
+            // Track connections for force-close on cleanup
+            server.on('connection', socket => {
+                openSockets.add(socket);
+                socket.once('close', () => openSockets.delete(socket));
+            });
+
+            await new Promise((resolve, reject) => {
+                server.once('error', reject);
+                server.listen(ASSET_SERVER_PORT, '127.0.0.1', resolve);
+            });
             const port = server.address().port;
             console.log(`[Renderer] Serving render HTML on http://127.0.0.1:${port}/render.html`);
 
@@ -128,77 +179,125 @@ async function renderPropertyPhoto(job) {
                 }
             });
 
-            console.log(`[Renderer] Navigating to http://127.0.0.1:${port}/render.html`);
+            console.log(`[Renderer] [${elapsed()}] Navigating to http://127.0.0.1:${port}/render.html`);
+            onProgress(10, 'Navigating to renderer...');
             await page.goto(`http://127.0.0.1:${port}/render.html`, { waitUntil: 'domcontentloaded' });
-            console.log(`[Renderer] Navigation complete, waiting for viewer...`);
+            console.log(`[Renderer] [${elapsed()}] Navigation complete, waiting for viewer...`);
+            onProgress(15, 'Waiting for Cesium initialization...');
             await page.waitForFunction(function() { return window.viewer !== undefined; }, { timeout: 60000 });
-            console.log('[Renderer] Viewer initialized');
+            console.log(`[Renderer] [${elapsed()}] Viewer initialized`);
+            onProgress(20, 'Cesium initialized');
 
+            // finalSSE = the lowest SSE we'll demand for that shot.
+            // Cardinal shots only need SSE=4 — background terrain at the horizon
+            // doesn't need to be pixel-perfect, and demanding SSE=1 triggers
+            // hundreds of tile requests that overwhelm SwiftShader.
+            // The overhead shot is the hero close-up, so it gets full SSE=1 quality.
+            //
+            // Overhead is rendered FIRST to warm the tile cache — its nadir view
+            // loads the property's core tiles which the cardinal shots also need.
             const shots = [
-                { id: 'north', heading: 0, pitch: -24 },
-                { id: 'east', heading: 90, pitch: -24 },
-                { id: 'south', heading: 180, pitch: -24 },
-                { id: 'west', heading: 270, pitch: -24 },
-                { id: 'overhead', heading: 0, pitch: -89.9 }
+                { id: 'overhead', heading: 0,   pitch: -89.9, finalSSE: 1 },
+                { id: 'north',    heading: 0,   pitch: -24,   finalSSE: 4 },
+                { id: 'east',     heading: 90,  pitch: -24,   finalSSE: 4 },
+                { id: 'south',    heading: 180, pitch: -24,   finalSSE: 4 },
+                { id: 'west',     heading: 270, pitch: -24,   finalSSE: 4 }
             ];
 
             const results = [];
+            let shotIndex = 0;
             for (const shot of shots) {
-                console.log('[Renderer] Rendering shot: ' + shot.id + ' (heading: ' + shot.heading + ' degrees)');
+                shotIndex++;
+                const progressBase = 20 + (shotIndex - 1) * (70 / shots.length);
+                onProgress(progressBase, `Rendering shot: ${shot.id} (${shotIndex}/${shots.length})`);
                 
-                await page.evaluate(function(s) {
-                    const h = window.Cesium.Math.toRadians(s.heading);
-                    const p = window.Cesium.Math.toRadians(s.pitch);
+                console.log(`[Renderer] [${elapsed()}] === Shot: ${shot.id} (heading: ${shot.heading}°, finalSSE: ${shot.finalSSE}) ===`);
+                const shotStart = Date.now();
+                
+                // Always start coarse (SSE=16) to avoid flooding SwiftShader with
+                // max-detail tile requests. --fast skips the SSE=4 intermediate
+                // step (16→1) instead of starting at SSE=1 directly, which was
+                // causing mass ERR_ABORTED tile cancellations.
+                let targetSSE = 16.0;
+                await page.evaluate(function(shot, initialSSE) {
+                    const h = window.Cesium.Math.toRadians(shot.heading);
+                    const p = window.Cesium.Math.toRadians(shot.pitch);
                     
-                    // High SSE during camera move for faster "coarse" loading
-                    if (window.tileset) window.tileset.maximumScreenSpaceError = 128.0;
-                    window.viewer.scene.globe.maximumScreenSpaceError = 128.0;
+                    // Set SSE to target initially
+                    if (window.tileset) {
+                        window.tileset.maximumScreenSpaceError = initialSSE;
+                        window.tileset.cacheBytes = 1073741824; 
+                    }
+                    window.viewer.scene.globe.maximumScreenSpaceError = initialSSE;
 
                     window.viewer.camera.setView({
                         orientation: { heading: h, pitch: p, roll: 0.0 }
                     });
-                }, shot);
+                }, shot, targetSSE);
 
-                // Wait for tiles to stabilize: 3 consecutive stable ticks (~900ms)
+                // Wait for tiles to stabilize using incremental SSE refinement.
+                // Steps: 16 → [4 if not fast] → shot.finalSSE
+                // Cardinal shots stop at SSE=4; overhead goes all the way to SSE=1.
                 let stable = 0;
+                let nearlyReady = 0;
                 let checks = 0;
-                const maxChecks = 2000; // 600 seconds total
+                // Poll every 150ms (was 300ms) — faster stability detection
+                const POLL_MS = 150;
+                const maxChecks = config.RENDER_TIMEOUT_MS / POLL_MS;
+                const finalSSE = shot.finalSSE;
 
                 while (checks < maxChecks) {
-                    const status = await page.evaluate(function() {
-                        // Force MAX detail (SSE 1.0) while checking for stability
-                        // as per quality.md requirements.
-                        if (window.tileset) window.tileset.maximumScreenSpaceError = 1.0;
+                    const status = await page.evaluate(function(currentSSE) {
+                        window.viewer.scene.render();
+                        
+                        // Apply quality SSE to tileset and globe throughout — ensures
+                        // what stabilises is exactly what gets captured.
+                        if (window.tileset) window.tileset.maximumScreenSpaceError = currentSSE;
                         window.viewer.scene.globe.maximumScreenSpaceError = 1.0;
 
-                        var tsLoaded = window.tileset ? !!window.tileset.tilesLoaded : false;
-                        var globeLoaded = (window.viewer.scene.globe && window.viewer.scene.globe.tilesLoaded !== undefined)
-                            ? window.viewer.scene.globe.tilesLoaded 
-                            : true;
+                        // Only gate on tileset readiness — the globe imagery layer is
+                        // invisible under Google Photorealistic 3D Tiles.
+                        var tsLoaded = window.tileset ? !!window.tileset.tilesLoaded : true;
                         
-                        return { tsLoaded: tsLoaded, globeLoaded: globeLoaded };
-                    });
+                        return { tsLoaded: tsLoaded };
+                    }, targetSSE);
 
                     checks++;
 
-                    if (status.tsLoaded && status.globeLoaded) {
-                        stable++;
-                        if (stable >= 3) {
-                            console.log(`[Renderer] Tiles stable (${stable}/3). Ready for capture.`);
-                            break;
+                    if (status.tsLoaded) {
+                        if (targetSSE > finalSSE) {
+                            // Step down SSE toward finalSSE.
+                            // Normal: 16 → 4 → finalSSE. Fast: skip the 4 step.
+                            const nextSSE = (targetSSE > 4.0 && !options.fast) ? 4.0 : finalSSE;
+                            console.log(`[Renderer] Tiles loaded at SSE ${targetSSE}. Refining to SSE ${nextSSE}...`);
+                            targetSSE = nextSSE;
+                            stable = 0;
+                        } else {
+                            stable++;
+                            // 1 stable tick is enough — we just need a fully-loaded frame.
+                            if (stable >= 1) {
+                                console.log(`[Renderer] Tiles stable at SSE ${finalSSE}. Ready for capture (shot: ${shot.id}).`);
+                                break;
+                            }
                         }
                     } else {
-                        if (stable > 0) {
-                            console.log('[Renderer] Tiles became unstable. Resetting.');
-                        }
                         stable = 0;
+                        nearlyReady++;
                     }
 
-                    if (checks % 10 === 0) {
-                        console.log(`[Renderer] Waiting for tiles... (TS:${status.tsLoaded}, Globe:${status.globeLoaded}, check:${checks})`);
+                    // Fallback: if the tileset is stubborn after 30 checks (4.5s), proceed anyway
+                    if (nearlyReady > 30) { 
+                        console.log('[Renderer] Tile loading stalled at SSE ' + targetSSE + '. Proceeding with fallback.');
+                        break;
                     }
 
-                    await new Promise(r => setTimeout(r, 300));
+                    if (checks % 20 === 0) {
+                        const intraShotProgress = Math.min(95, (checks / 200) * 100);
+                        onProgress(progressBase + (intraShotProgress * 0.1), `Loading tiles for ${shot.id}... (${checks} checks)`);
+                        console.log(`[Renderer] Waiting... (SSE:${targetSSE}, TS:${status.tsLoaded}, Nearly:${nearlyReady}/30, check:${checks})`);
+                    }
+
+                    await new Promise(r => setTimeout(r, POLL_MS));
                 }
 
 
@@ -206,12 +305,42 @@ async function renderPropertyPhoto(job) {
                     throw new Error('Tile loading timeout exceeded (600s)');
                 }
 
+                const waitMs = Date.now() - shotStart;
+                console.log(`[Renderer] [${elapsed()}] Tile wait done for ${shot.id} (${(waitMs/1000).toFixed(1)}s, ${checks} checks)`);
+
+                // Resize to full output resolution before capturing the screenshot.
+                // The tile loading was done at 512×384 to keep scene.render() fast.
+                const resizeStart = Date.now();
+                await page.setViewport({ width: 2048, height: 1536 });
+                // Force one full-res render so Cesium updates the framebuffer at output size
+                await page.evaluate(function() { window.viewer.scene.render(); });
+                console.log(`[Renderer] [${elapsed()}] Viewport resized to 2048×1536 (${((Date.now()-resizeStart)/1000).toFixed(1)}s)`);
+
+                const ssStart = Date.now();
                 const buffer = await page.screenshot({ type: 'png' });
-                const isBlack = await detectBlackFrame(buffer);
-                if (isBlack) throw new Error('Black-frame detected on shot ' + shot.id);
+                console.log(`[Renderer] [${elapsed()}] Screenshot captured for ${shot.id} (${((Date.now()-ssStart)/1000).toFixed(1)}s, ${(buffer.length/1024).toFixed(0)}KB)`);
+
+                // Shrink back down for the next shot's tile loading loop
+                await page.setViewport({ width: 512, height: 384 });
+
+                if (options.skipValidation) {
+                    console.log(`[Renderer] [${elapsed()}] Validation skipped for ${shot.id} (--no-validate)`);
+                } else {
+                    const bfStart = Date.now();
+                    onProgress(progressBase + (70 / shots.length * 0.8), `Validating shot: ${shot.id}`);
+                    const isBlack = await detectBlackFrame(buffer);
+                    console.log(`[Renderer] [${elapsed()}] Black-frame check for ${shot.id} (${((Date.now()-bfStart)/1000).toFixed(1)}s)`);
+                    if (isBlack) throw new Error('Black-frame detected on shot ' + shot.id);
+                }
+
+                const totalShotMs = Date.now() - shotStart;
+                console.log(`[Renderer] [${elapsed()}] Shot ${shot.id} TOTAL: ${(totalShotMs/1000).toFixed(1)}s`);
 
                 results.push({ id: shot.id, pngBuffer: buffer, heading: shot.heading, pitch: shot.pitch });
+                onProgress(progressBase + (70 / shots.length * 0.95), `Shot completed: ${shot.id}`);
             }
+
+            onProgress(90, 'Finalizing results...');
 
             // Optional: Fetch reference map from srcmap URL if provided
             if (job.srcmap) {
@@ -234,8 +363,7 @@ async function renderPropertyPhoto(job) {
                 }
             }
 
-            await browser.close();
-            server.close();
+            onProgress(100, 'Render complete');
             return {
                 shots: results,
                 metadata: { 
@@ -253,9 +381,12 @@ async function renderPropertyPhoto(job) {
         return await Promise.race([renderTask, timeoutPromise]);
 
     } catch (err) {
-        if (browser) await browser.close().catch(() => {});
-        if (server) server.close();
         throw err;
+    } finally {
+        // Always runs — success, failure, and timeout.
+        // Force-closes all sockets so server.close() doesn't hang
+        // on Puppeteer's lingering keep-alive connections.
+        await cleanup();
     }
 }
 

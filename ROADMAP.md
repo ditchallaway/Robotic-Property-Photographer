@@ -2,7 +2,7 @@
 
 > A living document. Updated as phases complete and new intent is defined.
 >
-> **Current Objective:** Stateless headless renderer that converts parcel geometry into **exactly 5 deterministic PNG images**.
+> **Current Objective:** Produce 5 PNG images of a property boundary — north, east, south, west, and overhead — from a JSON parcel payload.
 >
 > **Architecture constraint:** This service is a stateless rendering engine. It receives a JSON payload (via CLI stdin or file arg) and returns PNG assets. Long-term storage, job queuing, and notifications are handled by upstream n8n.
 
@@ -16,7 +16,7 @@
 - [x] **CLI entrypoint** (`bin/render.js`) accepts job JSON via stdin, file path, or inline argument.
 
 ## ✅ Phase 2 — Camera & Boundary System (Completed)
-- [x] **Deterministic headings:** 0°, 90°, 180°, 270° (True North aligned).
+- [x] **Fixed headings:** 0°, 90°, 180°, 270° (True North aligned).
 - [x] **FOV:** 100°.
 - [x] **Boundary Rendering:** GeoJSON polygon → Yellow polyline (3px), clamped to terrain.
 - [x] **Auto-framing:** Smart `flyToBoundingSphere` logic for consistent property sizing.

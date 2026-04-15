@@ -6,7 +6,7 @@ services:
     extends:
       file: docker-compose.yml
       service: renderer
-    command: ["npm", "start"]
+    command: ["npm", "start", "--", "--fast", "--progress-file", "/app/output/test.progress.json"]
     ports:
       - "9876:9876"
     environment:

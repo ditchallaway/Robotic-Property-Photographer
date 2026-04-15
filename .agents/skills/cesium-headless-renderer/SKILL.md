@@ -1,6 +1,6 @@
 ---
 name: Cesium Headless Renderer
-description: Expert skill for generating deterministic, high-quality 3D snapshots from Cesium.js within a headless Docker environment. Enforces strict rendering constraints, tile loading validation, and hardware-accelerated Puppeteer configurations.
+description: Expert skill for generating high-quality property boundary PNG images from Cesium.js within a headless Docker environment. Enforces strict rendering constraints, tile loading validation, and hardware-accelerated Puppeteer configurations.
 ---
 
 # Cesium Headless Renderer
@@ -58,7 +58,7 @@ Do NOT rely solely on `scene.render()`. A screenshot must only be captured when:
 2. **Tile Stability**: Use a `waitForTiles` function to ensure at least **3 consecutive stable ticks** (approx. 900ms) where no new tiles are requested.
 
 ### Shot Alignment
-Deterministic snapshots must align to True North. Standard property headings are:
+Shots must be aligned to True North. Standard property headings are:
 - `0` (North)
 - `90` (East)
 - `180` (South)
