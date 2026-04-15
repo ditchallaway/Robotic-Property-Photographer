@@ -1,8 +1,20 @@
 # Robotic Property Photographer
 
-Stateless headless renderer that converts parcel geometry into **exactly 5 deterministic PNG images**.
+Stateless headless renderer that converts parcel geometry into **exactly 5 PNG images**.
 
-This repo is a rendering engine. Upstream orchestration (n8n), long-term storage, notifications, and job scheduling happen outside this codebase.
+This repo is a rendering engine focused on one job: **automate the creation of 5 property-boundary images per request**.
+
+Upstream orchestration (n8n), long-term storage, notifications, and job scheduling happen outside this codebase.
+
+## Product north star
+
+Our immediate goal is simple and explicit:
+
+1. Given one property payload, render 5 usable PNGs (`north`, `east`, `south`, `west`, `nadir`) with the property boundary clearly visible.
+2. Keep the system simple and reliable enough to run a few times per day.
+3. Scale throughput only after the core 5-image workflow is consistently passing.
+
+This means we prioritize **working output and operational simplicity** over premature infrastructure complexity.
 
 ---
 
