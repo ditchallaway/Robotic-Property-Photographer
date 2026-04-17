@@ -3,7 +3,6 @@ node_modules/
 .env
 .env.local
 .vscode/
-public/
 output/
 tmp/
 *.log
