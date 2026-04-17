@@ -5,6 +5,8 @@ services:
     build: .
     # Increase shared memory size to prevent Chrome crashes during heavy WebGL rendering
     shm_size: '2gb'
+    ports:
+      - "9876:9876"
     # Define volume mounts for code and data access
     volumes:
       # Mount the current directory to /app in the container for live code reloading
@@ -15,11 +17,17 @@ services:
       - /app/public/cesium
       # Mount the host 'output' directory to the container so generated images are accessible on the host machine
       - ./output:/app/output
+      # Mount test-results for visibility and persistence
+      - ./test-results:/app/test-results
+      # Mount data and tmp for internal snapshots and assets
+      - ./data:/app/data
+      - ./tmp:/app/tmp
     # Define environment variables available to the container
     environment:
+      - PORT=9876
       # Instruct Puppeteer to use the OS-level Chromium installed in the Dockerfile
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
       # Pass through the Google API key from the host environment to the container
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     # Specify the default command to run when the container starts
-    command: ["node", "bin/render.js"]
+    command: ["npm", "start"]

@@ -1,1 +1,0 @@
-Set oblique pitch to -35 degrees.

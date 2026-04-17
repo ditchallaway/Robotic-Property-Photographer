@@ -1,1 +1,0 @@
-The app exposes a single HTTP POST endpoint (e.g., /api/render) accepting { customer_id, order_id, shots, centroid, centroid_elevation, ll_gisacre, geometry }.
