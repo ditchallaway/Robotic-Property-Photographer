@@ -1,0 +1,58 @@
+name: Render Smoke Test (Docker)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - "src/**"
+      - "lib/**"
+      - "bin/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "test-job.json"
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build renderer image
+        run: docker build -t rpp-renderer:ci .
+
+      - name: Run render job (no /app bind mount)
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p output
+
+          docker run --rm \
+            -e GOOGLE_API_KEY \
+            -v "${{ github.workspace }}/output:/app/output" \
+            -v "${{ github.workspace }}/test-job.json:/tmp/test-job.json:ro" \
+            rpp-renderer:ci \
+            node bin/render.js /tmp/test-job.json --output /app/output/property.png
+
+      - name: Verify expected outputs
+        run: |
+          set -euo pipefail
+          test -f output/property_north.png
+          test -f output/property_east.png
+          test -f output/property_south.png
+          test -f output/property_west.png
+          test -f output/property_nadir.png
+          ls -lah output/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-output
+          path: output/*.png
