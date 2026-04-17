@@ -1,0 +1,55 @@
+name: Render Smoke Test (Docker)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - "src/**"
+      - "lib/**"
+      - "bin/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "test-job.json"
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build renderer image
+        run: docker build -t rpp-renderer:ci .
+
+      - name: Run render job
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          mkdir -p output
+          docker run --rm \
+            -e GOOGLE_API_KEY \
+            -v "${{ github.workspace }}:/app" \
+            -w /app \
+            rpp-renderer:ci \
+            node bin/render.js test-job.json --output output/property.png
+
+      - name: Verify outputs exist
+        run: |
+          test -f output/property_north.png
+          test -f output/property_east.png
+          test -f output/property_south.png
+          test -f output/property_west.png
+          test -f output/property_nadir.png
+          ls -lah output/
+
+      - name: Upload PNG artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-output
+          path: output/*.png
