@@ -201,10 +201,10 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
             // hundreds of tile requests that overwhelm SwiftShader.
             // The overhead shot is the hero close-up, so it gets full SSE=1 quality.
             //
-            // Overhead is rendered FIRST to warm the tile cache — its nadir view
+            // Nadir is rendered FIRST to warm the tile cache — its top-down view
             // loads the property's core tiles which the cardinal shots also need.
             const shots = [
-                { id: 'overhead', heading: 0,   pitch: -89.9, finalSSE: 1, rangeFactor: 2.0 },
+                { id: 'nadir',    heading: 0,   pitch: -89.9, finalSSE: 1, rangeFactor: 2.0 },
                 { id: 'north',    heading: 0,   pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
                 { id: 'east',     heading: 90,  pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
                 { id: 'south',    heading: 180, pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
@@ -247,7 +247,7 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
 
                 // Wait for tiles to stabilize using incremental SSE refinement.
                 // Steps: 16 → [4 if not fast] → shot.finalSSE
-                // Cardinal shots stop at SSE=4; overhead goes all the way to SSE=1.
+                // Cardinal shots stop at SSE=4; nadir goes all the way to SSE=1.
                 let stable = 0;
                 let nearlyReady = 0;
                 let checks = 0;
