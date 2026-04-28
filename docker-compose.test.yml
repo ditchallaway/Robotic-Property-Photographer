@@ -20,7 +20,7 @@ services:
     depends_on:
       - renderer
     volumes:
-      - ./test-job.json:/data/test-job.json
+      - ./tests/fixtures/test-job.json:/data/test-job.json
       - ./test-results:/results
     command:
       - sh

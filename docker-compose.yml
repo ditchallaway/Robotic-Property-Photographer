@@ -19,9 +19,8 @@ services:
       - ./output:/app/output
       # Mount test-results for visibility and persistence
       - ./test-results:/app/test-results
-      # Mount data and tmp for internal snapshots and assets
+      # Mount data for internal assets
       - ./data:/app/data
-      - ./tmp:/app/tmp
     # Define environment variables available to the container
     environment:
       - PORT=9876

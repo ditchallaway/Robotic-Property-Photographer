@@ -1,5 +1,5 @@
 const puppeteer = require('puppeteer-core');
-const config = require('./src/config');
+const config = require('../src/config');
 (async () => {
     const browser = await puppeteer.launch({
         executablePath: config.PUPPETEER_EXECUTABLE_PATH,

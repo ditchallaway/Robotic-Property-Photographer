@@ -8,7 +8,7 @@
   "scripts": {
     "start": "node src/index.js",
     "render": "node bin/render.js",
-    "test": "node test-cli.cjs",
+    "test": "node tests/cli-test.cjs",
     "test:cardinal": "node tests/cardinal.js",
     "test:nadir": "node tests/nadir.js",
     "postinstall": "node scripts/copy-assets.cjs",

@@ -28,7 +28,7 @@ const job = {
 };
 
 const jobFile = path.join(__dirname, 'tmp_job.json');
-const outputBase = path.join(__dirname, 'output', 'test_render.png');
+const outputBase = path.join(process.cwd(), 'output', 'test_render.png');
 
 // Write the temporary job file to disk so the CLI can read it
 fs.writeFileSync(jobFile, JSON.stringify(job, null, 2));
@@ -39,7 +39,8 @@ console.log(`Output Base: ${outputBase}`);
 
 try {
     // Run the CLI using execSync, which runs synchronously and blocks until completion
-    const cmd = `node bin/render.js ${jobFile} --output ${outputBase} --timestamp`;
+    const renderBin = path.join(process.cwd(), 'bin', 'render.js');
+    const cmd = `node ${renderBin} ${jobFile} --output ${outputBase} --timestamp`;
     console.log(`Executing: ${cmd}`);
     
     // We expect some stderr logs from the renderer (stdio: 'inherit' passes them to our console)
@@ -52,7 +53,7 @@ try {
     const shots = ['north', 'east', 'south', 'west', 'overhead'];
     
     // Read the output directory to verify the files were actually created
-    const files = fs.readdirSync(path.join(__dirname, 'output'));
+    const files = fs.readdirSync(path.join(process.cwd(), 'output'));
     const matches = files.filter(f => f.startsWith('test_render') && f.endsWith('.png'));
 
     console.log(`Found ${matches.length} matching PNG files in output/`);

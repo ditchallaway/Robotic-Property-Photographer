@@ -1,9 +1,18 @@
-name: Render Smoke Test (Docker)
+name: Snapshots
 
 on:
   workflow_dispatch:
+    inputs:
+      job_json:
+        description: 'Property boundary JSON string'
+        required: true
+        type: string
+      callback_url:
+        description: 'Webhook URL to notify upon completion'
+        required: false
+        type: string
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - "Dockerfile"
       - "docker-compose.yml"
@@ -13,7 +22,7 @@ on:
       - "scripts/**"
       - "package.json"
       - "package-lock.json"
-      - "test-job.json"
+      - "tests/fixtures/test-job.json"
 
 jobs:
   render:
@@ -30,16 +39,23 @@ jobs:
       - name: Run render job (no /app bind mount)
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          JOB_JSON: ${{ inputs.job_json }}
         run: |
           set -euo pipefail
           mkdir -p output
 
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "$JOB_JSON" ]; then
+            echo "$JOB_JSON" > /tmp/target-job.json
+          else
+            cp "${{ github.workspace }}/tests/fixtures/test-job.json" /tmp/target-job.json
+          fi
+
           docker run --rm \
             -e GOOGLE_API_KEY \
             -v "${{ github.workspace }}/output:/app/output" \
-            -v "${{ github.workspace }}/test-job.json:/tmp/test-job.json:ro" \
+            -v "/tmp/target-job.json:/tmp/target-job.json:ro" \
             rpp-renderer:ci \
-            node bin/render.js /tmp/test-job.json --output /app/output/property.png
+            node bin/render.js /tmp/target-job.json --output /app/output/property.png
 
       - name: Verify expected outputs
         run: |
@@ -48,7 +64,7 @@ jobs:
           test -f output/property_east.png
           test -f output/property_south.png
           test -f output/property_west.png
-          test -f output/property_nadir.png
+          test -f output/property_overhead.png
           ls -lah output/
 
       - name: Upload artifacts
@@ -56,3 +72,10 @@ jobs:
         with:
           name: render-output
           path: output/*.png
+
+      - name: Notify Webhook Callback
+        if: ${{ inputs.callback_url != '' }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"run_id\": \"${{ github.run_id }}\"}" \
+            "${{ inputs.callback_url }}"

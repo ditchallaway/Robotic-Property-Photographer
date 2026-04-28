@@ -1,7 +1,6 @@
 node_modules/
 .next/
 .git/
-tmp/
 test-results/
 output/
 *.log
