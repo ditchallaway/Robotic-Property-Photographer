@@ -377,6 +377,8 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
             return {
                 shots: results,
                 metadata: { 
+                    order_id: job.order_id || null,
+                    customer_id: job.customer_id || null,
                     width: 2048, 
                     height: 1536, 
                     centroid, 

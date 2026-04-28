@@ -149,7 +149,9 @@ app.post('/render', async (req, res) => {
         }
 
         // Return PNG shots metadata, including base64-encoded image data for immediate use by clients (e.g., n8n)
+        const orderId = job.order_id || null;
         const pngShots = result.shots.map(shot => ({
+            order_id: orderId,
             id: shot.id,
             png: shot.pngBuffer.toString('base64')
         }));
