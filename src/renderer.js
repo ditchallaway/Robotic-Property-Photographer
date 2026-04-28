@@ -204,7 +204,7 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
             // Nadir is rendered FIRST to warm the tile cache — its top-down view
             // loads the property's core tiles which the cardinal shots also need.
             const shots = [
-                { id: 'nadir',    heading: 0,   pitch: -89.9, finalSSE: 1, rangeFactor: 2.0 },
+                { id: 'overhead', heading: 0,   pitch: -89.9, finalSSE: 1, rangeFactor: 2.0 },
                 { id: 'north',    heading: 0,   pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
                 { id: 'east',     heading: 90,  pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
                 { id: 'south',    heading: 180, pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
