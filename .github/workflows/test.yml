@@ -7,8 +7,8 @@ on:
         description: 'Property boundary JSON string'
         required: true
         type: string
-      callback_url:
-        description: 'Webhook URL to notify upon completion'
+      resumeUrl:
+        description: 'Webhook URL automatically injected by n8n dispatchAndWait'
         required: false
         type: string
 
@@ -63,8 +63,8 @@ jobs:
           path: output/*.png
 
       - name: Notify Webhook Callback
-        if: ${{ inputs.callback_url != '' }}
+        if: ${{ inputs.resumeUrl != '' }}
         run: |
           curl -X POST -H "Content-Type: application/json" \
             -d "{\"run_id\": \"${{ github.run_id }}\"}" \
-            "${{ inputs.callback_url }}"
+            "${{ inputs.resumeUrl }}"
