@@ -1,0 +1,113 @@
+{
+  "updatedAt": "2026-05-07T11:07:31.358Z",
+  "createdAt": "2026-05-07T11:07:30.571Z",
+  "id": "IWQpeubBNjO6De3x",
+  "name": "MCP Tool",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mcp-tool-name",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "trigger-001",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "mcp-tool-webhook"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const input = $input.first().json;\nconst param = input.body?.param || input.param;\n\nif (!param) {\n  return [{ json: { error: 'Missing required parameter: param' } }];\n}\n\nreturn [{ json: { param } }];"
+      },
+      "id": "parse-001",
+      "name": "Parse Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const data = $input.first().json;\n\n// ... your tool logic ...\n\nreturn [{ json: { output: 'result', status: 'success' } }];"
+      },
+      "id": "logic-001",
+      "name": "Tool Logic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Input": {
+      "main": [
+        [
+          {
+            "node": "Tool Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "9aa3b0b0-8b8b-458c-a6e0-e568fd124697",
+  "activeVersionId": null,
+  "versionCounter": 2,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-07T11:07:30.571Z",
+      "createdAt": "2026-05-07T11:07:30.571Z",
+      "role": "workflow:owner",
+      "workflowId": "IWQpeubBNjO6De3x",
+      "projectId": "SxZfT7rxAv9cKdRm",
+      "project": {
+        "updatedAt": "2025-11-07T03:45:28.862Z",
+        "createdAt": "2025-11-07T00:54:39.972Z",
+        "id": "SxZfT7rxAv9cKdRm",
+        "name": "Jonny Bot <in.the.air.jkb@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "c7000de2-88dd-46b6-8967-ca24d58f54dd"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

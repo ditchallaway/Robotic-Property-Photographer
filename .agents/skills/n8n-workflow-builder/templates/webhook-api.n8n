@@ -1,0 +1,87 @@
+{
+  "updatedAt": "2026-05-07T11:07:39.706Z",
+  "createdAt": "2026-05-07T11:07:37.976Z",
+  "id": "zh3QbnRvPQgXOEhl",
+  "name": "Webhook API Endpoint",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "process",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "trigger-001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "process-webhook"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const input = $input.first().json;\n\n// Validate input\nif (!input.body?.id) {\n  return [{ json: { error: 'Missing required field: id' } }];\n}\n\n// Process\nreturn [{ json: { success: true, id: input.body.id } }];"
+      },
+      "id": "process-001",
+      "name": "Process Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "7002f30b-77bc-4e4a-a1e7-2ce1044519b0",
+  "activeVersionId": null,
+  "versionCounter": 2,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-07T11:07:37.976Z",
+      "createdAt": "2026-05-07T11:07:37.976Z",
+      "role": "workflow:owner",
+      "workflowId": "zh3QbnRvPQgXOEhl",
+      "projectId": "SxZfT7rxAv9cKdRm",
+      "project": {
+        "updatedAt": "2025-11-07T03:45:28.862Z",
+        "createdAt": "2025-11-07T00:54:39.972Z",
+        "id": "SxZfT7rxAv9cKdRm",
+        "name": "Jonny Bot <in.the.air.jkb@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "c7000de2-88dd-46b6-8967-ca24d58f54dd"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

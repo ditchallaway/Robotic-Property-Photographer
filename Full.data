@@ -1,0 +1,2325 @@
+{
+  "When clicking ‘Execute workflow’": [
+    {
+      "startTime": 1778294552744,
+      "executionIndex": 0,
+      "source": [],
+      "hints": [],
+      "executionTime": 4,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {},
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "HTTP Request": [
+    {
+      "startTime": 1778294552750,
+      "executionIndex": 1,
+      "source": [
+        {
+          "previousNode": "When clicking ‘Execute workflow’",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 478,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "id": 30160,
+                "headline": "1117 Shingle Mill Rd",
+                "fields": {
+                  "parcelnumb": "RP58N01W327600A",
+                  "owner": "",
+                  "address": "1117 SHINGLE MILL RD",
+                  "scity": "SANDPOINT",
+                  "szip": "83864-7475",
+                  "alt_parcelnumb1": "RP58N01W327600",
+                  "usecode": "131",
+                  "usedesc": "Land-ag/timb w/resid Imp",
+                  "zoning": "A/F-10",
+                  "zoning_description": "Agricultural And Forestry 10",
+                  "zoning_type": "Mixed",
+                  "zoning_subtype": "Mixed Use",
+                  "zoning_code_link": "https://www.zoneomics.com/code/bonner-county-unincorporated-ID",
+                  "zoning_id": 14478542,
+                  "structstyle": "11 One Story",
+                  "parvaltype": "ASSESSED",
+                  "improvval": 322909,
+                  "landval": 246942,
+                  "parval": 569851,
+                  "taxamt": 1882.88,
+                  "owner2": null,
+                  "owner3": null,
+                  "szip5": "83864",
+                  "legaldesc": "32-58N-1W S 396 FT OF TAX 6",
+                  "neighborhood_code": "1405",
+                  "lat": "48.332259",
+                  "lon": "-116.486948",
+                  "census_tract": "16017950202",
+                  "census_block": "160179502022045",
+                  "census_blockgroup": "160179502022",
+                  "census_zcta": "83864",
+                  "census_unified_school_district": "Lake Pend Oreille School District 84",
+                  "recrdareano": 1728,
+                  "gisacre": 6.5,
+                  "plss_township": "058N",
+                  "plss_section": "Section 32",
+                  "plss_range": "001W",
+                  "pin": "RP58N01W327600A",
+                  "owner1": "Kisting, Warren V & Maria T",
+                  "parcels_owner2": null,
+                  "taxcdarea": "210000",
+                  "lastasmvalue": 547272,
+                  "lglacres": 6.5,
+                  "deed1": "563162 WD",
+                  "deed2": "522253 DEC",
+                  "deed3": "395420 WD",
+                  "deed4": "522804 WD",
+                  "deed5": "501348 DC",
+                  "deed1gis": "563162",
+                  "deed2gis": "522804",
+                  "deed3gis": "395420",
+                  "deed4gis": "501348",
+                  "deed5gis": "522253",
+                  "parcelstatus": "A",
+                  "primaryownername": "KISTING, WARREN V & MARIA T",
+                  "secondaryownername": null,
+                  "taxcodearea": "210000",
+                  "cybillnum": "43344",
+                  "exemptionsgranted": 125000,
+                  "netassessedvalue": 444851,
+                  "personalpropertyvalue": 0,
+                  "categories": "06,10H,31H,32",
+                  "totalbasearea": 1728,
+                  "bsmtfinishedarea": 0,
+                  "mainfinishedarea": 1728,
+                  "upperfinishedarea": 0,
+                  "atticbasearea": 0,
+                  "atticfinishedarea": 0,
+                  "garbasearea": 864,
+                  "cpbasearea": 0,
+                  "reviewyear": 2021,
+                  "ll_uuid": "bf4eb8b0-b6d0-4ac0-8aa5-74c0bf7bc376",
+                  "ll_gisacre": 6.1944,
+                  "area_building": 1728,
+                  "area_building_definition": "FINISHED AREA",
+                  "last_ownership_transfer_date": null,
+                  "ll_gissqft": 269834,
+                  "mailadd": null,
+                  "mail_city": null,
+                  "mail_state2": null,
+                  "mail_zip": null,
+                  "num_bath": 2,
+                  "num_bath_partial": null,
+                  "num_bedrooms": 2,
+                  "qoz": "No",
+                  "qoz_tract": null,
+                  "year_built_effective_date": 1992,
+                  "formatted_mailing_address": null
+                },
+                "key": {
+                  "parcelnumb": "Parcel ID",
+                  "owner": "Owner Name (Assessor)",
+                  "address": "Parcel Address",
+                  "scity": "Parcel Address City",
+                  "szip": "Parcel Address Zip Code",
+                  "alt_parcelnumb1": "First Alternative Parcel ID",
+                  "usecode": "Parcel Use Code",
+                  "usedesc": "Parcel Use Description",
+                  "zoning_type": "Zoning Type",
+                  "zoning_subtype": "Zoning Subtype",
+                  "zoning_code_link": "Zoning Code Link",
+                  "zoning_id": "Zoning Area ID",
+                  "homestead_exemption": "Homestead Exemption",
+                  "ll_address_count": "Regrid Calculated Total Address Count",
+                  "fema_flood_zone": "FEMA Flood Zone",
+                  "fema_flood_zone_subtype": "FEMA Flood Zone Subtype",
+                  "fema_flood_zone_raw": "FEMA Flood Zone Raw Data",
+                  "fema_flood_zone_data_date": "FEMA Flood Zone Data Date",
+                  "fema_nri_risk_rating": "FEMA NRI Risk Rating",
+                  "census_elementary_school_district": "Census Provided Elementary School District",
+                  "census_secondary_school_district": "Census Provided Secondary School District",
+                  "census_unified_school_district": "Census Provided Unified School District",
+                  "ll_bldg_footprint_sqft": "Regrid Calculated Building Footprint Square Feet",
+                  "ll_bldg_count": "Regrid Calculated Building Count",
+                  "cdl_raw": "Cropland Data Layer Raw Values",
+                  "cdl_majority_category": "Cropland Data Layer Majority Category",
+                  "cdl_majority_percent": "Cropland Data Layer Majority Percent",
+                  "cdl_date": "Cropland Data Layer Date",
+                  "insite_score": "InSite Score",
+                  "ll_row_parcel": "Regrid Right-of-Way Parcel Flag",
+                  "precisely_id": "Precisely ID",
+                  "placekey": "Placekey",
+                  "dpv_status": "USPS Delivery Point Validation",
+                  "dpv_codes": "Delivery Point Validation Codes",
+                  "dpv_notes": "Delivery Point Validation Notes",
+                  "dpv_type": "Delivery Point Match Type",
+                  "cass_errorno": "CASS Error Codes",
+                  "rdi": "Residential Delivery Indicator",
+                  "usps_vacancy": "USPS Vacancy Indicator",
+                  "usps_vacancy_date": "USPS Vacancy Indicator Date",
+                  "padus_public_access": "PAD-US Public Access Designation",
+                  "lbcs_activity": "Land Use Code: Activity",
+                  "lbcs_activity_desc": "Land Use Code Description: Activity",
+                  "lbcs_function": "Land Use Code: Function",
+                  "lbcs_function_desc": "Land Use Code Description: Function",
+                  "lbcs_structure": "Land Use Code: Structure",
+                  "lbcs_structure_desc": "Land Use Code Description: Structure",
+                  "lbcs_site": "Land Use Code: Site",
+                  "lbcs_site_desc": "Land Use Code Description: Site",
+                  "lbcs_ownership": "Land Use Code: Ownership",
+                  "lbcs_ownership_desc": "Land Use Code Description: Ownership",
+                  "housing_affordability_index": "Housing Affordability Index",
+                  "population_density": "Population Density",
+                  "population_growth_past_5_years": "Population Growth (CAGR) past 5 years",
+                  "population_growth_next_5_years": "Population Growth (CAGR) next 5 years",
+                  "housing_growth_past_5_years": "Housing Units Growth (CAGR) past 5 years",
+                  "housing_growth_next_5_years": "Housing Units Growth (CAGR) next 5 years",
+                  "household_income_growth_next_5_years": "Median Household Income Growth (CAGR) next 5 years",
+                  "median_household_income": "Median Household Income (current year)",
+                  "transmission_line_distance": "Distance to Transmission line",
+                  "roughness_rating": "Roughness Rating",
+                  "highest_parcel_elevation": "Highest Parcel Elevation",
+                  "lowest_parcel_elevation": "Lowest Parcel Elevation",
+                  "zoning": "Zoning Code",
+                  "zoning_description": "Zoning Description",
+                  "structstyle": "Structure Style",
+                  "parvaltype": "Parcel Value Type",
+                  "improvval": "Improvement Value",
+                  "landval": "Land Value",
+                  "parval": "Total Parcel Value",
+                  "taxamt": "Annual Tax Bill",
+                  "owner2": "Second Owner Name",
+                  "owner3": "Third Owner Name",
+                  "szip5": "5 Digit Parcel Zip Code",
+                  "legaldesc": "Legal Description",
+                  "neighborhood_code": "Neighborhood Code",
+                  "lat": "Latitude",
+                  "lon": "Longitude",
+                  "census_tract": "Census 2020 Tract",
+                  "census_block": "Census 2020 Block",
+                  "census_blockgroup": "Census 2020 Blockgroup",
+                  "census_zcta": "Census Zip Code Tabulation Area",
+                  "recrdareano": "Total Square Footage of Structures",
+                  "gisacre": "County-Provided Acres",
+                  "plss_township": "PLSS Township",
+                  "plss_section": "PLSS Section",
+                  "plss_range": "PLSS Range",
+                  "pin": "Pin",
+                  "owner1": "Owner 1",
+                  "parcels_owner2": "Parcels Owner 2",
+                  "taxcdarea": "Tax Code Area",
+                  "lastasmvalue": "Lastasmvalue",
+                  "lglacres": "Legal Acres",
+                  "deed1": "Deed 1",
+                  "deed2": "Deed 2",
+                  "deed3": "Deed 3",
+                  "deed4": "Deed 4",
+                  "deed5": "Deed 5",
+                  "deed1gis": "Deed 1 GIS",
+                  "deed2gis": "Deed 2 GIS",
+                  "deed3gis": "Deed 3 GIS",
+                  "deed4gis": "Deed 4 GIS",
+                  "deed5gis": "Deed 5 GIS",
+                  "parcelstatus": "Parcel Status",
+                  "primaryownername": "Primary Owner Name",
+                  "secondaryownername": "Secondary Owner Name",
+                  "taxcodearea": "Tax Code Area",
+                  "cybillnum": "Current Year Bill Number",
+                  "exemptionsgranted": "Exemptions Granted",
+                  "netassessedvalue": "Net Assessed Value",
+                  "personalpropertyvalue": "Personal Property Value",
+                  "categories": "Categories",
+                  "totalbasearea": "Total Base Area",
+                  "bsmtfinishedarea": "Basement Finished Area",
+                  "mainfinishedarea": "Main Finished Area",
+                  "upperfinishedarea": "Upper Finished Area",
+                  "atticbasearea": "Attic Base Area",
+                  "atticfinishedarea": "Attic Finished Area",
+                  "garbasearea": "Garage Base Area",
+                  "cpbasearea": "Carport Base Area",
+                  "reviewyear": "Review Year",
+                  "ll_uuid": "Regrid UUID",
+                  "ll_gisacre": "Calculated Acres",
+                  "area_building": "Building Area",
+                  "area_building_definition": "Area Building Definition",
+                  "last_ownership_transfer_date": "Last Ownership Transfer Date",
+                  "ll_gissqft": "Calculated Parcel Sq Ft",
+                  "mailadd": "Mailing Address",
+                  "mail_city": "Mailing Address City",
+                  "mail_state2": "Mailing Address State",
+                  "mail_zip": "Mailing Address ZIP Code",
+                  "num_bath": "Number of Baths",
+                  "num_bath_partial": "Number of Partial Baths",
+                  "num_bedrooms": "Number of Bedrooms",
+                  "qoz": "Federal Qualified Opportunity Zone",
+                  "qoz_tract": "Qualified Opportunity Zone Tract Number",
+                  "year_built_effective_date": "Year Built Effective Date",
+                  "eo_owner": "Enhanced Owner",
+                  "eo_deedowner": "Deeded Owner",
+                  "formatted_mailing_address": "Mailing Address"
+                },
+                "has_premium": true,
+                "premium_field_metadata": {
+                  "zoning_type": {
+                    "type": "text",
+                    "human": "Zoning Type",
+                    "description": "Standardized zoning type",
+                    "examples": [
+                      "Residential"
+                    ],
+                    "tier": "premium",
+                    "categories": [
+                      "premium",
+                      "zoning"
+                    ],
+                    "exists": true
+                  },
+                  "zoning_subtype": {
+                    "type": "text",
+                    "human": "Zoning Subtype",
+                    "description": "Standardized zoning subtype",
+                    "examples": [
+                      "Single-family"
+                    ],
+                    "tier": "premium",
+                    "categories": [
+                      "premium",
+                      "zoning"
+                    ],
+                    "exists": true
+                  },
+                  "zoning_code_link": {
+                    "type": "text",
+                    "human": "Zoning Code Link",
+                    "description": "Link to the municipality's zoning code",
+                    "examples": [
+                      "https://www.zoneomics.com/code/anchorage-AK/chapter_10"
+                    ],
+                    "tier": "premium",
+                    "categories": [
+                      "premium",
+                      "zoning"
+                    ],
+                    "exists": true
+                  },
+                  "zoning_id": {
+                    "type": "integer",
+                    "human": "Zoning Area ID",
+                    "description": "ID for the zoning area for matching to the Regrid zoning product",
+                    "examples": [
+                      5555
+                    ],
+                    "tier": "premium",
+                    "categories": [
+                      "premium",
+                      "zoning"
+                    ],
+                    "exists": true
+                  },
+                  "ll_address_count": {
+                    "type": "integer",
+                    "human": "Regrid Calculated Total Address Count",
+                    "description": "Total number of primary and secondary addresses on the parcel as calculated by Regrid",
+                    "tier": "premium",
+                    "categories": [
+                      "calculated",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "fema_nri_risk_rating": {
+                    "type": "text",
+                    "human": "FEMA NRI Risk Rating",
+                    "description": "Sourced from FEMA's National Risk Index; the Risk Rating leverages available source data for natural hazard and community risk factors to develop a baseline relative risk measurement for each U.S. Census tract for all 50 states, the District of Columbia (DC), American Samoa (AS), Commonwealth of the Northern Mariana Islands (MP), Guam (GU), Puerto Rico (PR), and the U.S. Virgin Islands (VI). The National Risk Rating is intended to help users better understand the natural hazard risk of their communities by providing a category range from “Very Low” to “Very High.”",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "census_unified_school_district": {
+                    "type": "text",
+                    "human": "Census Provided Unified School District",
+                    "tier": "premium",
+                    "categories": [
+                      "premium",
+                      "census"
+                    ],
+                    "exists": true
+                  },
+                  "ll_bldg_footprint_sqft": {
+                    "type": "integer",
+                    "human": "Regrid Calculated Building Footprint Square Feet",
+                    "description": "Total building footprint in square feet as calculated by Regrid",
+                    "tier": "premium",
+                    "categories": [
+                      "calculated",
+                      "bldg",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "ll_bldg_count": {
+                    "type": "integer",
+                    "human": "Regrid Calculated Building Count",
+                    "description": "Total number of buildings on the parcel as calculated by Regrid",
+                    "tier": "premium",
+                    "categories": [
+                      "calculated",
+                      "bldg",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "insite_score": {
+                    "type": "text",
+                    "human": "InSite Score",
+                    "description": "NatureServe InSite Score, an integrated biodiversity value score",
+                    "examples": [
+                      "Very High",
+                      "High",
+                      "Moderate",
+                      "Low"
+                    ],
+                    "tier": "premium",
+                    "categories": [
+                      "calculated",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "precisely_id": {
+                    "type": "text",
+                    "human": "Precisely ID",
+                    "description": "The PreciselyID represents a point addressable location. If a location has multiple alias addresses (alias street names, vanity city names, etc), it will receive the same PreciselyID.",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "placekey": {
+                    "type": "text",
+                    "default": null,
+                    "human": "Placekey",
+                    "examples": [
+                      "227-223@5vg-82n-pgk"
+                    ],
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "dpv_status": {
+                    "type": "text",
+                    "human": "USPS Delivery Point Validation",
+                    "examples": [
+                      "V",
+                      "N"
+                    ],
+                    "tier": "premium",
+                    "categories": [
+                      "usps",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "dpv_codes": {
+                    "type": "text",
+                    "human": "Delivery Point Validation Codes",
+                    "tier": "premium",
+                    "categories": [
+                      "usps",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "dpv_notes": {
+                    "type": "text",
+                    "human": "Delivery Point Validation Notes",
+                    "tier": "premium",
+                    "categories": [
+                      "usps",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "dpv_type": {
+                    "type": "text",
+                    "human": "Delivery Point Match Type",
+                    "examples": [
+                      "H (High Rise)",
+                      "S (Street)"
+                    ],
+                    "tier": "premium",
+                    "categories": [
+                      "usps",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "cass_errorno": {
+                    "type": "text",
+                    "human": "CASS Error Codes",
+                    "tier": "premium",
+                    "categories": [
+                      "usps",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "rdi": {
+                    "type": "text",
+                    "human": "Residential Delivery Indicator",
+                    "examples": [
+                      "Y",
+                      "N"
+                    ],
+                    "tier": "premium",
+                    "categories": [
+                      "usps",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "usps_vacancy": {
+                    "type": "text",
+                    "human": "USPS Vacancy Indicator",
+                    "examples": [
+                      "Y"
+                    ],
+                    "tier": "premium",
+                    "categories": [
+                      "usps",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "usps_vacancy_date": {
+                    "type": "date",
+                    "human": "USPS Vacancy Indicator Date",
+                    "description": "Date the vacancy indicator was collected",
+                    "tier": "premium",
+                    "categories": [
+                      "usps",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "lbcs_activity": {
+                    "type": "numeric",
+                    "human": "Land Use Code: Activity",
+                    "description": "Actual activity on land, eg farming, shopping, manufacturing.",
+                    "link": "https://support.regrid.com/articles/lbcs-keys/",
+                    "tier": "premium",
+                    "categories": [
+                      "lbcs",
+                      "premium",
+                      "set_during_synthesize"
+                    ],
+                    "exists": true
+                  },
+                  "lbcs_activity_desc": {
+                    "type": "text",
+                    "human": "Land Use Code Description: Activity",
+                    "description": "Description of the LBCS numeric code",
+                    "link": "https://support.regrid.com/articles/lbcs-keys/",
+                    "tier": "premium",
+                    "categories": [
+                      "lbcs",
+                      "premium",
+                      "set_during_synthesize"
+                    ],
+                    "exists": true
+                  },
+                  "lbcs_function": {
+                    "type": "numeric",
+                    "human": "Land Use Code: Function",
+                    "description": "Economic function or type of establishment, eg agricultural, commercial, industrial",
+                    "link": "https://support.regrid.com/articles/lbcs-keys/",
+                    "tier": "premium",
+                    "categories": [
+                      "lbcs",
+                      "premium",
+                      "set_during_synthesize"
+                    ],
+                    "exists": true
+                  },
+                  "lbcs_function_desc": {
+                    "type": "text",
+                    "human": "Land Use Code Description: Function",
+                    "description": "Economic function or type of establishment, eg agricultural, commercial, industrial",
+                    "link": "https://support.regrid.com/articles/lbcs-keys/",
+                    "tier": "premium",
+                    "categories": [
+                      "lbcs",
+                      "premium",
+                      "set_during_synthesize"
+                    ],
+                    "exists": true
+                  },
+                  "lbcs_structure": {
+                    "type": "numeric",
+                    "human": "Land Use Code: Structure",
+                    "description": "Type of structure or building, eg single-family house, office building, warehouse",
+                    "link": "https://support.regrid.com/articles/lbcs-keys/",
+                    "tier": "premium",
+                    "categories": [
+                      "lbcs",
+                      "premium",
+                      "set_during_synthesize"
+                    ],
+                    "exists": true
+                  },
+                  "lbcs_structure_desc": {
+                    "type": "text",
+                    "human": "Land Use Code Description: Structure",
+                    "description": "Type of structure or building, eg single-family house, office building, warehouse",
+                    "link": "https://support.regrid.com/articles/lbcs-keys/",
+                    "tier": "premium",
+                    "categories": [
+                      "lbcs",
+                      "premium",
+                      "set_during_synthesize"
+                    ],
+                    "exists": true
+                  },
+                  "lbcs_site": {
+                    "type": "numeric",
+                    "human": "Land Use Code: Site",
+                    "description": "What is on the land",
+                    "link": "https://support.regrid.com/articles/lbcs-keys/",
+                    "tier": "premium",
+                    "categories": [
+                      "lbcs",
+                      "premium",
+                      "set_during_synthesize"
+                    ],
+                    "exists": true
+                  },
+                  "lbcs_site_desc": {
+                    "type": "text",
+                    "human": "Land Use Code Description: Site",
+                    "description": "What is on the land",
+                    "link": "https://support.regrid.com/articles/lbcs-keys/",
+                    "tier": "premium",
+                    "categories": [
+                      "lbcs",
+                      "premium",
+                      "set_during_synthesize"
+                    ],
+                    "exists": true
+                  },
+                  "lbcs_ownership": {
+                    "type": "numeric",
+                    "human": "Land Use Code: Ownership",
+                    "description": "Ownership structure, eg public, private",
+                    "link": "https://support.regrid.com/articles/lbcs-keys/",
+                    "tier": "premium",
+                    "categories": [
+                      "lbcs",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "lbcs_ownership_desc": {
+                    "type": "text",
+                    "human": "Land Use Code Description: Ownership",
+                    "description": "Ownership structure, eg public, private",
+                    "link": "https://support.regrid.com/articles/lbcs-keys/",
+                    "tier": "premium",
+                    "categories": [
+                      "lbcs",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "housing_affordability_index": {
+                    "type": "numeric",
+                    "human": "Housing Affordability Index",
+                    "description": "Housing Affordability Index (HAI) measures the ability of a typical resident to purchase a home in the geographic area. The HAI has a base of 100, representing where the median income is sufficient to qualify for a loan on a median-valued home and not be cost-burdened (cost-burdened=greater than 30% of income spent on housing). HAI values > 100 indicate increasing affordability; HAI values < 100 indicate areas where homes are less affordable and median income might be insufficient to purchase a median-valued home. This attribute is calculated at the Census Block Group in which the parcel is located. Source US Census Bureau via Esri. Updated each July representing previous year.",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "population_density": {
+                    "type": "numeric",
+                    "human": "Population Density",
+                    "description": "Estimate of the Population Density (population per Square Mile) in the geographic area. Population density is computed by dividing the total population within the geographic area by the total land area, measured in square miles. This attribute is calculated at the Census Block Group in which the parcel is located. Source US Census Bureau via Esri. Updated each July representing previous year.",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "population_growth_past_5_years": {
+                    "type": "numeric",
+                    "human": "Population Growth (CAGR) past 5 years",
+                    "description": "Population Compound Annual Growth Rate (CAGR) for the previous 5 year period, is an annualized measure describing the direction (either positive or negative) and magnitude of change in the total number of persons between the previous 5 years. Annualized means that the resultant value reflects a rate of change over a twelve-month time period. This permits analysis of multiple growth rates between values measured at differing points in time using a common time period of twelve months; the annualized growth rate is repeated, or compounded, each year. The CAGR is sometimes referred to as growth rate, annual rate, annualized growth rate, or compound growth rate. This attribute is calculated at the Census Block Group in which the parcel is located. Source US Census Bureau via Esri. Updated each July representing previous year.",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "population_growth_next_5_years": {
+                    "type": "numeric",
+                    "human": "Population Growth (CAGR) next 5 years",
+                    "description": "Five-year forecast for Population Growth, Compound Annual Growth Rate (CAGR). The Population Growth CAGR is an annualized measure that describes the direction (either positive or negative) and magnitude of change in population between the current year and that year plus 5. The CAGR is sometimes referred to as growth rate, annual rate, annualized growth rate, or compound growth rate. This attribute is calculated at the Census Block Group in which the parcel is located. Source US Census Bureau via Esri. Updated each July representing previous year.",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "housing_growth_past_5_years": {
+                    "type": "numeric",
+                    "human": "Housing Units Growth (CAGR) past 5 years",
+                    "description": "Housing Units Compound Annual Growth Rate (CAGR) for the previous five year period, is an annualized measure describing the direction (either positive or negative) and magnitude of change in the total number of housing units between the previous 5 years. Annualized means that the resultant value reflects a rate of change over a twelve-month time period. This permits analysis of multiple growth rates between values measured at differing points in time using a common time period of twelve months; the annualized growth rate is repeated, or compounded, each year. The CAGR is sometimes referred to as growth rate, annual rate, annualized growth rate, or compound growth rate. This attribute is calculated at the Census Block Group in which the parcel is located. Source US Census Bureau via Esri. Updated each July representing previous year.",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "housing_growth_next_5_years": {
+                    "type": "numeric",
+                    "human": "Housing Units Growth (CAGR) next 5 years",
+                    "description": "Five-year forecast for Housing Units Compound Annual Growth Rate (CAGR). The Housing Unit CAGR is an annualized measure that describes the direction (either positive or negative) and magnitude of change in total housing units between the current year and that year plus 5. The CAGR is sometimes referred to as growth rate, annual rate, annualized growth rate, or compound growth rate. This attribute is calculated at the Census Block Group in which the parcel is located. Source US Census Bureau via Esri. Updated each July representing previous year.",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "household_income_growth_next_5_years": {
+                    "type": "numeric",
+                    "human": "Median Household Income Growth (CAGR) next 5 years",
+                    "description": "Five-year forecast for Median Household Income Compound Annual Growth Rate (CAGR). The Median Household Income CAGR is an annualized measure that describes the direction (either positive or negative) and magnitude of change in the total Median Household Income between the current year and that year plus 5. The CAGR is sometimes referred to as growth rate, annual rate, annualized growth rate, or compound growth rate. This attribute is calculated at the Census Block Group in which the parcel is located. Source US Census Bureau via Esri. Updated each July representing previous year.",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "median_household_income": {
+                    "type": "numeric",
+                    "human": "Median Household Income (current year)",
+                    "description": "Estimate of Median Household Income in the geographic area for the previous year. Median Household Income is the amount that divides household income (annual income for all household earners age 15+) into two equal groups in a geographic area; half of the population will have income higher than the median and half will have lower income. If the median falls in the upper income interval of $200,000+, it is represented by the value of $200,001. Esri uses the U.S. Census definition of income. This attribute is calculated at the Census Block Group in which the parcel is located. Source US Census Bureau via Esri. Updated each July representing previous year.",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "transmission_line_distance": {
+                    "type": "numeric",
+                    "human": "Distance to Transmission line",
+                    "description": "Sourced from HIFLD; provides the distance from the parcel boundary to the nearest relatively high voltage (69kv - 765kv) electric transmission line as available within the Homeland Infrastructure Foundation-Level Data (HIFLD) Transmission Line dataset",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "roughness_rating": {
+                    "type": "numeric",
+                    "human": "Roughness Rating",
+                    "description": "The amount of elevation variability within a parcel. Calculated per parcel from Digital Elevation Model (DEM). 0-80m is considered to represent a level terrain surface; 81-116m represents a nearly level surface; 117-161m represents a slightly rugged surface; 162-239m represents an intermediately rugged surface; 240-497m represents a moderately rugged surface; 498-958m represents a highly rugged surface; 959-4367m represents an extremely rugged surface.",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "highest_parcel_elevation": {
+                    "type": "numeric",
+                    "human": "Highest Parcel Elevation",
+                    "description": "Highest elevation value (meters) intersecting the parcel calculated using best available terrain data. Calculated for each parcel.",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "lowest_parcel_elevation": {
+                    "type": "numeric",
+                    "human": "Lowest Parcel Elevation",
+                    "description": "Lowest elevation value (meters) intersecting the parcel calculated using best available terrain data. Calculated for each parcel.",
+                    "examples": null,
+                    "tier": "premium",
+                    "categories": [
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "eo_owner": {
+                    "type": "text",
+                    "human": "Enhanced Owner",
+                    "tier": "premium",
+                    "categories": [
+                      "owner",
+                      "premium"
+                    ],
+                    "exists": true
+                  },
+                  "eo_deedowner": {
+                    "type": "text",
+                    "human": "Deeded Owner",
+                    "tier": "team",
+                    "categories": [
+                      "owner",
+                      "premium",
+                      "team"
+                    ],
+                    "exists": true
+                  },
+                  "owner": {
+                    "type": "text",
+                    "human": "Owner Name",
+                    "tier": "basic",
+                    "categories": [
+                      "basic",
+                      "assessor_data",
+                      "owner_address",
+                      "pii",
+                      "manually_mapped",
+                      "set_during_synthesize",
+                      "starter"
+                    ],
+                    "exists": true
+                  }
+                },
+                "anon_field_metadata": {
+                  "owner": {
+                    "type": "text",
+                    "human": "Owner Name",
+                    "tier": "basic",
+                    "categories": [
+                      "basic",
+                      "assessor_data",
+                      "owner_address",
+                      "pii",
+                      "manually_mapped",
+                      "set_during_synthesize",
+                      "starter"
+                    ],
+                    "exists": true
+                  }
+                },
+                "reference_links": {
+                  "lbcs_activity": "https://support.regrid.com/parcel-data/lbcs-keys/",
+                  "lbcs_function": "https://support.regrid.com/parcel-data/lbcs-keys/",
+                  "lbcs_ownership": "https://support.regrid.com/parcel-data/lbcs-keys/",
+                  "lbcs_structure": "https://support.regrid.com/parcel-data/lbcs-keys/",
+                  "lbcs_site": "https://support.regrid.com/parcel-data/lbcs-keys/",
+                  "dpv_status": "https://support.regrid.com/parcel-data/cass-codes/",
+                  "dpv_codes": "https://support.regrid.com/parcel-data/cass-codes/",
+                  "dpv_notes": "https://support.regrid.com/parcel-data/cass-codes/",
+                  "dpv_type": "https://support.regrid.com/parcel-data/cass-codes/",
+                  "cass_errorno": "https://support.regrid.com/parcel-data/cass-codes/",
+                  "eo_owner": "https://regrid.com/enhanced-ownership",
+                  "eo_deedowner": "https://regrid.com/enhanced-ownership",
+                  "owner": "https://support.regrid.com/parcel-data/schema#owner",
+                  "usps_vacancy": "/pages/vacancy",
+                  "usps_vacancy_date": "/pages/vacancy",
+                  "rdi": "/pages/vacancy",
+                  "plans_link": "/plans"
+                },
+                "tooltips": {
+                  "eo_owner": "Regrid's Enhanced Ownership dataset provides the most current ownership information available.\n<br/>Update frequency for this field is approximately daily; click on this info box to view our full Support documentation.\n<br/>Due to licensing restrictions, this information can be accessed on our site, but is not available for export.\n",
+                  "eo_deedowner": "Part of our Enhanced Ownership dataset, this field shows the owner's name as recorded on the deed.\n<br/>Update frequency for this field is approximately daily; click on this info box to view our full Support documentation.\n<br/>Due to licensing restrictions, this information can be accessed on our site, but is not available for export.",
+                  "owner": "The owner name as provided from Regrid's public data sources (generally Assessor), <br/>updated at the same frequency as the rest of this property's data. Source: Regrid",
+                  "formatted_mailing_address": "The address where tax and other assessor's communications are sent. <br/>Please note that this info is the same age as Regrid's \"Owner Name (Assessor)\" field, and may not match the Enhanced Owner information.",
+                  "zoning": "The zoning code as locally designated",
+                  "zoning_description": "Description of the zoning code.",
+                  "zoning_type": "Standardized zoning type nationwide, included for Regrid Pro and Team as part of our Premium Parcel Schema dataset.",
+                  "zoning_subtype": "Standardized zoning subtype nationwide, included for Regrid Pro and Team as part of our Premium Parcel Schema dataset.",
+                  "zoning_code_link": "Link to the zoning code text, included for Regrid Pro and Team as part of our Premium Parcel Schema dataset.",
+                  "zoning_id": "Unique ID for this zoning polygon, included for Regrid Pro and Team as part of our Premium Parcel Schema dataset.",
+                  "placekey": "Universal standard identifier for a physical place. Source: <a href=\"https://www.placekey.io/\" target=\"_blank\" rel=\"noopener noreferrer\">Placekey</a>",
+                  "housing_affordability_index": "Housing Affordability Index (HAI) measures the ability of a typical resident to purchase a home in the geographic area. The HAI has a base of 100, representing where the median income is sufficient to qualify for a loan on a median-valued home and not be cost-burdened. HAI values > 100 indicate increasing affordability; HAI values < 100 indicate areas where homes are less affordable and median income might be insufficient to purchase a median-valued home. This attribute is calculated at the Census Block Group level. Source: <a href=\"https://www.arcgis.com/home/item.html?id=b0b3b31e531e406185f2de4fff596060\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/US Census</a>",
+                  "population_density": "Estimated number of residents per square mile. Source: <a href=\"https://www.arcgis.com/home/item.html?id=b0b3b31e531e406185f2de4fff596060\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/US Census</a>",
+                  "housing_growth_past_5_years": "The Compound Annual Growth Rate of housing units in this area for the past five years. Calculated at the Census Block Group level. Source: <a href=\"https://www.arcgis.com/home/item.html?id=b0b3b31e531e406185f2de4fff596060\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/US Census</a>",
+                  "housing_growth_next_5_years": "Forecast of the Compound Annual Growth Rate of housing units in this area for the next five years. Calculated at the Census Block Group level. Source: <a href=\"https://www.arcgis.com/home/item.html?id=b0b3b31e531e406185f2de4fff596060\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/US Census</a>",
+                  "population_growth_past_5_years": "The Compound Annual Growth Rate of the population in this area for the past five years. Calculated at the Census Block Group level. Source: <a href=\"https://www.arcgis.com/home/item.html?id=b0b3b31e531e406185f2de4fff596060\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/US Census</a>",
+                  "population_growth_next_5_years": "Forecast of the Compound Annual Growth Rate of the population in this area for the next five years. Calculated at the Census Block Group level. Source: <a href=\"https://www.arcgis.com/home/item.html?id=b0b3b31e531e406185f2de4fff596060\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/US Census</a>",
+                  "household_income_growth_next_5_years": "Forecast of the change in median household income over the next five years. Calculated at the Census Block Group level. Source: <a href=\"https://www.arcgis.com/home/item.html?id=b0b3b31e531e406185f2de4fff596060\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/US Census</a>",
+                  "median_household_income": "Current Median Household Income in this property's Census Block Group. Source: <a href=\"https://www.arcgis.com/home/item.html?id=b0b3b31e531e406185f2de4fff596060\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/US Census</a>",
+                  "deeded_acres": "Acres of this property listed as \"deeded acres\" by the County. This number is often the same as, but can sometimes differ from, the acreage as calculated by GIS in the \"County Provided Acres\" and \"Regrid Calculated Acres\" fields.",
+                  "neighborhood_code": "Alpha numeric code labeled from the source as a \"neighborhood code\".",
+                  "fema_nri_risk_rating": "National Risk Index data. Incorporates data on natural hazards like flood and fire risk, social vulnerability, and community resilience, into one score which then gets classified into categories ranging from \"Very High\" to \"Very Low\". Calculated at the Census Block Group level. Source: <a href=\"https://hazards.fema.gov/nri/learn-more\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/FEMA</a>",
+                  "transmission_line_distance": "Distance (in meters) that the property lies from the nearest 'relatively high voltage (69kv - 765kv)' electric transmission line. Source: <a href=\"https://hifld-geoplatform.hub.arcgis.com/datasets/geoplatform::transmission-lines/explore\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/Homeland Infrastructure Foundation-Level Data (HIFLD)</a>",
+                  "highest_parcel_elevation": "The highest elevation present on a parcel reflected in meters above sea level. Source: <a href=\"https://data.usgs.gov/datacatalog/data/USGS:3a81321b-c153-416f-98b7-cc8e5f0e17c3\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/USGS</a>",
+                  "lowest_parcel_elevation": "Lowest Parcel Elevation: The lowest elevation present on a parcel reflected in meters above sea level. Source: <a href=\"https://data.usgs.gov/datacatalog/data/USGS:3a81321b-c153-416f-98b7-cc8e5f0e17c3\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/USGS</a>",
+                  "precisely_id": "PreciselyID represents a point addressable location.  If a location has multiple alias addresses (alias street names, vanity city names, etc), it will receive the same PreciselyID. Source: <a href=\"https://www.precisely.com/\" target=\"_blank\" rel=\"noopener noreferrer\"> Precisely</a>",
+                  "roughness_rating": "The amount of elevation variability within a parcel. Calculated per parcel from Digital Elevation Model (DEM). \n<br/>0 = a level terrain surface<br/>1 = a nearly level terrain surface<br/>2 = a slightly rugged terrain surface<br/>3 = an intermediately rugged terrain surface<br/>4 = a moderately rugged terrain surface<br/>5 = a highly rugged terrain surface<br/>6 = an extremely rugged terrain surface<br/>Source: <a href=\"https://data.usgs.gov/datacatalog/data/USGS:3a81321b-c153-416f-98b7-cc8e5f0e17c3\" target=\"_blank\" rel=\"noopener noreferrer\"> ESRI/USGS</a>",
+                  "year_built_effective_date": "Adjusted year built, factoring in condition and / or major structural changes to the building.",
+                  "last_ownership_transfer_date": "Most recent ownership transfer of any kind. Often the same as the 'Last Sale Date', but can differ if there was a non-arms-length transfer after the most recent sale.",
+                  "area_building": "Total area in square feet of all structures on the property, which can include; Hallways, Common Areas (Gym, Laundry, Mail, Pool, etc) and any other area determined by the specific county assessor.",
+                  "area_building_definition": "Details the area described by the AreaBuilding value.",
+                  "num_bath": "The total number of rooms that are utilized as bathrooms. Count includes full and partial bathrooms.",
+                  "num_bath_partial": "Total number of rooms that are defined as partial bathrooms by common real estate definition.",
+                  "num_bedrooms": "Total number of rooms that can be qualified as bedrooms.",
+                  "insite_score": "Estimated relative biodiversity value based on comprehensive national data, including spatial models. Intended to provide an overview summary of biodiversity assets across a site. Source: <a href='https://insite.natureserve.org/' target='_blank' rel='noopener noreferrer'>NatureServe</a>"
+                },
+                "streetview": "https://app.regrid.com/us/id/bonner/sandpoint/30160/streetside.jpg",
+                "birdseye": "https://app.regrid.com/us/id/bonner/sandpoint/30160/birdseye.jpg",
+                "spec": {
+                  "dataset": "sitecontrol",
+                  "geoid": "16017",
+                  "city": "sandpoint",
+                  "id": 30160
+                },
+                "path": "/us/id/bonner/sandpoint/30160",
+                "centroid": [
+                  -116.4869477327835,
+                  48.33225928561425
+                ],
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        -116.4868255,
+                        48.3317135
+                      ],
+                      [
+                        -116.485553,
+                        48.3317135
+                      ],
+                      [
+                        -116.4855585,
+                        48.332807
+                      ],
+                      [
+                        -116.488335,
+                        48.3328055
+                      ],
+                      [
+                        -116.488341,
+                        48.332094
+                      ],
+                      [
+                        -116.4883485,
+                        48.3317135
+                      ],
+                      [
+                        -116.4868255,
+                        48.3317135
+                      ]
+                    ]
+                  ]
+                },
+                "blexts": [],
+                "blext_key": {},
+                "bookmarked": false,
+                "bookmarks": [],
+                "bookmarks_team": [],
+                "bookmarks_as_blexts": [],
+                "context": [
+                  {
+                    "headline": "83864",
+                    "name": "83864",
+                    "path": "/us/83864",
+                    "category": "place"
+                  },
+                  {
+                    "headline": "Census Tract 9502.02",
+                    "name": "Census Tract 9502.02",
+                    "path": "/us/tracts/16017950202",
+                    "category": "place"
+                  },
+                  {
+                    "headline": "Sandpoint, ID",
+                    "name": "Sandpoint, ID",
+                    "path": "/us/id/bonner/sandpoint",
+                    "active": true
+                  },
+                  {
+                    "headline": "Bonner County, ID",
+                    "name": "Bonner County",
+                    "path": "/us/id/bonner",
+                    "active": true,
+                    "verse_path": "/us/id/bonner"
+                  },
+                  {
+                    "headline": "United States",
+                    "name": "United States",
+                    "path": "/us",
+                    "category": "place"
+                  }
+                ],
+                "formatted_addresses": [
+                  [
+                    "1117 Shingle Mill Rd",
+                    "Sandpoint",
+                    "ID",
+                    "83864",
+                    "United States"
+                  ]
+                ],
+                "metadata": {
+                  "headline": "Bonner, ID",
+                  "table_updated": "February 10, 2026",
+                  "last_refresh": "January 27, 2026"
+                },
+                "notices": {},
+                "others": [],
+                "status": "ok",
+                "sources": [],
+                "imagery": {
+                  "allowed": false,
+                  "remaining": 0,
+                  "used": 0,
+                  "need": "register",
+                  "metered": false
+                }
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "HTTP Request1": [
+    {
+      "startTime": 1778294553232,
+      "executionIndex": 2,
+      "source": [
+        {
+          "previousNode": "HTTP Request",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 705,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "elevation": [
+                  655
+                ]
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "Edit Fields": [
+    {
+      "startTime": 1778294553939,
+      "executionIndex": 3,
+      "source": [
+        {
+          "previousNode": "HTTP Request1",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 13,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "ap parcel number": "RP58N01W327600A",
+                "owner": "",
+                "centroid": [
+                  -116.4869477327835,
+                  48.33225928561425
+                ],
+                "lat": "48.332259",
+                "lon": "-116.486948",
+                "ll_gisacre": 6.1944,
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        -116.4868255,
+                        48.3317135
+                      ],
+                      [
+                        -116.485553,
+                        48.3317135
+                      ],
+                      [
+                        -116.4855585,
+                        48.332807
+                      ],
+                      [
+                        -116.488335,
+                        48.3328055
+                      ],
+                      [
+                        -116.488341,
+                        48.332094
+                      ],
+                      [
+                        -116.4883485,
+                        48.3317135
+                      ],
+                      [
+                        -116.4868255,
+                        48.3317135
+                      ]
+                    ]
+                  ]
+                },
+                "county": "Bonner County",
+                "elevation": 655,
+                "customer_id": "cust_12345",
+                "order_id": "order_12345"
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "Edit Fields9": [
+    {
+      "startTime": 1778294553955,
+      "executionIndex": 4,
+      "source": [
+        {
+          "previousNode": "Edit Fields",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 12,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "owner": "KISTING, WARREN V & MARIA T",
+                "elevation": 655,
+                "lat": "48.332259",
+                "lon": "-116.486948",
+                "county": "Bonner County",
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        -116.4868255,
+                        48.3317135
+                      ],
+                      [
+                        -116.485553,
+                        48.3317135
+                      ],
+                      [
+                        -116.4855585,
+                        48.332807
+                      ],
+                      [
+                        -116.488335,
+                        48.3328055
+                      ],
+                      [
+                        -116.488341,
+                        48.332094
+                      ],
+                      [
+                        -116.4883485,
+                        48.3317135
+                      ],
+                      [
+                        -116.4868255,
+                        48.3317135
+                      ]
+                    ]
+                  ]
+                },
+                "fields": {
+                  "gisacre": 6.5
+                }
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "Code1": [
+    {
+      "startTime": 1778294553970,
+      "executionIndex": 5,
+      "source": [
+        {
+          "previousNode": "Edit Fields9",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 62,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "pathString": "path=color:0xffff00ff|weight:4|48.3317135,-116.4868255|48.3317135,-116.4855530|48.3328070,-116.4855585|48.3328055,-116.4883350|48.3320940,-116.4883410|48.3317135,-116.4883485|48.3317135,-116.4868255"
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "Edit Fields8": [
+    {
+      "startTime": 1778294554034,
+      "executionIndex": 6,
+      "source": [
+        {
+          "previousNode": "Code1",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 4,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "srcmap": "https://maps.googleapis.com/maps/api/staticmap?size=1200x1200&scale=2&maptype=hybrid&path=color:0xffff00ff|weight:4|48.3317135,-116.4868255|48.3317135,-116.4855530|48.3328070,-116.4855585|48.3328055,-116.4883350|48.3320940,-116.4883410|48.3317135,-116.4883485|48.3317135,-116.4868255&key=AIzaSyBH98WxAx5gUHvvKSwhoKpyfQQiBS5dUJ0",
+                "acres": "6.5"
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "Edit Fields1": [
+    {
+      "startTime": 1778294554040,
+      "executionIndex": 7,
+      "source": [
+        {
+          "previousNode": "Edit Fields8",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 11,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "acres": 6.5,
+                "owner": "KISTING, WARREN V & MARIA T",
+                "elevation": 655,
+                "lat": 48.332259,
+                "lon": -116.486948,
+                "county": "Bonner County",
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        -116.4868255,
+                        48.3317135
+                      ],
+                      [
+                        -116.485553,
+                        48.3317135
+                      ],
+                      [
+                        -116.4855585,
+                        48.332807
+                      ],
+                      [
+                        -116.488335,
+                        48.3328055
+                      ],
+                      [
+                        -116.488341,
+                        48.332094
+                      ],
+                      [
+                        -116.4883485,
+                        48.3317135
+                      ],
+                      [
+                        -116.4868255,
+                        48.3317135
+                      ]
+                    ]
+                  ]
+                },
+                "srcmap": "https://maps.googleapis.com/maps/api/staticmap?size=1200x1200&scale=2&maptype=hybrid&path=color:0xffff00ff|weight:4|48.3317135,-116.4868255|48.3317135,-116.4855530|48.3328070,-116.4855585|48.3328055,-116.4883350|48.3320940,-116.4883410|48.3317135,-116.4883485|48.3317135,-116.4868255&key=AIzaSyBH98WxAx5gUHvvKSwhoKpyfQQiBS5dUJ0",
+                "": ""
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "Dispatch a workflow event and wait for completion": [
+    {
+      "startTime": 1778294696624,
+      "executionIndex": 0,
+      "source": [
+        {
+          "previousNode": "Edit Fields1",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 3,
+      "metadata": {
+        "resumeUrl": "https://auto.brokertricks.com/webhook-waiting/486?signature=0642aab2dc7f6cef8b585e3e5ce517ee66c239e88f75b09683da40d7c29e836c"
+      },
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "run_id": "25589465253"
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "HTTP Request2": [
+    {
+      "startTime": 1778294696630,
+      "executionIndex": 1,
+      "source": [
+        {
+          "previousNode": "Dispatch a workflow event and wait for completion",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 233,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "total_count": 1,
+                "artifacts": [
+                  {
+                    "id": 6892172020,
+                    "node_id": "MDg6QXJ0aWZhY3Q2ODkyMTcyMDIw",
+                    "name": "render-output",
+                    "size_in_bytes": 27075172,
+                    "url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020",
+                    "archive_download_url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020/zip",
+                    "expired": false,
+                    "digest": "sha256:470834290ccb65b66a27ac4886fa9679c47963d3d2f42429bdf0d14fea978e1b",
+                    "created_at": "2026-05-09T02:44:56Z",
+                    "updated_at": "2026-05-09T02:44:56Z",
+                    "expires_at": "2026-08-07T02:42:36Z",
+                    "workflow_run": {
+                      "id": 25589465253,
+                      "repository_id": 1119998585,
+                      "head_repository_id": 1119998585,
+                      "head_branch": "main",
+                      "head_sha": "632faa136c7fe1d63301f551490536a633955b45"
+                    }
+                  }
+                ]
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "HTTP Request3": [
+    {
+      "startTime": 1778294696865,
+      "executionIndex": 2,
+      "source": [
+        {
+          "previousNode": "HTTP Request2",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 8488,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "total_count": 1,
+                "artifacts": [
+                  {
+                    "id": 6892172020,
+                    "node_id": "MDg6QXJ0aWZhY3Q2ODkyMTcyMDIw",
+                    "name": "render-output",
+                    "size_in_bytes": 27075172,
+                    "url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020",
+                    "archive_download_url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020/zip",
+                    "expired": false,
+                    "digest": "sha256:470834290ccb65b66a27ac4886fa9679c47963d3d2f42429bdf0d14fea978e1b",
+                    "created_at": "2026-05-09T02:44:56Z",
+                    "updated_at": "2026-05-09T02:44:56Z",
+                    "expires_at": "2026-08-07T02:42:36Z",
+                    "workflow_run": {
+                      "id": 25589465253,
+                      "repository_id": 1119998585,
+                      "head_repository_id": 1119998585,
+                      "head_branch": "main",
+                      "head_sha": "632faa136c7fe1d63301f551490536a633955b45"
+                    }
+                  }
+                ]
+              },
+              "binary": {
+                "data": {
+                  "mimeType": "application/zip",
+                  "fileExtension": "zip",
+                  "data": "filesystem-v2",
+                  "directory": "https://productionresultssa13.blob.core.windows.net/actions-results/9a3867eb-ff6d-41de-81eb-0dd322f265fd/workflow-job-run-6dd5c7b6-0d5a-534d-b8c6-a6a16417a0ee/artifacts/f96365fa19d917eaf138db304ba6d075bba5cc2f8cc2b30c7dd63b1d7485917c.zip?rscd=attachment%3B+filename%3D%22render-output.zip%22&rsct=application%2Fzip&se=2026-05-09T02%3A54%3A57Z&sig=im7oLhYaTH3gNBW9DnzwevbxMSyJCVjf8T4Cp%2BhAx6Y%3D&ske=2026-05-09T06%3A03%3A37Z&skoid=ca7593d4-ee42-46cd-af88-8b886a2f84eb&sks=b&skt=2026-05-09T02%3A03%3A37Z&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skv=2025-11-05&sp=r&spr=https&sr=b&st=2026-05-09T02%3A44%3A52Z&sv=2025-11-05",
+                  "fileName": "render-output.zip",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/5107e07b-8f99-4111-aabe-4c8602bed3fe",
+                  "fileSize": "27.1 MB",
+                  "bytes": 27075172
+                }
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "Compression": [
+    {
+      "startTime": 1778294705359,
+      "executionIndex": 3,
+      "source": [
+        {
+          "previousNode": "HTTP Request3",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 2247,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "total_count": 1,
+                "artifacts": [
+                  {
+                    "id": 6892172020,
+                    "node_id": "MDg6QXJ0aWZhY3Q2ODkyMTcyMDIw",
+                    "name": "render-output",
+                    "size_in_bytes": 27075172,
+                    "url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020",
+                    "archive_download_url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020/zip",
+                    "expired": false,
+                    "digest": "sha256:470834290ccb65b66a27ac4886fa9679c47963d3d2f42429bdf0d14fea978e1b",
+                    "created_at": "2026-05-09T02:44:56Z",
+                    "updated_at": "2026-05-09T02:44:56Z",
+                    "expires_at": "2026-08-07T02:42:36Z",
+                    "workflow_run": {
+                      "id": 25589465253,
+                      "repository_id": 1119998585,
+                      "head_repository_id": 1119998585,
+                      "head_branch": "main",
+                      "head_sha": "632faa136c7fe1d63301f551490536a633955b45"
+                    }
+                  }
+                ]
+              },
+              "binary": {
+                "0": {
+                  "mimeType": "image/png",
+                  "fileType": "image",
+                  "fileExtension": "png",
+                  "data": "filesystem-v2",
+                  "fileName": "property_east.png",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/320b381f-9d29-4f49-9fc8-d3417c1865d0",
+                  "fileSize": "4.94 MB",
+                  "bytes": 4935424
+                },
+                "1": {
+                  "mimeType": "image/png",
+                  "fileType": "image",
+                  "fileExtension": "png",
+                  "data": "filesystem-v2",
+                  "fileName": "property_overhead.png",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/272095c0-5b38-4ae2-89ae-ccb6162d8994",
+                  "fileSize": "5.82 MB",
+                  "bytes": 5821293
+                },
+                "2": {
+                  "mimeType": "image/png",
+                  "fileType": "image",
+                  "fileExtension": "png",
+                  "data": "filesystem-v2",
+                  "fileName": "property_north.png",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/5af9457d-0b65-4621-8862-8dff5c3a8c57",
+                  "fileSize": "5 MB",
+                  "bytes": 4996251
+                },
+                "3": {
+                  "mimeType": "image/png",
+                  "fileType": "image",
+                  "fileExtension": "png",
+                  "data": "filesystem-v2",
+                  "fileName": "property_reference_overhead.png",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/d422bf49-c848-4cd2-b8cf-8663fb8bcf21",
+                  "fileSize": "1.06 MB",
+                  "bytes": 1059548
+                },
+                "4": {
+                  "mimeType": "image/png",
+                  "fileType": "image",
+                  "fileExtension": "png",
+                  "data": "filesystem-v2",
+                  "fileName": "property_south.png",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/87f3549e-cf63-468c-ab21-b0718901ba29",
+                  "fileSize": "5.05 MB",
+                  "bytes": 5046760
+                },
+                "5": {
+                  "mimeType": "image/png",
+                  "fileType": "image",
+                  "fileExtension": "png",
+                  "data": "filesystem-v2",
+                  "fileName": "property_west.png",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/10ef0bb7-abc2-432a-aace-e68004c4ccd9",
+                  "fileSize": "5.21 MB",
+                  "bytes": 5206930
+                }
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "Code in JavaScript": [
+    {
+      "startTime": 1778294707609,
+      "executionIndex": 4,
+      "source": [
+        {
+          "previousNode": "Compression",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 152,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "total_count": 1,
+                "artifacts": [
+                  {
+                    "id": 6892172020,
+                    "node_id": "MDg6QXJ0aWZhY3Q2ODkyMTcyMDIw",
+                    "name": "render-output",
+                    "size_in_bytes": 27075172,
+                    "url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020",
+                    "archive_download_url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020/zip",
+                    "expired": false,
+                    "digest": "sha256:470834290ccb65b66a27ac4886fa9679c47963d3d2f42429bdf0d14fea978e1b",
+                    "created_at": "2026-05-09T02:44:56Z",
+                    "updated_at": "2026-05-09T02:44:56Z",
+                    "expires_at": "2026-08-07T02:42:36Z",
+                    "workflow_run": {
+                      "id": 25589465253,
+                      "repository_id": 1119998585,
+                      "head_repository_id": 1119998585,
+                      "head_branch": "main",
+                      "head_sha": "632faa136c7fe1d63301f551490536a633955b45"
+                    }
+                  }
+                ],
+                "fileName": "property_east.png"
+              },
+              "binary": {
+                "data": {
+                  "mimeType": "image/png",
+                  "fileType": "image",
+                  "fileExtension": "png",
+                  "data": "filesystem-v2",
+                  "fileName": "property_east.png",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/320b381f-9d29-4f49-9fc8-d3417c1865d0",
+                  "fileSize": "4.94 MB",
+                  "bytes": 4935424
+                }
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            },
+            {
+              "json": {
+                "total_count": 1,
+                "artifacts": [
+                  {
+                    "id": 6892172020,
+                    "node_id": "MDg6QXJ0aWZhY3Q2ODkyMTcyMDIw",
+                    "name": "render-output",
+                    "size_in_bytes": 27075172,
+                    "url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020",
+                    "archive_download_url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020/zip",
+                    "expired": false,
+                    "digest": "sha256:470834290ccb65b66a27ac4886fa9679c47963d3d2f42429bdf0d14fea978e1b",
+                    "created_at": "2026-05-09T02:44:56Z",
+                    "updated_at": "2026-05-09T02:44:56Z",
+                    "expires_at": "2026-08-07T02:42:36Z",
+                    "workflow_run": {
+                      "id": 25589465253,
+                      "repository_id": 1119998585,
+                      "head_repository_id": 1119998585,
+                      "head_branch": "main",
+                      "head_sha": "632faa136c7fe1d63301f551490536a633955b45"
+                    }
+                  }
+                ],
+                "fileName": "property_overhead.png"
+              },
+              "binary": {
+                "data": {
+                  "mimeType": "image/png",
+                  "fileType": "image",
+                  "fileExtension": "png",
+                  "data": "filesystem-v2",
+                  "fileName": "property_overhead.png",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/272095c0-5b38-4ae2-89ae-ccb6162d8994",
+                  "fileSize": "5.82 MB",
+                  "bytes": 5821293
+                }
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            },
+            {
+              "json": {
+                "total_count": 1,
+                "artifacts": [
+                  {
+                    "id": 6892172020,
+                    "node_id": "MDg6QXJ0aWZhY3Q2ODkyMTcyMDIw",
+                    "name": "render-output",
+                    "size_in_bytes": 27075172,
+                    "url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020",
+                    "archive_download_url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020/zip",
+                    "expired": false,
+                    "digest": "sha256:470834290ccb65b66a27ac4886fa9679c47963d3d2f42429bdf0d14fea978e1b",
+                    "created_at": "2026-05-09T02:44:56Z",
+                    "updated_at": "2026-05-09T02:44:56Z",
+                    "expires_at": "2026-08-07T02:42:36Z",
+                    "workflow_run": {
+                      "id": 25589465253,
+                      "repository_id": 1119998585,
+                      "head_repository_id": 1119998585,
+                      "head_branch": "main",
+                      "head_sha": "632faa136c7fe1d63301f551490536a633955b45"
+                    }
+                  }
+                ],
+                "fileName": "property_north.png"
+              },
+              "binary": {
+                "data": {
+                  "mimeType": "image/png",
+                  "fileType": "image",
+                  "fileExtension": "png",
+                  "data": "filesystem-v2",
+                  "fileName": "property_north.png",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/5af9457d-0b65-4621-8862-8dff5c3a8c57",
+                  "fileSize": "5 MB",
+                  "bytes": 4996251
+                }
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            },
+            {
+              "json": {
+                "total_count": 1,
+                "artifacts": [
+                  {
+                    "id": 6892172020,
+                    "node_id": "MDg6QXJ0aWZhY3Q2ODkyMTcyMDIw",
+                    "name": "render-output",
+                    "size_in_bytes": 27075172,
+                    "url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020",
+                    "archive_download_url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020/zip",
+                    "expired": false,
+                    "digest": "sha256:470834290ccb65b66a27ac4886fa9679c47963d3d2f42429bdf0d14fea978e1b",
+                    "created_at": "2026-05-09T02:44:56Z",
+                    "updated_at": "2026-05-09T02:44:56Z",
+                    "expires_at": "2026-08-07T02:42:36Z",
+                    "workflow_run": {
+                      "id": 25589465253,
+                      "repository_id": 1119998585,
+                      "head_repository_id": 1119998585,
+                      "head_branch": "main",
+                      "head_sha": "632faa136c7fe1d63301f551490536a633955b45"
+                    }
+                  }
+                ],
+                "fileName": "property_reference_overhead.png"
+              },
+              "binary": {
+                "data": {
+                  "mimeType": "image/png",
+                  "fileType": "image",
+                  "fileExtension": "png",
+                  "data": "filesystem-v2",
+                  "fileName": "property_reference_overhead.png",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/d422bf49-c848-4cd2-b8cf-8663fb8bcf21",
+                  "fileSize": "1.06 MB",
+                  "bytes": 1059548
+                }
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            },
+            {
+              "json": {
+                "total_count": 1,
+                "artifacts": [
+                  {
+                    "id": 6892172020,
+                    "node_id": "MDg6QXJ0aWZhY3Q2ODkyMTcyMDIw",
+                    "name": "render-output",
+                    "size_in_bytes": 27075172,
+                    "url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020",
+                    "archive_download_url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020/zip",
+                    "expired": false,
+                    "digest": "sha256:470834290ccb65b66a27ac4886fa9679c47963d3d2f42429bdf0d14fea978e1b",
+                    "created_at": "2026-05-09T02:44:56Z",
+                    "updated_at": "2026-05-09T02:44:56Z",
+                    "expires_at": "2026-08-07T02:42:36Z",
+                    "workflow_run": {
+                      "id": 25589465253,
+                      "repository_id": 1119998585,
+                      "head_repository_id": 1119998585,
+                      "head_branch": "main",
+                      "head_sha": "632faa136c7fe1d63301f551490536a633955b45"
+                    }
+                  }
+                ],
+                "fileName": "property_south.png"
+              },
+              "binary": {
+                "data": {
+                  "mimeType": "image/png",
+                  "fileType": "image",
+                  "fileExtension": "png",
+                  "data": "filesystem-v2",
+                  "fileName": "property_south.png",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/87f3549e-cf63-468c-ab21-b0718901ba29",
+                  "fileSize": "5.05 MB",
+                  "bytes": 5046760
+                }
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            },
+            {
+              "json": {
+                "total_count": 1,
+                "artifacts": [
+                  {
+                    "id": 6892172020,
+                    "node_id": "MDg6QXJ0aWZhY3Q2ODkyMTcyMDIw",
+                    "name": "render-output",
+                    "size_in_bytes": 27075172,
+                    "url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020",
+                    "archive_download_url": "https://api.github.com/repos/ditchallaway/Robotic-Property-Photographer/actions/artifacts/6892172020/zip",
+                    "expired": false,
+                    "digest": "sha256:470834290ccb65b66a27ac4886fa9679c47963d3d2f42429bdf0d14fea978e1b",
+                    "created_at": "2026-05-09T02:44:56Z",
+                    "updated_at": "2026-05-09T02:44:56Z",
+                    "expires_at": "2026-08-07T02:42:36Z",
+                    "workflow_run": {
+                      "id": 25589465253,
+                      "repository_id": 1119998585,
+                      "head_repository_id": 1119998585,
+                      "head_branch": "main",
+                      "head_sha": "632faa136c7fe1d63301f551490536a633955b45"
+                    }
+                  }
+                ],
+                "fileName": "property_west.png"
+              },
+              "binary": {
+                "data": {
+                  "mimeType": "image/png",
+                  "fileType": "image",
+                  "fileExtension": "png",
+                  "data": "filesystem-v2",
+                  "fileName": "property_west.png",
+                  "id": "filesystem-v2:workflows/eiHeW6leMz4NRikO/executions/486/binary_data/10ef0bb7-abc2-432a-aace-e68004c4ccd9",
+                  "fileSize": "5.21 MB",
+                  "bytes": 5206930
+                }
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "Upload a file": [
+    {
+      "startTime": 1778294707763,
+      "executionIndex": 5,
+      "source": [
+        {
+          "previousNode": "Code in JavaScript",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 4873,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "success": true
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            },
+            {
+              "json": {
+                "success": true
+              },
+              "pairedItem": {
+                "item": 1
+              }
+            },
+            {
+              "json": {
+                "success": true
+              },
+              "pairedItem": {
+                "item": 2
+              }
+            },
+            {
+              "json": {
+                "success": true
+              },
+              "pairedItem": {
+                "item": 3
+              }
+            },
+            {
+              "json": {
+                "success": true
+              },
+              "pairedItem": {
+                "item": 4
+              }
+            },
+            {
+              "json": {
+                "success": true
+              },
+              "pairedItem": {
+                "item": 5
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "Edit Fields3": [
+    {
+      "startTime": 1778294712641,
+      "executionIndex": 6,
+      "source": [
+        {
+          "previousNode": "Upload a file",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 19,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_east.png"
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            },
+            {
+              "json": {
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_overhead.png"
+              },
+              "pairedItem": {
+                "item": 1
+              }
+            },
+            {
+              "json": {
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_north.png"
+              },
+              "pairedItem": {
+                "item": 2
+              }
+            },
+            {
+              "json": {
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_reference_overhead.png"
+              },
+              "pairedItem": {
+                "item": 3
+              }
+            },
+            {
+              "json": {
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_south.png"
+              },
+              "pairedItem": {
+                "item": 4
+              }
+            },
+            {
+              "json": {
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_west.png"
+              },
+              "pairedItem": {
+                "item": 5
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "Edit Fields2": [
+    {
+      "startTime": 1778294712662,
+      "executionIndex": 7,
+      "source": [
+        {
+          "previousNode": "Edit Fields3",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 34,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5,
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_east.png"
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            },
+            {
+              "json": {
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5,
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_overhead.png"
+              },
+              "pairedItem": {
+                "item": 1
+              }
+            },
+            {
+              "json": {
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5,
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_north.png"
+              },
+              "pairedItem": {
+                "item": 2
+              }
+            },
+            {
+              "json": {
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5,
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_reference_overhead.png"
+              },
+              "pairedItem": {
+                "item": 3
+              }
+            },
+            {
+              "json": {
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5,
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_south.png"
+              },
+              "pairedItem": {
+                "item": 4
+              }
+            },
+            {
+              "json": {
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5,
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_west.png"
+              },
+              "pairedItem": {
+                "item": 5
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "single imagewith dash": [
+    {
+      "startTime": 1778294712698,
+      "executionIndex": 8,
+      "source": [
+        {
+          "previousNode": "Edit Fields2",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 77,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "direction": "north",
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_north.png",
+                "editorUrl": "https://app.brokertricks.com/editor.html?customer_id=cust_12345&order_id=order_12345&direction=north&server_url=https%3A%2F%2Fauto.brokertricks.com%2Fwebhook%2Fbucket%3Fcustomer_id%3Dcust_12345%26order_id%3Dorder_12345%26direction%3Dnorth&acreage=6.5",
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5
+              }
+            },
+            {
+              "json": {
+                "direction": "east",
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_east.png",
+                "editorUrl": "https://app.brokertricks.com/editor.html?customer_id=cust_12345&order_id=order_12345&direction=east&server_url=https%3A%2F%2Fauto.brokertricks.com%2Fwebhook%2Fbucket%3Fcustomer_id%3Dcust_12345%26order_id%3Dorder_12345%26direction%3Deast&acreage=6.5",
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5
+              }
+            },
+            {
+              "json": {
+                "direction": "south",
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_south.png",
+                "editorUrl": "https://app.brokertricks.com/editor.html?customer_id=cust_12345&order_id=order_12345&direction=south&server_url=https%3A%2F%2Fauto.brokertricks.com%2Fwebhook%2Fbucket%3Fcustomer_id%3Dcust_12345%26order_id%3Dorder_12345%26direction%3Dsouth&acreage=6.5",
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5
+              }
+            },
+            {
+              "json": {
+                "direction": "west",
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_west.png",
+                "editorUrl": "https://app.brokertricks.com/editor.html?customer_id=cust_12345&order_id=order_12345&direction=west&server_url=https%3A%2F%2Fauto.brokertricks.com%2Fwebhook%2Fbucket%3Fcustomer_id%3Dcust_12345%26order_id%3Dorder_12345%26direction%3Dwest&acreage=6.5",
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5
+              }
+            },
+            {
+              "json": {
+                "direction": "overhead",
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_overhead.png",
+                "editorUrl": "https://app.brokertricks.com/editor.html?customer_id=cust_12345&order_id=order_12345&direction=overhead&server_url=https%3A%2F%2Fauto.brokertricks.com%2Fwebhook%2Fbucket%3Fcustomer_id%3Dcust_12345%26order_id%3Dorder_12345%26direction%3Doverhead&acreage=6.5",
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "all images url builder": [
+    {
+      "startTime": 1778294712776,
+      "executionIndex": 9,
+      "source": [
+        {
+          "previousNode": "Edit Fields2",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 46,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "photopeaPayload": {
+                  "files": [],
+                  "script": "var docName = app.activeDocument.name.toLowerCase();\nvar doc = app.activeDocument;\n\nvar textLayer = doc.artLayers.add();\ntextLayer.kind = LayerKind.TEXT;\n\nvar displayName = docName\n    .replace('property_', '')\n    .replace('.png', '')\n    .toUpperCase();\n\ntextLayer.textItem.contents = displayName;\n\ntextLayer.textItem.size = 120;\ntextLayer.textItem.color.rgb.hexValue = 'FFFFFF';\ntextLayer.textItem.position = [100, 200];"
+                }
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "single image edit urls": [
+    {
+      "startTime": 1778294712824,
+      "executionIndex": 10,
+      "source": [
+        {
+          "previousNode": "Edit Fields2",
+          "previousNodeOutput": 0,
+          "previousNodeRun": 0
+        }
+      ],
+      "hints": [],
+      "executionTime": 47,
+      "executionStatus": "success",
+      "data": {
+        "main": [
+          [
+            {
+              "json": {
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5,
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_east.png",
+                "photopeaEditorUrl": "https://www.photopea.com#%7B%22files%22%3A%5B%22https%3A%2F%2Fapp.brokertricks.com%2Faction.atn%22%2C%22https%3A%2F%2Fapp.brokertricks.com%2Ftemplate.psd%22%5D%2C%22server%22%3A%7B%22url%22%3A%22https%3A%2F%2Fauto.brokertricks.com%2Fwebhook%2Fbucket%3Fcustomer_id%3Dcust_12345%26order_id%3Dorder_12345%26direction%3Dunknown%22%2C%22formats%22%3A%5B%22png%22%5D%7D%2C%22script%22%3A%22%5Cn%20%20%20%20var%20doc%20%3D%20app.activeDocument%3B%5Cn%20%20%20%20%5Cn%20%20%20%20%2F%2F%20Safety%20check%20to%20ensure%20it%20goes%20above%20the%20bottom%20layer%5Cn%20%20%20%20try%20%7B%20doc.activeLayer%20%3D%20doc.layers%5Bdoc.layers.length%20-%201%5D%3B%20%7D%20catch(e)%20%7B%7D%5Cn%20%20%20%20%5Cn%20%20%20%20app.open(%5C%22https%3A%2F%2Fpics.brokertricks.com%2Fcust_12345%2Forder_12345%2Fproperty_east.png%5C%22%2C%20null%2C%20true)%3B%5Cn%20%20%5Cn%20%20%20%20%20%20%2F%2F%20THE%20PROVEN%20TEXT%20INJECTION%20BLOCK%20(Flat%20placement)%5Cn%20%20%20%20%20%20var%20tl%20%3D%20doc.artLayers.add()%3B%20%5Cn%20%20%20%20%20%20tl.kind%20%3D%20LayerKind.TEXT%3B%5Cn%20%20%20%20%20%20tl.textItem.contents%20%3D%20%5C%226.5%5C%22%20%2B%20%5C%22%20acres%5C%22%3B%5Cn%20%20%20%20%20%20%5Cn%20%20%20%20%20%20var%20col%20%3D%20new%20SolidColor()%3B%20%5Cn%20%20%20%20%20%20col.rgb.hexValue%20%3D%20%5C%22FFFF00%5C%22%3B%5Cn%20%20%20%20%20%20tl.textItem.color%20%3D%20col%3B%5Cn%20%20%20%20%20%20tl.textItem.size%20%3D%2080%3B%5Cn%20%20%20%20%20%20tl.textItem.baselineShift%20%3D%200%3B%5Cn%20%20%20%20%20%20tl.textItem.justification%20%3D%20Justification.CENTER%3B%5Cn%20%20%20%20%20%20%5Cn%20%20%20%20%20%20%2F%2F%20Spawn%20it%20near%20the%20center%20of%20the%20canvas%20(assuming%20~1200px%20map%20size)%5Cn%20%20%20%20%20%20tl.textItem.position%20%3D%20%5B600%2C%20600%5D%3B%20%5Cn%20%20%20%20%22%7D"
+              },
+              "pairedItem": {
+                "item": 0
+              }
+            },
+            {
+              "json": {
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5,
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_overhead.png",
+                "photopeaEditorUrl": "https://www.photopea.com#%7B%22files%22%3A%5B%22https%3A%2F%2Fapp.brokertricks.com%2Faction.atn%22%2C%22https%3A%2F%2Fapp.brokertricks.com%2Ftemplate.psd%22%5D%2C%22server%22%3A%7B%22url%22%3A%22https%3A%2F%2Fauto.brokertricks.com%2Fwebhook%2Fbucket%3Fcustomer_id%3Dcust_12345%26order_id%3Dorder_12345%26direction%3Dunknown%22%2C%22formats%22%3A%5B%22png%22%5D%7D%2C%22script%22%3A%22%5Cn%20%20%20%20var%20doc%20%3D%20app.activeDocument%3B%5Cn%20%20%20%20%5Cn%20%20%20%20%2F%2F%20Safety%20check%20to%20ensure%20it%20goes%20above%20the%20bottom%20layer%5Cn%20%20%20%20try%20%7B%20doc.activeLayer%20%3D%20doc.layers%5Bdoc.layers.length%20-%201%5D%3B%20%7D%20catch(e)%20%7B%7D%5Cn%20%20%20%20%5Cn%20%20%20%20app.open(%5C%22https%3A%2F%2Fpics.brokertricks.com%2Fcust_12345%2Forder_12345%2Fproperty_overhead.png%5C%22%2C%20null%2C%20true)%3B%5Cn%20%20%5Cn%20%20%20%20%20%20%2F%2F%20THE%20PROVEN%20TEXT%20INJECTION%20BLOCK%20(Flat%20placement)%5Cn%20%20%20%20%20%20var%20tl%20%3D%20doc.artLayers.add()%3B%20%5Cn%20%20%20%20%20%20tl.kind%20%3D%20LayerKind.TEXT%3B%5Cn%20%20%20%20%20%20tl.textItem.contents%20%3D%20%5C%226.5%5C%22%20%2B%20%5C%22%20acres%5C%22%3B%5Cn%20%20%20%20%20%20%5Cn%20%20%20%20%20%20var%20col%20%3D%20new%20SolidColor()%3B%20%5Cn%20%20%20%20%20%20col.rgb.hexValue%20%3D%20%5C%22FFFF00%5C%22%3B%5Cn%20%20%20%20%20%20tl.textItem.color%20%3D%20col%3B%5Cn%20%20%20%20%20%20tl.textItem.size%20%3D%2080%3B%5Cn%20%20%20%20%20%20tl.textItem.baselineShift%20%3D%200%3B%5Cn%20%20%20%20%20%20tl.textItem.justification%20%3D%20Justification.CENTER%3B%5Cn%20%20%20%20%20%20%5Cn%20%20%20%20%20%20%2F%2F%20Spawn%20it%20near%20the%20center%20of%20the%20canvas%20(assuming%20~1200px%20map%20size)%5Cn%20%20%20%20%20%20tl.textItem.position%20%3D%20%5B600%2C%20600%5D%3B%20%5Cn%20%20%20%20%22%7D"
+              },
+              "pairedItem": {
+                "item": 1
+              }
+            },
+            {
+              "json": {
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5,
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_north.png",
+                "photopeaEditorUrl": "https://www.photopea.com#%7B%22files%22%3A%5B%22https%3A%2F%2Fapp.brokertricks.com%2Faction.atn%22%2C%22https%3A%2F%2Fapp.brokertricks.com%2Ftemplate.psd%22%5D%2C%22server%22%3A%7B%22url%22%3A%22https%3A%2F%2Fauto.brokertricks.com%2Fwebhook%2Fbucket%3Fcustomer_id%3Dcust_12345%26order_id%3Dorder_12345%26direction%3Dunknown%22%2C%22formats%22%3A%5B%22png%22%5D%7D%2C%22script%22%3A%22%5Cn%20%20%20%20var%20doc%20%3D%20app.activeDocument%3B%5Cn%20%20%20%20%5Cn%20%20%20%20%2F%2F%20Safety%20check%20to%20ensure%20it%20goes%20above%20the%20bottom%20layer%5Cn%20%20%20%20try%20%7B%20doc.activeLayer%20%3D%20doc.layers%5Bdoc.layers.length%20-%201%5D%3B%20%7D%20catch(e)%20%7B%7D%5Cn%20%20%20%20%5Cn%20%20%20%20app.open(%5C%22https%3A%2F%2Fpics.brokertricks.com%2Fcust_12345%2Forder_12345%2Fproperty_north.png%5C%22%2C%20null%2C%20true)%3B%5Cn%20%20%5Cn%20%20%20%20%20%20%2F%2F%20THE%20PROVEN%20TEXT%20INJECTION%20BLOCK%20(Flat%20placement)%5Cn%20%20%20%20%20%20var%20tl%20%3D%20doc.artLayers.add()%3B%20%5Cn%20%20%20%20%20%20tl.kind%20%3D%20LayerKind.TEXT%3B%5Cn%20%20%20%20%20%20tl.textItem.contents%20%3D%20%5C%226.5%5C%22%20%2B%20%5C%22%20acres%5C%22%3B%5Cn%20%20%20%20%20%20%5Cn%20%20%20%20%20%20var%20col%20%3D%20new%20SolidColor()%3B%20%5Cn%20%20%20%20%20%20col.rgb.hexValue%20%3D%20%5C%22FFFF00%5C%22%3B%5Cn%20%20%20%20%20%20tl.textItem.color%20%3D%20col%3B%5Cn%20%20%20%20%20%20tl.textItem.size%20%3D%2080%3B%5Cn%20%20%20%20%20%20tl.textItem.baselineShift%20%3D%200%3B%5Cn%20%20%20%20%20%20tl.textItem.justification%20%3D%20Justification.CENTER%3B%5Cn%20%20%20%20%20%20%5Cn%20%20%20%20%20%20%2F%2F%20Spawn%20it%20near%20the%20center%20of%20the%20canvas%20(assuming%20~1200px%20map%20size)%5Cn%20%20%20%20%20%20tl.textItem.position%20%3D%20%5B600%2C%20600%5D%3B%20%5Cn%20%20%20%20%22%7D"
+              },
+              "pairedItem": {
+                "item": 2
+              }
+            },
+            {
+              "json": {
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5,
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_reference_overhead.png",
+                "photopeaEditorUrl": "https://www.photopea.com#%7B%22files%22%3A%5B%22https%3A%2F%2Fapp.brokertricks.com%2Faction.atn%22%2C%22https%3A%2F%2Fapp.brokertricks.com%2Ftemplate.psd%22%5D%2C%22server%22%3A%7B%22url%22%3A%22https%3A%2F%2Fauto.brokertricks.com%2Fwebhook%2Fbucket%3Fcustomer_id%3Dcust_12345%26order_id%3Dorder_12345%26direction%3Dunknown%22%2C%22formats%22%3A%5B%22png%22%5D%7D%2C%22script%22%3A%22%5Cn%20%20%20%20var%20doc%20%3D%20app.activeDocument%3B%5Cn%20%20%20%20%5Cn%20%20%20%20%2F%2F%20Safety%20check%20to%20ensure%20it%20goes%20above%20the%20bottom%20layer%5Cn%20%20%20%20try%20%7B%20doc.activeLayer%20%3D%20doc.layers%5Bdoc.layers.length%20-%201%5D%3B%20%7D%20catch(e)%20%7B%7D%5Cn%20%20%20%20%5Cn%20%20%20%20app.open(%5C%22https%3A%2F%2Fpics.brokertricks.com%2Fcust_12345%2Forder_12345%2Fproperty_reference_overhead.png%5C%22%2C%20null%2C%20true)%3B%5Cn%20%20%5Cn%20%20%20%20%20%20%2F%2F%20THE%20PROVEN%20TEXT%20INJECTION%20BLOCK%20(Flat%20placement)%5Cn%20%20%20%20%20%20var%20tl%20%3D%20doc.artLayers.add()%3B%20%5Cn%20%20%20%20%20%20tl.kind%20%3D%20LayerKind.TEXT%3B%5Cn%20%20%20%20%20%20tl.textItem.contents%20%3D%20%5C%226.5%5C%22%20%2B%20%5C%22%20acres%5C%22%3B%5Cn%20%20%20%20%20%20%5Cn%20%20%20%20%20%20var%20col%20%3D%20new%20SolidColor()%3B%20%5Cn%20%20%20%20%20%20col.rgb.hexValue%20%3D%20%5C%22FFFF00%5C%22%3B%5Cn%20%20%20%20%20%20tl.textItem.color%20%3D%20col%3B%5Cn%20%20%20%20%20%20tl.textItem.size%20%3D%2080%3B%5Cn%20%20%20%20%20%20tl.textItem.baselineShift%20%3D%200%3B%5Cn%20%20%20%20%20%20tl.textItem.justification%20%3D%20Justification.CENTER%3B%5Cn%20%20%20%20%20%20%5Cn%20%20%20%20%20%20%2F%2F%20Spawn%20it%20near%20the%20center%20of%20the%20canvas%20(assuming%20~1200px%20map%20size)%5Cn%20%20%20%20%20%20tl.textItem.position%20%3D%20%5B600%2C%20600%5D%3B%20%5Cn%20%20%20%20%22%7D"
+              },
+              "pairedItem": {
+                "item": 3
+              }
+            },
+            {
+              "json": {
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5,
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_south.png",
+                "photopeaEditorUrl": "https://www.photopea.com#%7B%22files%22%3A%5B%22https%3A%2F%2Fapp.brokertricks.com%2Faction.atn%22%2C%22https%3A%2F%2Fapp.brokertricks.com%2Ftemplate.psd%22%5D%2C%22server%22%3A%7B%22url%22%3A%22https%3A%2F%2Fauto.brokertricks.com%2Fwebhook%2Fbucket%3Fcustomer_id%3Dcust_12345%26order_id%3Dorder_12345%26direction%3Dunknown%22%2C%22formats%22%3A%5B%22png%22%5D%7D%2C%22script%22%3A%22%5Cn%20%20%20%20var%20doc%20%3D%20app.activeDocument%3B%5Cn%20%20%20%20%5Cn%20%20%20%20%2F%2F%20Safety%20check%20to%20ensure%20it%20goes%20above%20the%20bottom%20layer%5Cn%20%20%20%20try%20%7B%20doc.activeLayer%20%3D%20doc.layers%5Bdoc.layers.length%20-%201%5D%3B%20%7D%20catch(e)%20%7B%7D%5Cn%20%20%20%20%5Cn%20%20%20%20app.open(%5C%22https%3A%2F%2Fpics.brokertricks.com%2Fcust_12345%2Forder_12345%2Fproperty_south.png%5C%22%2C%20null%2C%20true)%3B%5Cn%20%20%5Cn%20%20%20%20%20%20%2F%2F%20THE%20PROVEN%20TEXT%20INJECTION%20BLOCK%20(Flat%20placement)%5Cn%20%20%20%20%20%20var%20tl%20%3D%20doc.artLayers.add()%3B%20%5Cn%20%20%20%20%20%20tl.kind%20%3D%20LayerKind.TEXT%3B%5Cn%20%20%20%20%20%20tl.textItem.contents%20%3D%20%5C%226.5%5C%22%20%2B%20%5C%22%20acres%5C%22%3B%5Cn%20%20%20%20%20%20%5Cn%20%20%20%20%20%20var%20col%20%3D%20new%20SolidColor()%3B%20%5Cn%20%20%20%20%20%20col.rgb.hexValue%20%3D%20%5C%22FFFF00%5C%22%3B%5Cn%20%20%20%20%20%20tl.textItem.color%20%3D%20col%3B%5Cn%20%20%20%20%20%20tl.textItem.size%20%3D%2080%3B%5Cn%20%20%20%20%20%20tl.textItem.baselineShift%20%3D%200%3B%5Cn%20%20%20%20%20%20tl.textItem.justification%20%3D%20Justification.CENTER%3B%5Cn%20%20%20%20%20%20%5Cn%20%20%20%20%20%20%2F%2F%20Spawn%20it%20near%20the%20center%20of%20the%20canvas%20(assuming%20~1200px%20map%20size)%5Cn%20%20%20%20%20%20tl.textItem.position%20%3D%20%5B600%2C%20600%5D%3B%20%5Cn%20%20%20%20%22%7D"
+              },
+              "pairedItem": {
+                "item": 4
+              }
+            },
+            {
+              "json": {
+                "customer_id": "cust_12345",
+                "order_id": "order_12345",
+                "product_id": "full",
+                "acreage": 6.5,
+                "imageUrl": "https://pics.brokertricks.com/cust_12345/order_12345/property_west.png",
+                "photopeaEditorUrl": "https://www.photopea.com#%7B%22files%22%3A%5B%22https%3A%2F%2Fapp.brokertricks.com%2Faction.atn%22%2C%22https%3A%2F%2Fapp.brokertricks.com%2Ftemplate.psd%22%5D%2C%22server%22%3A%7B%22url%22%3A%22https%3A%2F%2Fauto.brokertricks.com%2Fwebhook%2Fbucket%3Fcustomer_id%3Dcust_12345%26order_id%3Dorder_12345%26direction%3Dunknown%22%2C%22formats%22%3A%5B%22png%22%5D%7D%2C%22script%22%3A%22%5Cn%20%20%20%20var%20doc%20%3D%20app.activeDocument%3B%5Cn%20%20%20%20%5Cn%20%20%20%20%2F%2F%20Safety%20check%20to%20ensure%20it%20goes%20above%20the%20bottom%20layer%5Cn%20%20%20%20try%20%7B%20doc.activeLayer%20%3D%20doc.layers%5Bdoc.layers.length%20-%201%5D%3B%20%7D%20catch(e)%20%7B%7D%5Cn%20%20%20%20%5Cn%20%20%20%20app.open(%5C%22https%3A%2F%2Fpics.brokertricks.com%2Fcust_12345%2Forder_12345%2Fproperty_west.png%5C%22%2C%20null%2C%20true)%3B%5Cn%20%20%5Cn%20%20%20%20%20%20%2F%2F%20THE%20PROVEN%20TEXT%20INJECTION%20BLOCK%20(Flat%20placement)%5Cn%20%20%20%20%20%20var%20tl%20%3D%20doc.artLayers.add()%3B%20%5Cn%20%20%20%20%20%20tl.kind%20%3D%20LayerKind.TEXT%3B%5Cn%20%20%20%20%20%20tl.textItem.contents%20%3D%20%5C%226.5%5C%22%20%2B%20%5C%22%20acres%5C%22%3B%5Cn%20%20%20%20%20%20%5Cn%20%20%20%20%20%20var%20col%20%3D%20new%20SolidColor()%3B%20%5Cn%20%20%20%20%20%20col.rgb.hexValue%20%3D%20%5C%22FFFF00%5C%22%3B%5Cn%20%20%20%20%20%20tl.textItem.color%20%3D%20col%3B%5Cn%20%20%20%20%20%20tl.textItem.size%20%3D%2080%3B%5Cn%20%20%20%20%20%20tl.textItem.baselineShift%20%3D%200%3B%5Cn%20%20%20%20%20%20tl.textItem.justification%20%3D%20Justification.CENTER%3B%5Cn%20%20%20%20%20%20%5Cn%20%20%20%20%20%20%2F%2F%20Spawn%20it%20near%20the%20center%20of%20the%20canvas%20(assuming%20~1200px%20map%20size)%5Cn%20%20%20%20%20%20tl.textItem.position%20%3D%20%5B600%2C%20600%5D%3B%20%5Cn%20%20%20%20%22%7D"
+              },
+              "pairedItem": {
+                "item": 5
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}

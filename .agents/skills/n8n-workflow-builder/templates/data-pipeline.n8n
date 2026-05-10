@@ -1,0 +1,142 @@
+{
+  "updatedAt": "2026-05-08T00:46:23.083Z",
+  "createdAt": "2026-05-07T11:07:32.523Z",
+  "id": "BUO82gn90RhvHVux",
+  "name": "Data Pipeline",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-001",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.example.com/data",
+        "options": {}
+      },
+      "id": "fetch-001",
+      "name": "Fetch Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const items = $input.all();\nreturn items.map(item => ({\n  json: {\n    transformed: item.json.data,\n    timestamp: new Date().toISOString()\n  }\n}));"
+      },
+      "id": "transform-001",
+      "name": "Transform",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.example.com/store",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "payload",
+              "value": "={{ JSON.stringify($json) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "store-001",
+      "name": "Store Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          {
+            "node": "Fetch Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Data": {
+      "main": [
+        [
+          {
+            "node": "Transform",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform": {
+      "main": [
+        [
+          {
+            "node": "Store Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "c0606e2f-b506-415f-b74c-511c2d6b1a76",
+  "activeVersionId": null,
+  "versionCounter": 3,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-07T11:07:32.523Z",
+      "createdAt": "2026-05-07T11:07:32.523Z",
+      "role": "workflow:owner",
+      "workflowId": "hfQgCkO52aa5MS7I",
+      "projectId": "SxZfT7rxAv9cKdRm",
+      "project": {
+        "updatedAt": "2025-11-07T03:45:28.862Z",
+        "createdAt": "2025-11-07T00:54:39.972Z",
+        "id": "SxZfT7rxAv9cKdRm",
+        "name": "Jonny Bot <in.the.air.jkb@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "c7000de2-88dd-46b6-8967-ca24d58f54dd"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

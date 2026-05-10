@@ -1,0 +1,1735 @@
+{
+  "updatedAt": "2026-05-09T08:11:17.753Z",
+  "createdAt": "2026-05-02T08:28:50.274Z",
+  "id": "eiHeW6leMz4NRikO",
+  "name": "Full",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2928,
+        -48
+      ],
+      "id": "7fe0934f-a94a-40d6-8122-cd19344755da",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://auto.brokertricks.com/webhook/ungrid",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2704,
+        -48
+      ],
+      "id": "79bdc4a0-a87c-4ab8-ae34-74434bc5c188",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "411ea856-ca12-4349-9313-e3c087580f43",
+              "name": "ap parcel number",
+              "value": "={{ $('HTTP Request').item.json.fields.parcelnumb }}",
+              "type": "string"
+            },
+            {
+              "id": "f519640f-87eb-44dc-aef6-eacdd48afd0f",
+              "name": "owner",
+              "value": "={{ $('HTTP Request').item.json.fields.owner }}",
+              "type": "string"
+            },
+            {
+              "id": "2f2f92f2-3a15-4405-a5a6-e192f98bad73",
+              "name": "centroid",
+              "value": "={{ $('HTTP Request').item.json.centroid }}",
+              "type": "array"
+            },
+            {
+              "id": "211a05ff-4ba4-465b-96c8-2355925a86cc",
+              "name": "lat",
+              "value": "={{ $('HTTP Request').item.json.fields.lat }}",
+              "type": "string"
+            },
+            {
+              "id": "0957b2c4-2d14-4a22-b3d6-b38b8ba4182c",
+              "name": "lon",
+              "value": "={{ $('HTTP Request').item.json.fields.lon }}",
+              "type": "string"
+            },
+            {
+              "id": "f421ae78-f1a1-4e76-a374-ecc15170c676",
+              "name": "ll_gisacre",
+              "value": "={{ $('HTTP Request').item.json.fields.ll_gisacre }}",
+              "type": "number"
+            },
+            {
+              "id": "4c435da0-704e-4e80-9a11-89349464e6c2",
+              "name": "geometry",
+              "value": "={{ $('HTTP Request').item.json.geometry }}",
+              "type": "object"
+            },
+            {
+              "id": "57c40033-7331-4897-b3c4-2589c8422c62",
+              "name": "county",
+              "value": "={{ $('HTTP Request').item.json.context[3].name }}",
+              "type": "string"
+            },
+            {
+              "id": "a78441f2-c1ba-4a04-b602-5daf1947ab24",
+              "name": "elevation",
+              "value": "={{ $json.elevation[0] }}",
+              "type": "number"
+            },
+            {
+              "id": "79de9b5b-743c-4c2e-9a30-b954e9352f5f",
+              "name": "customer_id",
+              "value": "cust_12345",
+              "type": "string"
+            },
+            {
+              "id": "9c19d833-5884-4467-bb5f-ab1f7a435c5f",
+              "name": "order_id",
+              "value": "order_12345",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2256,
+        -48
+      ],
+      "id": "2f3d72fa-6b0e-4bfb-9099-cc93c4caecea",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.open-meteo.com/v1/elevation?latitude={{ $json.fields.lat }}&longitude={{ $json.fields.lon }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2480,
+        -48
+      ],
+      "id": "42b264ed-cfde-448c-b248-99c978fb4932",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b687ed80-e00e-4108-b1e9-1d1a378ac748",
+              "name": "srcmap",
+              "value": "=https://maps.googleapis.com/maps/api/staticmap?size=1200x1200&scale=2&maptype=hybrid&{{ $json.pathString }}&key=AIzaSyBH98WxAx5gUHvvKSwhoKpyfQQiBS5dUJ0",
+              "type": "string"
+            },
+            {
+              "id": "fd464050-4749-47b5-bde9-4ecd7b47ab58",
+              "name": "acres",
+              "value": "={{ $('HTTP Request').item.json.fields.lglacres }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "19371f71-914a-42ce-b31c-aabcf1b40d41",
+      "name": "Edit Fields8",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1584,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fbffd5dc-6e53-4038-a1b1-9d53ccc9986c",
+              "name": "owner",
+              "value": "={{ $if($json.owner, $isEmpty(),$('HTTP Request').item.json.fields.primaryownername ) }}",
+              "type": "string"
+            },
+            {
+              "id": "833f249c-1c9e-4761-a33a-3a3db158b696",
+              "name": "elevation",
+              "value": "={{ $json.elevation }}",
+              "type": "number"
+            },
+            {
+              "id": "371329a8-6fc2-40da-a44f-a2e0ecf85799",
+              "name": "lat",
+              "value": "={{ $json.lat }}",
+              "type": "string"
+            },
+            {
+              "id": "d9e3c9b4-6d08-4581-93b6-1b71c7196349",
+              "name": "lon",
+              "value": "={{ $json.lon }}",
+              "type": "string"
+            },
+            {
+              "id": "9cfcc07f-8fd5-4cfa-a27d-6a806c49347b",
+              "name": "county",
+              "value": "={{ $json.county }}",
+              "type": "string"
+            },
+            {
+              "id": "99dbf8a6-c1f3-45ed-9455-ea17598b8caf",
+              "name": "customer_id",
+              "value": "={{ $json.customer_id }}",
+              "type": "string"
+            },
+            {
+              "id": "47501d91-0e4d-4484-b987-e06c59997b52",
+              "name": "order_id",
+              "value": "={{ $json.order_id }}",
+              "type": "string"
+            },
+            {
+              "id": "363501e4-e192-4890-b57f-ab723cc2a53a",
+              "name": "geometry",
+              "value": "={{ $json.geometry }}",
+              "type": "object"
+            },
+            {
+              "id": "dd033ec8-237e-4e04-9004-623914baa468",
+              "name": "fields.gisacre",
+              "value": "={{ $('HTTP Request').item.json.fields.gisacre }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {
+          "dotNotation": true
+        }
+      },
+      "id": "8ba9f227-dceb-4d87-9869-8ebd5ea74586",
+      "name": "Edit Fields9",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2032,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input JSON containing the geometry and coordinates\nconst input = items[0].json;\nconst coordinates = $input.first().json.geometry.coordinates[0];  // Access the first ring of the Polygon\n\nconst color = \"0xffff00ff\";\nconst weight = 4;\n\n// Helper function to create the path string with rounded numbers\nfunction createPathString(coordinates) {\n  return coordinates.map(coord => {\n    const lat = Number(coord[1]).toFixed(7); // Convert to number, round to 7 decimals\n    const lon = Number(coord[0]).toFixed(7); // Convert to number, round to 7 decimals\n    return `${lat},${lon}`;\n  }).join('|');  // Reverse lat/lon\n}\n\n// Build the path string\nconst pathString = `path=color:${color}|weight:${weight}|${createPathString(coordinates)}`;\n\n// Return the result\nreturn [{ json: { pathString: pathString } }];"
+      },
+      "id": "dcebec96-dd08-44c0-8e2b-8c0ba0922058",
+      "name": "Code1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1808,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "68a6db1a-891e-48fe-9f8e-52f6b1e92a6e",
+              "name": "acres",
+              "value": "={{ $json.acres }}",
+              "type": "number"
+            },
+            {
+              "id": "86c320a1-3e81-4e96-8028-c2b360c911af",
+              "name": "owner",
+              "value": "={{ $('Edit Fields9').item.json.owner }}",
+              "type": "string"
+            },
+            {
+              "id": "369090e7-3df2-451b-b0df-8a21951a35e1",
+              "name": "elevation",
+              "value": "={{ $('Edit Fields9').item.json.elevation }}",
+              "type": "number"
+            },
+            {
+              "id": "ccbe62f6-31f1-4c54-bbc8-f5471615c971",
+              "name": "lat",
+              "value": "={{ $('Edit Fields9').item.json.lat }}",
+              "type": "number"
+            },
+            {
+              "id": "cc988a98-9a90-474a-be5b-a1988bddac86",
+              "name": "lon",
+              "value": "={{ $('Edit Fields9').item.json.lon }}",
+              "type": "number"
+            },
+            {
+              "id": "98d5ce07-c629-4329-a75e-c1b4a00df470",
+              "name": "county",
+              "value": "={{ $('Edit Fields9').item.json.county }}",
+              "type": "string"
+            },
+            {
+              "id": "ae8a5ec6-c344-4b65-a8bc-f5e4b12223a1",
+              "name": "customer_id",
+              "value": "={{ $('Edit Fields9').item.json.customer_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6e88832b-b8a4-440b-b7a0-b5455cb8cad1",
+              "name": "order_id",
+              "value": "={{ $('Edit Fields9').item.json.order_id }}",
+              "type": "string"
+            },
+            {
+              "id": "7ef0cb01-ec6b-4b28-916e-bda06b82074b",
+              "name": "geometry",
+              "value": "={{ $('Edit Fields9').item.json.geometry }}",
+              "type": "object"
+            },
+            {
+              "id": "c33cc601-a399-4bfc-b167-6ee2a7677468",
+              "name": "srcmap",
+              "value": "={{ $('Edit Fields8').item.json.srcmap }}",
+              "type": "string"
+            },
+            {
+              "id": "e43cd9a6-6166-4204-aaa7-bffac3644e26",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "dotNotation": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1360,
+        -48
+      ],
+      "id": "ec788af8-ac25-4272-876d-c34b80a7518d",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "resource": "workflow",
+        "operation": "dispatchAndWait",
+        "owner": {
+          "__rl": true,
+          "value": "ditchallaway",
+          "mode": "list",
+          "cachedResultName": "ditchallaway",
+          "cachedResultUrl": "https://github.com/ditchallaway"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "Robotic-Property-Photographer",
+          "mode": "list",
+          "cachedResultName": "Robotic-Property-Photographer",
+          "cachedResultUrl": "https://github.com/ditchallaway/Robotic-Property-Photographer"
+        },
+        "workflowId": {
+          "__rl": true,
+          "value": 262111778,
+          "mode": "list",
+          "cachedResultName": "Snapshots"
+        },
+        "ref": {
+          "__rl": true,
+          "value": "main",
+          "mode": "list",
+          "cachedResultName": "main"
+        },
+        "inputs": "={{ JSON.stringify({ job_json: JSON.stringify($json) }) }}"
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        -1136,
+        -48
+      ],
+      "id": "fd158265-2008-4ef4-8ea4-f58a2436c993",
+      "name": "Dispatch a workflow event and wait for completion",
+      "webhookId": "d4974609-6a46-45bc-8230-d5fc3fdb580c",
+      "credentials": {
+        "githubApi": {
+          "id": "WAVhETF4rbadk9yF",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/ditchallaway/robotic-property-photographer/actions/runs/{{ $json.run_id }}/artifacts",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -912,
+        -48
+      ],
+      "id": "60e090b9-7a6c-471d-a390-08d100de8cd5",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.artifacts[0].archive_download_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -688,
+        -48
+      ],
+      "id": "cbc90dc4-efc4-4a4c-a695-1e46ab845263",
+      "name": "HTTP Request3",
+      "credentials": {
+        "githubApi": {
+          "id": "WAVhETF4rbadk9yF",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "outputPrefix": "="
+      },
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        -464,
+        -48
+      ],
+      "id": "ed5eb1ed-a379-4064-8644-11da8263ae40",
+      "name": "Compression"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\nfor (const item of $input.all()) {\n  for (const key of Object.keys(item.binary)) {\n    items.push({\n      json: {\n        ...item.json,\n        fileName: item.binary[key].fileName\n      },\n      binary: {\n        data: item.binary[key]\n      }\n    });\n  }\n}\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -48
+      ],
+      "id": "b286f6f0-4d55-4996-830b-9ed917aa1a5e",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucketName": "btx-store",
+        "fileName": "={{ $('Edit Fields1').item.json.customer_id }}/{{ $('Edit Fields1').item.json.order_id }}/{{ $json.fileName }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        -48
+      ],
+      "id": "109cbc83-2967-47db-8947-cbac80d1a449",
+      "name": "Upload a file",
+      "credentials": {
+        "s3": {
+          "id": "1GusURtMq14SbO6K",
+          "name": "btx-store-bucket"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e0230557-51e0-480a-902e-a7db19187952",
+              "name": "customer_id",
+              "value": "={{ $('Edit Fields9').item.json.customer_id }}",
+              "type": "string"
+            },
+            {
+              "id": "645ef0e8-eba0-40f0-a5d0-4cb73b2514ed",
+              "name": "order_id",
+              "value": "={{ $('Edit Fields9').item.json.order_id }}",
+              "type": "string"
+            },
+            {
+              "id": "010529f8-ad41-4e80-ad97-837021971818",
+              "name": "product_id",
+              "value": "full",
+              "type": "string"
+            },
+            {
+              "id": "ad75eb23-304b-4fad-aef6-57be26f05d0c",
+              "name": "acreage",
+              "value": "={{ $('Edit Fields1').item.json.acres }}",
+              "type": "number"
+            },
+            {
+              "id": "fe722463-ee2c-448f-ae8d-e8f6ed6bca48",
+              "name": "imageUrl",
+              "value": "={{ $json.imageUrl }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        432,
+        -48
+      ],
+      "id": "59bce36f-c5d7-4d7e-84c3-fe535c1f1925",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "content": "## 🚩Replace Me\n**Replace** With webhook node.",
+        "height": 272,
+        "width": 192,
+        "color": "#477D40"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2976,
+        -160
+      ],
+      "id": "a415ac96-ce78-4234-9574-96d007f2bd1a",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## 🚩Replace Me\n**Replace** With actual api endpoint",
+        "height": 272,
+        "width": 192,
+        "color": "#477D40"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2752,
+        -160
+      ],
+      "id": "349d7f61-fea5-400f-8ac3-66d0a3e7790d",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over all incoming items\nconst items = $input.all();\nconst result = [];\nfor (const item of items) {\n  // 1. Get the image URL from the incoming data \n  // (Change 'imageUrl' to match your actual input field name)\n  const imageUrl = item.json.imageUrl;\n  \n  if (!imageUrl) {\n    // Pass the item through unchanged if there's no image URL\n    result.push({ json: item.json });\n    continue;\n  }\n  \n  // 2. Build the Photopea API compliant JSON configuration\n  const photopeaConfig = {\n    files: [\n      imageUrl\n    ],\n    // Optional: you can add environment settings like a custom save endpoint\n    // environment: {\n    //   customIO: {\n    //     save: \"https://your-webhook-to-receive-saved-images.com/\"\n    //   }\n    // }\n  };\n  \n  // 3. Serialize and encode the JSON\n  const configString = JSON.stringify(photopeaConfig);\n  const encodedConfig = encodeURIComponent(configString);\n  \n  // 4. Construct the final URL pointing to your hosted editor\n  const finalUrl = `https://app.brokertricks.com/editor.html#${encodedConfig}`;\n  \n  // 5. Output the results\n  result.push({\n    json: {\n      ...item.json,            // Keep all original incoming data\n      photopeaUrl: finalUrl,   // Add the generated URL\n      photopeaConfig: photopeaConfig // (Optional) Output the raw config for debugging\n    }\n  });\n}\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        -592
+      ],
+      "id": "e23f76db-b2d4-4986-b08c-22fd5e964b3e",
+      "name": "Code in JavaScript2",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d596049d-c49b-4128-a169-e36e268497ce",
+              "name": "imageUrl",
+              "value": "=https://pics.brokertricks.com/{{ $('Edit Fields9').item.json.customer_id }}/{{ $('Edit Fields9').item.json.order_id }}/{{ $('Code in JavaScript').item.json.fileName }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        -48
+      ],
+      "id": "1510e24a-b6e6-4fdb-8971-8294f439774b",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over all incoming items\nconst items = $input.all();\nconst result = [];\nfor (const item of items) {\n  // 1. Extract your variables (Update these field names if they differ in your n8n data)\n  const imageUrl = item.json.imageUrl;\n  const customerId = item.json.customer_id || \"unknown_cust\";\n  const orderId = item.json.order_id || \"unknown_order\";\n  const direction = item.json.direction || \"unknown_dir\";\n  const acreage = item.json.acreage || \"Acreage N/A\";\n  \n  if (!imageUrl) {\n    result.push({ json: item.json });\n    continue;\n  }\n  // 2. Build the ExtendScript to execute inside Photopea\n  // This opens the image as a layer, updates the text on Layer 1, and runs the action.\n  const extendScript = `\n    // The PSD template is already open and active.\n    \n    // Step A: Load the boundary image as a Smart Object onto Layer 0\n    // The \"true\" parameter tells Photopea to open it as a layer in the current document.\n    app.open(\"${imageUrl}\", null, true);\n    // Step B: Update the placeholder text on Layer 1\n    // (Note: layers are 0-indexed in scripts, but order depends on your PSD structure. \n    // Assuming the text layer is named \"TextLayer\" or you can access by index).\n    var doc = app.activeDocument;\n    \n    // Safety check: Find the layer by name, or just use index 1 if it's strictly the second layer\n    try {\n      doc.layers[1].textItem.contents = \"${acreage}\";\n    } catch(e) {\n      // Fallback if layer[1] isn't a text layer\n      alert(\"Could not update text layer. Please check PSD layer order.\");\n    }\n    // Step C: Run your pre-recorded action\n    app.doAction(\"Action 0\", \"Action Set 0\");\n  `;\n  \n  // 3. Build the complete Photopea API JSON payload\n  const photopeaConfig = {\n    // Files to load first (Actions and your blank PSD template)\n    files: [\n      \"https://app.brokertricks.com/actions.atn\",\n      \"https://app.brokertricks.com/template.psd\" \n    ],\n    // The webhook endpoint where Photopea will POST the final image when they hit \"Save\"\n    server: {\n      url: `https://auto.brokertricks.com/webhook/bucket?customer_id=${customerId}&order_id=${orderId}&direction=${direction}`,\n      formats: [\"png\"] // We only want the final flat PNG for the dataset\n    },\n    // The script to run immediately after the files are loaded\n    script: extendScript\n  };\n  \n  // 4. Serialize and encode the JSON\n  const configString = JSON.stringify(photopeaConfig);\n  const encodedConfig = encodeURIComponent(configString);\n  \n  // 5. Construct the final direct URL pointing to the official Photopea app\n  const finalUrl = `https://www.photopea.com#${encodedConfig}`;\n  \n  // 6. Output the results\n  result.push({\n    json: {\n      ...item.json,\n      photopeaEditorUrl: finalUrl // Provide this link to your human editor!\n    }\n  });\n}\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        -640
+      ],
+      "id": "6698e43b-129a-4d48-aeb5-5ecea88c5def",
+      "name": "Code in JavaScript1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "height": 352,
+        "width": 192,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1184,
+        -240
+      ],
+      "id": "d2a39ae3-7387-4178-b634-62947b19ef81",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst input = items[0].json;\n\nconst customer_id = input.customer_id || 'cust_12345';\nconst order_id = input.order_id || 'order_12345';\n\nlet acreage = \"0\";\ntry {\n    acreage = $('Edit Fields1').first().json.acres;\n} catch(e) {\n    acreage = input.acreage || \"0\";\n}\n\n// Dynamically build files array from all incoming items\nconst files = [];\nfor (const item of items) {\n  if (item.json.imageUrl) {\n    files.push(item.json.imageUrl);\n  }\n}\n\n// Fallback in case no imageUrls were passed\nif (files.length === 0) {\n  files.push(`https://pics.brokertricks.com/${customer_id}/${order_id}/property_overhead.png`);\n}\n\nconst webhookUrl = `https://auto.brokertricks.com/webhook/bucket?customer_id=${customer_id}&order_id=${order_id}&direction=full`;\n\nconst payload = {\n    files: files,\n    server: {\n        url: webhookUrl,\n        formats: [\"png\"]\n    },\n    script: `\nvar docName = app.activeDocument.name.toLowerCase();\nvar doc = app.activeDocument;\n\nvar textLayer = doc.artLayers.add();\ntextLayer.kind = LayerKind.TEXT;\n\ntextLayer.textItem.contents = \"${acreage} ACRES\";\n\ntextLayer.textItem.size = 120;\ntextLayer.textItem.color.rgb.hexValue = 'FFFFFF';\ntextLayer.textItem.position = [100, 200];\n`.trim()\n};\n\nconst encodedConfig = encodeURIComponent(JSON.stringify(payload));\n\n// Add query params for the dashboard UI, and the hash for Photopea\nconst params = [\n  `customer_id=${encodeURIComponent(customer_id)}`,\n  `order_id=${encodeURIComponent(order_id)}`,\n  `direction=full`,\n  `acreage=${encodeURIComponent(acreage)}`\n];\nconst editorUrl = `https://app.brokertricks.com/editor-full.html?${params.join('&')}#${encodedConfig}`;\n\n// We only need to output a single item containing the combined URL\nreturn [\n  {\n    json: {\n      ...input,\n      editorUrl: editorUrl,\n      photopeaPayload: payload,\n      filesIncluded: files.length\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        96
+      ],
+      "id": "86111bf4-e49e-43e8-962d-f759220c0b3c",
+      "name": "all images url builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over all incoming items\nconst items = $input.all();\nconst result = [];\nfor (const item of items) {\n  const imageUrl = item.json.imageUrl;\n  const customerId = item.json.customer_id || \"unknown_cust\";\n  const orderId = item.json.order_id || \"unknown_order\";\n  const direction = (item.json.direction || \"unknown\").toLowerCase();\n  const acreage = item.json.acreage || \"0.302 acres\"; \n  \n  if (!imageUrl) {\n    result.push({ json: item.json });\n    continue;\n  }\n  // 1. Load the image as a layer\n  let extendScript = `\n    var doc = app.activeDocument;\n    \n    // Safety check to ensure it goes above the bottom layer\n    try { doc.activeLayer = doc.layers[doc.layers.length - 1]; } catch(e) {}\n    \n    app.open(\"${imageUrl}\", null, true);\n  `;\n  // 2. Branch logic based on direction\n  if (direction === \"overhead\") {\n    // OVERHEAD: Run the action, calculate the path angle, and align text automatically\n    extendScript += `\n      app.doAction(\"Action 0\", \"Action Set 0\");\n      if (doc.pathItems.length > 0) {\n        var sub = doc.pathItems[0].subPathItems[0].pathPoints;\n        var best = {len:0, ang:0, p1:[0,0], p2:[0,0]};\n        \n        for (var i=0; i < sub.length-1; i++) {\n          var a = sub[i].anchor, b = sub[i+1].anchor;\n          var dx = b[0]-a[0], dy = b[1]-a[1];\n          var len = Math.hypot(dx,dy), ang = Math.atan2(dy,dx);\n          if (len > best.len) best = {len:len, ang:ang, p1:a, p2:b};\n        }\n        \n        var mx = (best.p1[0] + best.p2[0]) / 2;\n        var my = (best.p1[1] + best.p2[1]) / 2;\n        var ox = -30 * Math.sin(best.ang);\n        var oy = 30 * Math.cos(best.ang);\n            \n        // THE PROVEN TEXT INJECTION BLOCK\n        var tl = doc.artLayers.add(); \n        tl.kind = LayerKind.TEXT;\n        tl.textItem.contents = \"${acreage}\";\n        \n        var col = new SolidColor(); \n        col.rgb.hexValue = \"FFFF00\";\n        tl.textItem.color = col;\n        tl.textItem.size = 80;\n        tl.textItem.baselineShift = -160;\n        tl.textItem.justification = Justification.CENTER;\n        tl.textItem.position = [mx + ox, my + oy];\n        \n        var deg = best.ang * (180/Math.PI);\n        if (deg > 90 || deg < -90) deg += 180;\n        tl.rasterize(); \n        tl.rotate(deg, AnchorPosition.MIDDLECENTER);\n      }\n    `;\n  } else {\n    // CARDINAL VIEWS: Skip the action/math, but still use the proven text injection \n    // so the editor doesn't have to type it manually.\n    extendScript += `\n      // THE PROVEN TEXT INJECTION BLOCK (Flat placement)\n      var tl = doc.artLayers.add(); \n      tl.kind = LayerKind.TEXT;\n      tl.textItem.contents = \"${acreage}\" + \" acres\";\n      \n      var col = new SolidColor(); \n      col.rgb.hexValue = \"FFFF00\";\n      tl.textItem.color = col;\n      tl.textItem.size = 80;\n      tl.textItem.baselineShift = 0;\n      tl.textItem.justification = Justification.CENTER;\n      \n      // Spawn it near the center of the canvas (assuming ~1200px map size)\n      tl.textItem.position = [600, 600]; \n    `;\n  }\n  // 3. Build the Photopea API JSON payload\n  const photopeaConfig = {\n    files: [\n      \"https://app.brokertricks.com/action.atn\",\n      \"https://app.brokertricks.com/template.psd\" \n    ],\n    server: {\n      url: `https://auto.brokertricks.com/webhook/bucket?customer_id=${customerId}&order_id=${orderId}&direction=${direction}`,\n      formats: [\"png\"] \n    },\n    script: extendScript\n  };\n  \n  // 4. Serialize and encode the JSON\n  const configString = JSON.stringify(photopeaConfig);\n  const encodedConfig = encodeURIComponent(configString);\n  const finalUrl = `https://www.photopea.com#${encodedConfig}`;\n  \n  result.push({\n    json: {\n      ...item.json,\n      photopeaEditorUrl: finalUrl\n    }\n  });\n}\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        336
+      ],
+      "id": "1227539a-c169-4190-ba56-a8680c5162de",
+      "name": "single image edit urls"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Photopea URL Builder — n8n Code Node\n * \n * Generates editor URLs for the embedded Photopea page at app.brokertricks.com.\n * Each URL opens a specific property image in the editor with:\n * - The action set (.atn) pre-loaded for boundary \"pop\" effects\n * - An acreage text layer automatically placed (yellow #FFFF00, 120pt)\n * - One URL per image — each opens in its own browser tab\n *\n * The editor page fetches images from R2 as ArrayBuffers, bypassing CORS\n * entirely since Photopea never makes the cross-origin request itself.\n *\n * MODE: \"Run Once for All Items\"\n *\n * EXPECTED INPUT ($input.first().json):\n *   customer_id  — e.g. \"cust_12345\"\n *   order_id     — e.g. \"order_12345\"\n *   product_id   — \"single_overhead\" | \"single_north\" | \"full\"\n *   acreage      — e.g. \"5.00 ACRES\"\n *\n * OUTPUT: Array of { direction, imageUrl, editorUrl } objects\n */\n\n// ── Config ─────────────────────────────────────────────────────��������─\nconst EDITOR_BASE  = \"https://app.brokertricks.com/editor.html\";\nconst R2_BASE      = \"https://pics.brokertricks.com\";\n\n// Product → which shots get URLs\nconst PRODUCT_SHOTS = {\n  single_overhead: [\"overhead\"],\n  single_north:    [\"north\"],\n  full:            [\"north\", \"east\", \"south\", \"west\", \"overhead\"],\n};\n\n// ── Input ──────────────────────────────────────────────────────────���\nconst data = $input.first().json;\n\n// Support both direct fields and webhook .body nesting\nconst input = data.body || data;\n\nconst customer_id = input.customer_id;\nconst order_id    = input.order_id;\nconst product_id  = input.product_id || \"full\";\nconst acreage     = input.acreage    || \"\";\n\n// Validate required fields\nif (!customer_id || !order_id) {\n  return [{\n    json: {\n      error: \"Missing required fields: customer_id and order_id\",\n      customer_id,\n      order_id,\n    }\n  }];\n}\n\n// Resolve shot list from product type\nconst shots = PRODUCT_SHOTS[product_id];\nif (!shots) {\n  return [{\n    json: {\n      error: `Unknown product_id: \"${product_id}\". Expected: ${Object.keys(PRODUCT_SHOTS).join(\", \")}`,\n      product_id,\n    }\n  }];\n}\n\n// ── Build Editor URLs ──���─────────��─�������─────────────────────────────\n\nfunction buildEditorUrl(direction, customerId, orderId, acreageText) {\n  const params = [];\n  params.push(`customer_id=${encodeURIComponent(customerId)}`);\n  params.push(`order_id=${encodeURIComponent(orderId)}`);\n  params.push(`direction=${encodeURIComponent(direction)}`);\n\n  // Tell the editor where to POST the final saved image\n  const webhookUrl = `https://auto.brokertricks.com/webhook/bucket?customer_id=${customerId}&order_id=${orderId}&direction=${direction}`;\n  params.push(`server_url=${encodeURIComponent(webhookUrl)}`);\n\n  // Only include acreage if present\n  if (acreageText) {\n    params.push(`acreage=${encodeURIComponent(acreageText)}`);\n  }\n\n  return `${EDITOR_BASE}?${params.join('&')}`;\n}\n\n\n// ── Generate output ─────────────────────────────────────────────────\nconst results = shots.map(direction => {\n  const imageUrl  = `${R2_BASE}/${customer_id}/${order_id}/property_${direction}.png`;\n  const editorUrl = buildEditorUrl(direction, customer_id, order_id, acreage);\n\n  return {\n    json: {\n      direction,\n      imageUrl,\n      editorUrl,\n      customer_id,\n      order_id,\n      product_id,\n      acreage,\n    }\n  };\n});\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        -176
+      ],
+      "id": "8b27d8f6-8845-4c49-8eb4-90865a9a558f",
+      "name": "single imagewith dash"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields8": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields9": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Dispatch a workflow event and wait for completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch a workflow event and wait for completion": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Compression",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compression": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Upload a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload a file": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "single imagewith dash",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "all images url builder",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "single image edit urls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        []
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "single image edit urls": {
+      "main": [
+        []
+      ]
+    },
+    "single imagewith dash": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "7b6e46ef-a0e6-4a2a-91cc-893097e0a47d",
+  "activeVersionId": "098163b2-a42b-462c-a422-a01862d13af1",
+  "versionCounter": 354,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-05-02T08:28:50.274Z",
+      "createdAt": "2026-05-02T08:28:50.274Z",
+      "role": "workflow:owner",
+      "workflowId": "eiHeW6leMz4NRikO",
+      "projectId": "SxZfT7rxAv9cKdRm",
+      "project": {
+        "updatedAt": "2025-11-07T03:45:28.862Z",
+        "createdAt": "2025-11-07T00:54:39.972Z",
+        "id": "SxZfT7rxAv9cKdRm",
+        "name": "Jonny Bot <in.the.air.jkb@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "c7000de2-88dd-46b6-8967-ca24d58f54dd"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-05-02T10:20:45.285Z",
+    "createdAt": "2026-05-02T10:17:14.430Z",
+    "versionId": "098163b2-a42b-462c-a422-a01862d13af1",
+    "workflowId": "eiHeW6leMz4NRikO",
+    "nodes": [
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          -2928,
+          256
+        ],
+        "id": "7fe0934f-a94a-40d6-8122-cd19344755da",
+        "name": "When clicking ‘Execute workflow’"
+      },
+      {
+        "parameters": {
+          "url": "https://auto.brokertricks.com/webhook/ungrid",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -2720,
+          256
+        ],
+        "id": "79bdc4a0-a87c-4ab8-ae34-74434bc5c188",
+        "name": "HTTP Request"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "411ea856-ca12-4349-9313-e3c087580f43",
+                "name": "ap parcel number",
+                "value": "={{ $('HTTP Request').item.json.fields.parcelnumb }}",
+                "type": "string"
+              },
+              {
+                "id": "f519640f-87eb-44dc-aef6-eacdd48afd0f",
+                "name": "owner",
+                "value": "={{ $('HTTP Request').item.json.fields.owner }}",
+                "type": "string"
+              },
+              {
+                "id": "2f2f92f2-3a15-4405-a5a6-e192f98bad73",
+                "name": "centroid",
+                "value": "={{ $('HTTP Request').item.json.centroid }}",
+                "type": "array"
+              },
+              {
+                "id": "211a05ff-4ba4-465b-96c8-2355925a86cc",
+                "name": "lat",
+                "value": "={{ $('HTTP Request').item.json.fields.lat }}",
+                "type": "string"
+              },
+              {
+                "id": "0957b2c4-2d14-4a22-b3d6-b38b8ba4182c",
+                "name": "lon",
+                "value": "={{ $('HTTP Request').item.json.fields.lon }}",
+                "type": "string"
+              },
+              {
+                "id": "f421ae78-f1a1-4e76-a374-ecc15170c676",
+                "name": "ll_gisacre",
+                "value": "={{ $('HTTP Request').item.json.fields.ll_gisacre }}",
+                "type": "number"
+              },
+              {
+                "id": "4c435da0-704e-4e80-9a11-89349464e6c2",
+                "name": "geometry",
+                "value": "={{ $('HTTP Request').item.json.geometry }}",
+                "type": "object"
+              },
+              {
+                "id": "57c40033-7331-4897-b3c4-2589c8422c62",
+                "name": "county",
+                "value": "={{ $('HTTP Request').item.json.context[3].name }}",
+                "type": "string"
+              },
+              {
+                "id": "a78441f2-c1ba-4a04-b602-5daf1947ab24",
+                "name": "elevation",
+                "value": "={{ $json.elevation[0] }}",
+                "type": "number"
+              },
+              {
+                "id": "79de9b5b-743c-4c2e-9a30-b954e9352f5f",
+                "name": "customer_id",
+                "value": "cust_12345",
+                "type": "string"
+              },
+              {
+                "id": "9c19d833-5884-4467-bb5f-ab1f7a435c5f",
+                "name": "order_id",
+                "value": "order_12345",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          -2352,
+          256
+        ],
+        "id": "2f3d72fa-6b0e-4bfb-9099-cc93c4caecea",
+        "name": "Edit Fields"
+      },
+      {
+        "parameters": {
+          "url": "=https://api.open-meteo.com/v1/elevation?latitude={{ $json.fields.lat }}&longitude={{ $json.fields.lon }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -2528,
+          256
+        ],
+        "id": "42b264ed-cfde-448c-b248-99c978fb4932",
+        "name": "HTTP Request1"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "b687ed80-e00e-4108-b1e9-1d1a378ac748",
+                "name": "srcmap",
+                "value": "=https://maps.googleapis.com/maps/api/staticmap?size=1200x1200&scale=2&maptype=hybrid&{{ $json.pathString }}&key=AIzaSyBH98WxAx5gUHvvKSwhoKpyfQQiBS5dUJ0",
+                "type": "string"
+              },
+              {
+                "id": "fd464050-4749-47b5-bde9-4ecd7b47ab58",
+                "name": "acres",
+                "value": "={{ $('HTTP Request').item.json.fields.lglacres }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "19371f71-914a-42ce-b31c-aabcf1b40d41",
+        "name": "Edit Fields8",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          -1744,
+          256
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "fbffd5dc-6e53-4038-a1b1-9d53ccc9986c",
+                "name": "owner",
+                "value": "={{ $if($json.owner, $isEmpty(),$('HTTP Request').item.json.fields.primaryownername ) }}",
+                "type": "string"
+              },
+              {
+                "id": "833f249c-1c9e-4761-a33a-3a3db158b696",
+                "name": "elevation",
+                "value": "={{ $json.elevation }}",
+                "type": "number"
+              },
+              {
+                "id": "371329a8-6fc2-40da-a44f-a2e0ecf85799",
+                "name": "lat",
+                "value": "={{ $json.lat }}",
+                "type": "string"
+              },
+              {
+                "id": "d9e3c9b4-6d08-4581-93b6-1b71c7196349",
+                "name": "lon",
+                "value": "={{ $json.lon }}",
+                "type": "string"
+              },
+              {
+                "id": "9cfcc07f-8fd5-4cfa-a27d-6a806c49347b",
+                "name": "county",
+                "value": "={{ $json.county }}",
+                "type": "string"
+              },
+              {
+                "id": "99dbf8a6-c1f3-45ed-9455-ea17598b8caf",
+                "name": "customer_id",
+                "value": "={{ $json.customer_id }}",
+                "type": "string"
+              },
+              {
+                "id": "47501d91-0e4d-4484-b987-e06c59997b52",
+                "name": "order_id",
+                "value": "={{ $json.order_id }}",
+                "type": "string"
+              },
+              {
+                "id": "363501e4-e192-4890-b57f-ab723cc2a53a",
+                "name": "geometry",
+                "value": "={{ $json.geometry }}",
+                "type": "object"
+              },
+              {
+                "id": "dd033ec8-237e-4e04-9004-623914baa468",
+                "name": "fields.gisacre",
+                "value": "={{ $('HTTP Request').item.json.fields.gisacre }}",
+                "type": "number"
+              }
+            ]
+          },
+          "options": {
+            "dotNotation": true
+          }
+        },
+        "id": "8ba9f227-dceb-4d87-9869-8ebd5ea74586",
+        "name": "Edit Fields9",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          -2144,
+          240
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Input JSON containing the geometry and coordinates\nconst input = items[0].json;\nconst coordinates = $input.first().json.geometry.coordinates[0];  // Access the first ring of the Polygon\n\nconst color = \"0xffff00ff\";\nconst weight = 4;\n\n// Helper function to create the path string with rounded numbers\nfunction createPathString(coordinates) {\n  return coordinates.map(coord => {\n    const lat = Number(coord[1]).toFixed(7); // Convert to number, round to 7 decimals\n    const lon = Number(coord[0]).toFixed(7); // Convert to number, round to 7 decimals\n    return `${lat},${lon}`;\n  }).join('|');  // Reverse lat/lon\n}\n\n// Build the path string\nconst pathString = `path=color:${color}|weight:${weight}|${createPathString(coordinates)}`;\n\n// Return the result\nreturn [{ json: { pathString: pathString } }];"
+        },
+        "id": "dcebec96-dd08-44c0-8e2b-8c0ba0922058",
+        "name": "Code1",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1952,
+          240
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "68a6db1a-891e-48fe-9f8e-52f6b1e92a6e",
+                "name": "acres",
+                "value": "={{ $json.acres }}",
+                "type": "number"
+              },
+              {
+                "id": "86c320a1-3e81-4e96-8028-c2b360c911af",
+                "name": "owner",
+                "value": "={{ $('Edit Fields9').item.json.owner }}",
+                "type": "string"
+              },
+              {
+                "id": "369090e7-3df2-451b-b0df-8a21951a35e1",
+                "name": "elevation",
+                "value": "={{ $('Edit Fields9').item.json.elevation }}",
+                "type": "number"
+              },
+              {
+                "id": "ccbe62f6-31f1-4c54-bbc8-f5471615c971",
+                "name": "lat",
+                "value": "={{ $('Edit Fields9').item.json.lat }}",
+                "type": "number"
+              },
+              {
+                "id": "cc988a98-9a90-474a-be5b-a1988bddac86",
+                "name": "lon",
+                "value": "={{ $('Edit Fields9').item.json.lon }}",
+                "type": "number"
+              },
+              {
+                "id": "98d5ce07-c629-4329-a75e-c1b4a00df470",
+                "name": "county",
+                "value": "={{ $('Edit Fields9').item.json.county }}",
+                "type": "string"
+              },
+              {
+                "id": "ae8a5ec6-c344-4b65-a8bc-f5e4b12223a1",
+                "name": "customer_id",
+                "value": "={{ $('Edit Fields9').item.json.customer_id }}",
+                "type": "string"
+              },
+              {
+                "id": "6e88832b-b8a4-440b-b7a0-b5455cb8cad1",
+                "name": "order_id",
+                "value": "={{ $('Edit Fields9').item.json.order_id }}",
+                "type": "string"
+              },
+              {
+                "id": "7ef0cb01-ec6b-4b28-916e-bda06b82074b",
+                "name": "geometry",
+                "value": "={{ $('Edit Fields9').item.json.geometry }}",
+                "type": "object"
+              },
+              {
+                "id": "c33cc601-a399-4bfc-b167-6ee2a7677468",
+                "name": "srcmap",
+                "value": "={{ $('Edit Fields8').item.json.srcmap }}",
+                "type": "string"
+              },
+              {
+                "id": "e43cd9a6-6166-4204-aaa7-bffac3644e26",
+                "name": "",
+                "value": "",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {
+            "dotNotation": true
+          }
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          -1568,
+          192
+        ],
+        "id": "ec788af8-ac25-4272-876d-c34b80a7518d",
+        "name": "Edit Fields1"
+      },
+      {
+        "parameters": {
+          "resource": "workflow",
+          "operation": "dispatchAndWait",
+          "owner": {
+            "__rl": true,
+            "value": "ditchallaway",
+            "mode": "list",
+            "cachedResultName": "ditchallaway",
+            "cachedResultUrl": "https://github.com/ditchallaway"
+          },
+          "repository": {
+            "__rl": true,
+            "value": "Robotic-Property-Photographer",
+            "mode": "list",
+            "cachedResultName": "Robotic-Property-Photographer",
+            "cachedResultUrl": "https://github.com/ditchallaway/Robotic-Property-Photographer"
+          },
+          "workflowId": {
+            "__rl": true,
+            "value": 262111778,
+            "mode": "list",
+            "cachedResultName": "Snapshots"
+          },
+          "ref": {
+            "__rl": true,
+            "value": "main",
+            "mode": "list",
+            "cachedResultName": "main"
+          },
+          "inputs": "={{ JSON.stringify({ job_json: JSON.stringify($json) }) }}"
+        },
+        "type": "n8n-nodes-base.github",
+        "typeVersion": 1.1,
+        "position": [
+          -1344,
+          224
+        ],
+        "id": "fd158265-2008-4ef4-8ea4-f58a2436c993",
+        "name": "Dispatch a workflow event and wait for completion",
+        "webhookId": "d4974609-6a46-45bc-8230-d5fc3fdb580c",
+        "credentials": {
+          "githubApi": {
+            "id": "WAVhETF4rbadk9yF",
+            "name": "GitHub account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "url": "=https://api.github.com/repos/ditchallaway/robotic-property-photographer/actions/runs/{{ $json.run_id }}/artifacts",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          -1136,
+          224
+        ],
+        "id": "60e090b9-7a6c-471d-a390-08d100de8cd5",
+        "name": "HTTP Request2"
+      },
+      {
+        "parameters": {
+          "url": "={{ $json.artifacts[0].archive_download_url }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "githubApi",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          -928,
+          224
+        ],
+        "id": "cbc90dc4-efc4-4a4c-a695-1e46ab845263",
+        "name": "HTTP Request3",
+        "credentials": {
+          "githubApi": {
+            "id": "WAVhETF4rbadk9yF",
+            "name": "GitHub account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "outputPrefix": "="
+        },
+        "type": "n8n-nodes-base.compression",
+        "typeVersion": 1.1,
+        "position": [
+          -768,
+          224
+        ],
+        "id": "ed5eb1ed-a379-4064-8644-11da8263ae40",
+        "name": "Compression"
+      },
+      {
+        "parameters": {
+          "jsCode": "const items = [];\nfor (const item of $input.all()) {\n  for (const key of Object.keys(item.binary)) {\n    items.push({\n      json: {\n        ...item.json,\n        fileName: item.binary[key].fileName\n      },\n      binary: {\n        data: item.binary[key]\n      }\n    });\n  }\n}\nreturn items;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -592,
+          224
+        ],
+        "id": "b286f6f0-4d55-4996-830b-9ed917aa1a5e",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "operation": "upload",
+          "bucketName": "btx-store",
+          "fileName": "={{ $('Edit Fields1').item.json.customer_id }}/{{ $('Edit Fields1').item.json.order_id }}/{{ $json.fileName }}",
+          "additionalFields": {}
+        },
+        "type": "n8n-nodes-base.s3",
+        "typeVersion": 1,
+        "position": [
+          -400,
+          208
+        ],
+        "id": "109cbc83-2967-47db-8947-cbac80d1a449",
+        "name": "Upload a file",
+        "credentials": {
+          "s3": {
+            "id": "1GusURtMq14SbO6K",
+            "name": "btx-store-bucket"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "content": "## Here's whats up. **Photopea api**\n",
+          "width": 356
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -432,
+          96
+        ],
+        "id": "a1ec2ecb-d081-40fc-bc50-d5ab81e66661",
+        "name": "Sticky Note"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "e0230557-51e0-480a-902e-a7db19187952",
+                "name": "customer_id",
+                "value": "={{ $('Edit Fields9').item.json.customer_id }}",
+                "type": "string"
+              },
+              {
+                "id": "645ef0e8-eba0-40f0-a5d0-4cb73b2514ed",
+                "name": "order_id",
+                "value": "={{ $('Edit Fields9').item.json.order_id }}",
+                "type": "string"
+              },
+              {
+                "id": "010529f8-ad41-4e80-ad97-837021971818",
+                "name": "product_id",
+                "value": "full",
+                "type": "string"
+              },
+              {
+                "id": "ad75eb23-304b-4fad-aef6-57be26f05d0c",
+                "name": "acreage",
+                "value": "={{ $('Edit Fields1').item.json.acres }}",
+                "type": "number"
+              },
+              {
+                "id": "fe722463-ee2c-448f-ae8d-e8f6ed6bca48",
+                "name": "imageUrl",
+                "value": "={{ $json.imageUrl }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          16,
+          208
+        ],
+        "id": "59bce36f-c5d7-4d7e-84c3-fe535c1f1925",
+        "name": "Edit Fields2"
+      },
+      {
+        "parameters": {
+          "content": "## 🚩Replace Me\n**Replace** With webhook node.",
+          "height": 272,
+          "width": 192,
+          "color": "#477D40"
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -2976,
+          144
+        ],
+        "id": "a415ac96-ce78-4234-9574-96d007f2bd1a",
+        "name": "Sticky Note1"
+      },
+      {
+        "parameters": {
+          "content": "## 🚩Replace Me\n**Replace** With actual api endpoint",
+          "height": 272,
+          "width": 192,
+          "color": "#477D40"
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -2768,
+          144
+        ],
+        "id": "349d7f61-fea5-400f-8ac3-66d0a3e7790d",
+        "name": "Sticky Note2"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Loop over all incoming items\nconst items = $input.all();\nconst result = [];\nfor (const item of items) {\n  // 1. Get the image URL from the incoming data \n  // (Change 'imageUrl' to match your actual input field name)\n  const imageUrl = item.json.imageUrl;\n  \n  if (!imageUrl) {\n    // Pass the item through unchanged if there's no image URL\n    result.push({ json: item.json });\n    continue;\n  }\n  \n  // 2. Build the Photopea API compliant JSON configuration\n  const photopeaConfig = {\n    files: [\n      imageUrl\n    ],\n    // Optional: you can add environment settings like a custom save endpoint\n    // environment: {\n    //   customIO: {\n    //     save: \"https://your-webhook-to-receive-saved-images.com/\"\n    //   }\n    // }\n  };\n  \n  // 3. Serialize and encode the JSON\n  const configString = JSON.stringify(photopeaConfig);\n  const encodedConfig = encodeURIComponent(configString);\n  \n  // 4. Construct the final URL pointing to your hosted editor\n  const finalUrl = `https://app.brokertricks.com/editor.html#${encodedConfig}`;\n  \n  // 5. Output the results\n  result.push({\n    json: {\n      ...item.json,            // Keep all original incoming data\n      photopeaUrl: finalUrl,   // Add the generated URL\n      photopeaConfig: photopeaConfig // (Optional) Output the raw config for debugging\n    }\n  });\n}\nreturn result;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          272,
+          48
+        ],
+        "id": "e23f76db-b2d4-4986-b08c-22fd5e964b3e",
+        "name": "Code in JavaScript2"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "d596049d-c49b-4128-a169-e36e268497ce",
+                "name": "imageUrl",
+                "value": "=https://store.brokertricks.com/{{ $('Edit Fields9').item.json.customer_id }}/{{ $('Edit Fields9').item.json.order_id }}/{{ $('Code in JavaScript').item.json.fileName }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          -192,
+          208
+        ],
+        "id": "1510e24a-b6e6-4fdb-8971-8294f439774b",
+        "name": "Edit Fields3"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "pea",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          96,
+          32
+        ],
+        "id": "710f5dc9-acc4-47ed-a59e-a542db3125c7",
+        "name": "Webhook",
+        "webhookId": "e4600e2d-fd53-4ce6-9fdc-a0e22b46b065"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://auto.brokertricks.com/webhook-test/pea",
+          "sendBody": true,
+          "contentType": "multipart-form-data",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "imageUrl",
+                "value": "={{ $json.imageUrl }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          288,
+          240
+        ],
+        "id": "dea46928-245a-492e-a746-08bebfb35317",
+        "name": "HTTP Request4"
+      }
+    ],
+    "connections": {
+      "When clicking ‘Execute workflow’": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Edit Fields": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields9",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request1": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Edit Fields8": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Edit Fields9": {
+        "main": [
+          [
+            {
+              "node": "Code1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code1": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields8",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Edit Fields1": {
+        "main": [
+          [
+            {
+              "node": "Dispatch a workflow event and wait for completion",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Dispatch a workflow event and wait for completion": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request2": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request3": {
+        "main": [
+          [
+            {
+              "node": "Compression",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Compression": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Upload a file",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Upload a file": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Edit Fields2": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request4",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Edit Fields3": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript2": {
+        "main": [
+          []
+        ]
+      },
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Jonny Bot",
+    "name": "Alph",
+    "description": "",
+    "autosaved": true,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-05-02T10:20:45.274Z",
+        "id": 10,
+        "workflowId": "eiHeW6leMz4NRikO",
+        "versionId": "098163b2-a42b-462c-a422-a01862d13af1",
+        "event": "activated",
+        "userId": "c7000de2-88dd-46b6-8967-ca24d58f54dd"
+      }
+    ]
+  }
+}
