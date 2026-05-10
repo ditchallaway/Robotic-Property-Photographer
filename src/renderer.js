@@ -148,7 +148,10 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
             assetApp.get('/api/job', (req, res) => {
                 res.json({
                     job,
-                    googleApiKey: (process.env.GOOGLE_API_KEY || '').trim()
+                    googleApiKey: (process.env.GOOGLE_API_KEY || '').trim(),
+                    baseLayerProvider: config.BASE_LAYER_PROVIDER,
+                    azureMapsKey: (config.AZURE_MAPS_KEY || '').trim(),
+                    cesiumIonToken: (config.CESIUM_ION_TOKEN || '').trim()
                 });
             });
 
@@ -265,9 +268,15 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
                         if (window.tileset) window.tileset.maximumScreenSpaceError = currentSSE;
                         window.viewer.scene.globe.maximumScreenSpaceError = 1.0;
 
-                        // Only gate on tileset readiness — the globe imagery layer is
-                        // invisible under Google Photorealistic 3D Tiles.
-                        var tsLoaded = window.tileset ? !!window.tileset.tilesLoaded : true;
+                        // Provider-aware tile readiness check:
+                        // - google-3d: gate on the 3D tileset primitive (globe imagery is invisible)
+                        // - azure-maps: gate on globe tile loading (no 3D tileset exists)
+                        var tsLoaded;
+                        if (window.tileset) {
+                            tsLoaded = !!window.tileset.tilesLoaded;
+                        } else {
+                            tsLoaded = !!window.viewer.scene.globe.tilesLoaded;
+                        }
                         
                         return { tsLoaded: tsLoaded };
                     }, targetSSE);

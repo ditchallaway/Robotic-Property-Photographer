@@ -5,8 +5,11 @@ window.addEventListener('load', async function() {
     try {
         const response = await fetch('/api/job');
         const data = await response.json();
-        const { job, googleApiKey } = data;
+        const { job, googleApiKey, baseLayerProvider, azureMapsKey, cesiumIonToken } = data;
         const { centroid, elevation, boundary, boundaryRings } = job;
+
+        const provider = baseLayerProvider || 'google-3d';
+        console.log("[Cesium] Base layer provider:", provider);
 
         console.log("[Cesium] Initializing viewer...");
         const container = document.getElementById("cesiumContainer");
@@ -14,7 +17,8 @@ window.addEventListener('load', async function() {
         // Brief delay to ensure container dimensioning and WebGL ready
         await new Promise(r => setTimeout(r, 100));
 
-        const viewer = new Cesium.Viewer(container, {
+        // ── Provider-specific viewer options ────────────────────────────
+        var viewerOptions = {
             contextOptions: { 
                 webgl: { 
                     preserveDrawingBuffer: true,
@@ -25,24 +29,65 @@ window.addEventListener('load', async function() {
             infoBox: false,
             selectionIndicator: false,
             creditContainer: document.createElement("div")
-        });
+        };
+
+        // Set Cesium Ion token before Viewer initialization — required for
+        // world terrain (azure-maps) and any Ion-backed resources.
+        if (cesiumIonToken) {
+            Cesium.Ion.defaultAccessToken = cesiumIonToken;
+            console.log("[Cesium] Cesium Ion defaultAccessToken configured");
+        }
+
+        const viewer = new Cesium.Viewer(container, viewerOptions);
         
         viewer.scene.globe.show = true;
         viewer.scene.skyAtmosphere.show = true;
         viewer.scene.skyBox.show = true;
 
-        console.log("[Cesium] Initializing Google Photorealistic 3D Tileset...");
-        if (!googleApiKey) {
-            console.error("[Cesium] CRITICAL: Google API Key is missing!");
-        }
+        // ── Base layer initialization ───────────────────────────────────
+        if (provider === 'azure-maps') {
+            // ── Azure Maps: imagery + world terrain ─────────────────────
+            console.log("[Cesium] Initializing Azure Maps imagery layer...");
+            if (!azureMapsKey) {
+                console.error("[Cesium] CRITICAL: Azure Maps Key is missing!");
+            }
 
-        console.log("[Cesium] Calling createGooglePhotorealistic3DTileset...");
-        const tileset = await Cesium.createGooglePhotorealistic3DTileset({
-            key: googleApiKey
-        });
-        console.log("[Cesium] Tileset created successfully.");
-        window.tileset = tileset;
-        viewer.scene.primitives.add(tileset);
+            var azureImagery = new Cesium.UrlTemplateImageryProvider({
+                url: 'https://atlas.microsoft.com/map/tile?api-version=2.0&tilesetId=microsoft.imagery&zoom={z}&x={x}&y={y}&subscription-key=' + azureMapsKey,
+                maximumLevel: 19,
+                credit: new Cesium.Credit('© Microsoft Azure Maps')
+            });
+            viewer.imageryLayers.addImageryProvider(azureImagery);
+            console.log("[Cesium] Azure Maps imagery provider added");
+
+            // World terrain provides the 3D surface that Azure Maps imagery
+            // drapes over — without this, the view would be a flat ellipsoid.
+            console.log("[Cesium] Loading Cesium World Terrain...");
+            var terrainProvider = await Cesium.createWorldTerrainAsync({
+                requestWaterMask: false,
+                requestVertexNormals: false
+            });
+            viewer.terrainProvider = terrainProvider;
+            console.log("[Cesium] World terrain loaded successfully");
+
+            // No 3D tileset for Azure Maps — leave window.tileset undefined
+            // so renderer.js falls back to globe.tilesLoaded gating.
+
+        } else {
+            // ── Google 3D: photorealistic tileset (default) ─────────────
+            console.log("[Cesium] Initializing Google Photorealistic 3D Tileset...");
+            if (!googleApiKey) {
+                console.error("[Cesium] CRITICAL: Google API Key is missing!");
+            }
+
+            console.log("[Cesium] Calling createGooglePhotorealistic3DTileset...");
+            const tileset = await Cesium.createGooglePhotorealistic3DTileset({
+                key: googleApiKey
+            });
+            console.log("[Cesium] Tileset created successfully.");
+            window.tileset = tileset;
+            viewer.scene.primitives.add(tileset);
+        }
 
         // Allow Cesium to skip intermediate LOD levels when loading tiles.
         // Without this, it loads every ancestor tile before rendering a high-detail child,
