@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-09T08:11:17.753Z",
+  "updatedAt": "2026-05-11T01:20:22.257Z",
   "createdAt": "2026-05-02T08:28:50.274Z",
   "id": "eiHeW6leMz4NRikO",
   "name": "Full",
@@ -87,7 +87,7 @@
             {
               "id": "a78441f2-c1ba-4a04-b602-5daf1947ab24",
               "name": "elevation",
-              "value": "={{ $json.elevation[0] }}",
+              "value": "={{ $json.results && $json.results[0] ? $json.results[0].elevation : 100 }}",
               "type": "number"
             },
             {
@@ -117,7 +117,7 @@
     },
     {
       "parameters": {
-        "url": "=https://api.open-meteo.com/v1/elevation?latitude={{ $json.fields.lat }}&longitude={{ $json.fields.lon }}",
+        "url": "=https://maps.googleapis.com/maps/api/elevation/json?locations={{ $json.fields.lat }},{{ $json.fields.lon }}&key={{ $env.GOOGLE_API_KEY }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -136,7 +136,7 @@
             {
               "id": "b687ed80-e00e-4108-b1e9-1d1a378ac748",
               "name": "srcmap",
-              "value": "=https://maps.googleapis.com/maps/api/staticmap?size=1200x1200&scale=2&maptype=hybrid&{{ $json.pathString }}&key=AIzaSyBH98WxAx5gUHvvKSwhoKpyfQQiBS5dUJ0",
+              "value": "=https://maps.googleapis.com/maps/api/staticmap?size=1200x1200&scale=2&maptype=hybrid&{{ $json.pathString }}&key={{ $env.GOOGLE_API_KEY }}",
               "type": "string"
             },
             {
@@ -608,7 +608,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst input = items[0].json;\n\nconst customer_id = input.customer_id || 'cust_12345';\nconst order_id = input.order_id || 'order_12345';\n\nlet acreage = \"0\";\ntry {\n    acreage = $('Edit Fields1').first().json.acres;\n} catch(e) {\n    acreage = input.acreage || \"0\";\n}\n\n// Dynamically build files array from all incoming items\nconst files = [];\nfor (const item of items) {\n  if (item.json.imageUrl) {\n    files.push(item.json.imageUrl);\n  }\n}\n\n// Fallback in case no imageUrls were passed\nif (files.length === 0) {\n  files.push(`https://pics.brokertricks.com/${customer_id}/${order_id}/property_overhead.png`);\n}\n\nconst webhookUrl = `https://auto.brokertricks.com/webhook/bucket?customer_id=${customer_id}&order_id=${order_id}&direction=full`;\n\nconst payload = {\n    files: files,\n    server: {\n        url: webhookUrl,\n        formats: [\"png\"]\n    },\n    script: `\nvar docName = app.activeDocument.name.toLowerCase();\nvar doc = app.activeDocument;\n\nvar textLayer = doc.artLayers.add();\ntextLayer.kind = LayerKind.TEXT;\n\ntextLayer.textItem.contents = \"${acreage} ACRES\";\n\ntextLayer.textItem.size = 120;\ntextLayer.textItem.color.rgb.hexValue = 'FFFFFF';\ntextLayer.textItem.position = [100, 200];\n`.trim()\n};\n\nconst encodedConfig = encodeURIComponent(JSON.stringify(payload));\n\n// Add query params for the dashboard UI, and the hash for Photopea\nconst params = [\n  `customer_id=${encodeURIComponent(customer_id)}`,\n  `order_id=${encodeURIComponent(order_id)}`,\n  `direction=full`,\n  `acreage=${encodeURIComponent(acreage)}`\n];\nconst editorUrl = `https://app.brokertricks.com/editor-full.html?${params.join('&')}#${encodedConfig}`;\n\n// We only need to output a single item containing the combined URL\nreturn [\n  {\n    json: {\n      ...input,\n      editorUrl: editorUrl,\n      photopeaPayload: payload,\n      filesIncluded: files.length\n    }\n  }\n];"
+        "jsCode": "const items = $input.all();\nconst input = items[0].json;\n\nconst customer_id = input.customer_id || 'cust_12345';\nconst order_id = input.order_id || 'order_12345';\n\nlet acreage = \"0\";\ntry {\n    acreage = $('Edit Fields1').first().json.acres;\n} catch(e) {\n    acreage = input.acreage || \"0\";\n}\n\n// Dynamically build files array from all incoming items\n// Filter out reference images — they are srcmap downloads, not property shots\nconst files = [];\nfor (const item of items) {\n  if (item.json.imageUrl && !item.json.imageUrl.includes('reference_')) {\n    files.push(item.json.imageUrl);\n  }\n}\n\n// Fallback in case no imageUrls were passed\nif (files.length === 0) {\n  files.push(`https://pics.brokertricks.com/${customer_id}/${order_id}/property_overhead.png`);\n}\n\nconst webhookUrl = `https://auto.brokertricks.com/webhook/bucket?customer_id=${customer_id}&order_id=${order_id}&direction=full`;\n\n// Build ExtendScript that loops over ALL open documents\n// Photopea opens each file as a separate tab — we must iterate\n// through every document to add the acreage text layer to each one.\nconst script = `\nvar acreageText = \"${acreage} ACRES\";\nfor (var i = 0; i < app.documents.length; i++) {\n  app.activeDocument = app.documents[i];\n  var doc = app.activeDocument;\n\n  var textLayer = doc.artLayers.add();\n  textLayer.kind = LayerKind.TEXT;\n  textLayer.textItem.contents = acreageText;\n  textLayer.textItem.size = 120;\n\n  var col = new SolidColor();\n  col.rgb.hexValue = \"FFFF00\";\n  textLayer.textItem.color = col;\n  textLayer.textItem.position = [100, 200];\n}\n`.trim();\n\nconst payload = {\n    files: files,\n    server: {\n        url: webhookUrl,\n        formats: [\"png\"]\n    },\n    script: script\n};\n\nconst encodedConfig = encodeURIComponent(JSON.stringify(payload));\n\n// Add query params for the dashboard UI, and the hash for Photopea\nconst params = [\n  `customer_id=${encodeURIComponent(customer_id)}`,\n  `order_id=${encodeURIComponent(order_id)}`,\n  `direction=full`,\n  `acreage=${encodeURIComponent(acreage)}`\n];\nconst editorUrl = `https://app.brokertricks.com/editor-full.html?${params.join('&')}#${encodedConfig}`;\n\n// We only need to output a single item containing the combined URL\nreturn [\n  {\n    json: {\n      ...input,\n      editorUrl: editorUrl,\n      photopeaPayload: payload,\n      filesIncluded: files.length\n    }\n  }\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -867,9 +867,9 @@
   "staticData": null,
   "meta": null,
   "pinData": {},
-  "versionId": "7b6e46ef-a0e6-4a2a-91cc-893097e0a47d",
+  "versionId": "9d1e1ee3-bb19-4bd4-a704-facabdd39eee",
   "activeVersionId": "098163b2-a42b-462c-a422-a01862d13af1",
-  "versionCounter": 354,
+  "versionCounter": 355,
   "triggerCount": 1,
   "shared": [
     {

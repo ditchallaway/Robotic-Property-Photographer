@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-05-07T11:07:31.349Z",
-  "createdAt": "2026-05-07T11:07:30.410Z",
-  "id": "dBsr9OfqMGvCFL5c",
-  "name": "Conditional Flow",
+  "updatedAt": "2026-05-10T10:18:05.272Z",
+  "createdAt": "2026-05-10T10:17:57.483Z",
+  "id": "BUO82gn90RhvHVux",
+  "name": "Data Pipeline",
   "description": null,
   "active": false,
   "isArchived": false,
@@ -10,7 +10,7 @@
     {
       "parameters": {},
       "id": "trigger-001",
-      "name": "Start",
+      "name": "When clicking 'Test workflow'",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
@@ -20,28 +20,14 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true
-          },
-          "conditions": [
-            {
-              "id": "cond-001",
-              "leftValue": "={{ $json.status }}",
-              "rightValue": "active",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        }
+        "method": "GET",
+        "url": "https://api.example.com/data",
+        "options": {}
       },
-      "id": "if-001",
-      "name": "Check Status",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
+      "id": "fetch-001",
+      "name": "Fetch Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         480,
         300
@@ -51,57 +37,70 @@
       "parameters": {
         "mode": "runOnceForAllItems",
         "language": "javaScript",
-        "jsCode": "return [{ json: { result: 'active path' } }];"
+        "jsCode": "const items = $input.all();\nreturn items.map(item => ({\n  json: {\n    transformed: item.json.data,\n    timestamp: new Date().toISOString()\n  }\n}));"
       },
-      "id": "true-001",
-      "name": "Handle Active",
+      "id": "transform-001",
+      "name": "Transform",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         700,
-        200
+        300
       ]
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "language": "javaScript",
-        "jsCode": "return [{ json: { result: 'inactive path' } }];"
+        "method": "POST",
+        "url": "https://api.example.com/store",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "payload",
+              "value": "={{ JSON.stringify($json) }}"
+            }
+          ]
+        },
+        "options": {}
       },
-      "id": "false-001",
-      "name": "Handle Inactive",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "store-001",
+      "name": "Store Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        700,
-        400
+        920,
+        300
       ]
     }
   ],
   "connections": {
-    "Start": {
+    "When clicking 'Test workflow'": {
       "main": [
         [
           {
-            "node": "Check Status",
+            "node": "Fetch Data",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check Status": {
+    "Fetch Data": {
       "main": [
         [
           {
-            "node": "Handle Active",
+            "node": "Transform",
             "type": "main",
             "index": 0
           }
-        ],
+        ]
+      ]
+    },
+    "Transform": {
+      "main": [
         [
           {
-            "node": "Handle Inactive",
+            "node": "Store Result",
             "type": "main",
             "index": 0
           }
@@ -115,16 +114,16 @@
   "staticData": null,
   "meta": null,
   "pinData": null,
-  "versionId": "6d2623e2-56c4-408e-bb05-11c4e2a503af",
+  "versionId": "f65484db-0e96-4121-9333-13b581ec5ca0",
   "activeVersionId": null,
   "versionCounter": 2,
   "triggerCount": 0,
   "shared": [
     {
-      "updatedAt": "2026-05-07T11:07:30.410Z",
-      "createdAt": "2026-05-07T11:07:30.410Z",
+      "updatedAt": "2026-05-10T10:17:57.483Z",
+      "createdAt": "2026-05-10T10:17:57.483Z",
       "role": "workflow:owner",
-      "workflowId": "dBsr9OfqMGvCFL5c",
+      "workflowId": "BUO82gn90RhvHVux",
       "projectId": "SxZfT7rxAv9cKdRm",
       "project": {
         "updatedAt": "2025-11-07T03:45:28.862Z",

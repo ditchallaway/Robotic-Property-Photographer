@@ -254,8 +254,8 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
                 let stable = 0;
                 let nearlyReady = 0;
                 let checks = 0;
-                // Poll every 150ms (was 300ms) — faster stability detection
-                const POLL_MS = 150;
+                // Poll every 300ms to ensure stability (3 ticks = 900ms)
+                const POLL_MS = 300;
                 const maxChecks = config.RENDER_TIMEOUT_MS / POLL_MS;
                 const finalSSE = shot.finalSSE;
 
@@ -293,9 +293,9 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
                             stable = 0;
                         } else {
                             stable++;
-                            // 1 stable tick is enough — we just need a fully-loaded frame.
-                            if (stable >= 1) {
-                                console.log(`[Renderer] Tiles stable at SSE ${finalSSE}. Ready for capture (shot: ${shot.id}).`);
+                            // Wait for 3 stable ticks (900ms) per project rules
+                            if (stable >= 3) {
+                                console.log(`[Renderer] Tiles stable at SSE ${finalSSE} for 3 ticks. Ready for capture (shot: ${shot.id}).`);
                                 break;
                             }
                         }
@@ -304,8 +304,8 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
                         nearlyReady++;
                     }
 
-                    // Fallback: if the tileset is stubborn after 30 checks (4.5s), proceed anyway
-                    if (nearlyReady > 30) { 
+                    // Fallback: if the tileset is stubborn after 60 checks (18s), proceed anyway
+                    if (nearlyReady > 60) { 
                         console.log('[Renderer] Tile loading stalled at SSE ' + targetSSE + '. Proceeding with fallback.');
                         break;
                     }
