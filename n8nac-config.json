@@ -1,0 +1,23 @@
+{
+  "version": 4,
+  "activeEnvironmentId": "brokertricks-2",
+  "environmentTargets": [
+    {
+      "id": "brokertricks",
+      "name": "brokertricks",
+      "kind": "external-instance",
+      "url": "https://auto.brokertricks.com"
+    }
+  ],
+  "environments": [
+    {
+      "id": "brokertricks-2",
+      "name": "brokertricks",
+      "environmentTargetId": "brokertricks",
+      "projectId": "personal",
+      "projectName": "Personal",
+      "syncFolder": "workflows",
+      "folderSync": true
+    }
+  ]
+}
