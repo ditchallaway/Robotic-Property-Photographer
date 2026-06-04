@@ -2,7 +2,7 @@
 
 Headless renderer that converts parcel boundary geometry into PNG images of the property. By default it renders **5 PNG images** — north, east, south, west, and overhead — and can also produce tiered subsets for overhead-only deliveries.
 
-This repo is a rendering engine focused on one job: **automate the creation of 5 property-boundary images per request**. 
+This repo is a rendering engine focused on one job: **automate the creation of tiered property-boundary image sets per request**. 
 
 Now transitioned to an **API-first architecture**, it provides a stateless microservice for high-fidelity property imagery.
 
@@ -24,7 +24,7 @@ Default mode returns **5 PNGs**:
 | `east` | 90° | -24° (Oblique) |
 | `south` | 180° | -24° (Oblique) |
 | `west` | 270° | -24° (Oblique) |
-| `nadir` | Top-down | -90° (Overhead) |
+| `overhead` | Top-down | -90° (Overhead) |
 
 When `SNAPSHOT_MODE=overhead_only`, only the overhead image is generated. When `SNAPSHOT_MODE=overhead_north`, the overhead and north images are generated.
 
