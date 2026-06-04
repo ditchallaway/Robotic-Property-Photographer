@@ -1,6 +1,6 @@
 # Robotic Property Photographer
 
-Headless renderer that converts parcel boundary geometry into **5 PNG images** of the property — north, east, south, west, and overhead.
+Headless renderer that converts parcel boundary geometry into PNG images of the property. By default it renders **5 PNG images** — north, east, south, west, and overhead — and can also produce tiered subsets for overhead-only deliveries.
 
 This repo is a rendering engine focused on one job: **automate the creation of 5 property-boundary images per request**. 
 
@@ -14,9 +14,9 @@ Now transitioned to an **API-first architecture**, it provides a stateless micro
 
 ---
 
-## Output (fixed)
+## Output
 
-For every render request, the service returns **exactly 5 PNGs**:
+Default mode returns **5 PNGs**:
 
 | Shot | Camera Heading | Pitch |
 |------|---------------|-------|
@@ -25,6 +25,8 @@ For every render request, the service returns **exactly 5 PNGs**:
 | `south` | 180° | -24° (Oblique) |
 | `west` | 270° | -24° (Oblique) |
 | `nadir` | Top-down | -90° (Overhead) |
+
+When `SNAPSHOT_MODE=overhead_only`, only the overhead image is generated. When `SNAPSHOT_MODE=overhead_north`, the overhead and north images are generated.
 
 Each PNG contains:
 - Base imagery (Cesium / Google Photorealistic 3D Tiles)
