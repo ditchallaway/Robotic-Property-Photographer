@@ -361,7 +361,7 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
 
             onProgress(90, 'Finalizing results...');
 
-            // Optional: Fetch reference map from srcmap URL if provided
+            // Fetch reference map from srcmap URL if provided
             if (job.srcmap) {
                 console.log(`[Renderer] Fetching reference srcmap from: ${job.srcmap}`);
                 try {
