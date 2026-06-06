@@ -6,7 +6,7 @@ window.addEventListener('load', async function() {
         const response = await fetch('/api/job');
         const data = await response.json();
         const { job, googleApiKey, baseLayerProvider, azureMapsKey, cesiumIonToken } = data;
-        const { centroid, elevation, boundary, boundaryOuter, boundaryRings } = job;
+        const { centroid, elevation, boundaryRings } = job;
 
         const provider = baseLayerProvider || 'google-3d';
         console.log("[Cesium] Base layer provider:", provider);
@@ -96,7 +96,11 @@ window.addEventListener('load', async function() {
 
 
         var elev = elevation || 100;
-        var rings = boundaryRings || (boundary && boundary.coordinates) || (boundaryOuter ? [boundaryOuter] : [boundary]);
+        if (!Array.isArray(boundaryRings) || boundaryRings.length === 0) {
+            var receivedType = Array.isArray(boundaryRings) ? 'array(empty)' : typeof boundaryRings;
+            throw new Error("Invalid boundaryRings: expected non-empty array, got " + receivedType);
+        }
+        var rings = boundaryRings;
 
         // Calculate bounding sphere from property boundary for robust framing
         var allPoints = [];

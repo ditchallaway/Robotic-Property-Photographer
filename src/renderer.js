@@ -115,8 +115,8 @@ function getShotsForSnapshotMode(snapshotMode = process.env.SNAPSHOT_MODE) {
 async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
     const { centroid, elevation, boundaryOuter, acreage } = job;
     
-    if (!centroid || typeof centroid.lon !== 'number' || typeof centroid.lat !== 'number') {
-        throw new Error('Invalid centroid: requires { lon, lat }');
+    if (!centroid || !Number.isFinite(centroid.lon) || !Number.isFinite(centroid.lat)) {
+        throw new Error('Invalid centroid: requires { lon, lat } with finite numeric values');
     }
     if (!boundaryOuter || !Array.isArray(boundaryOuter)) {
         throw new Error('Invalid boundary: requires polygon outer ring');
