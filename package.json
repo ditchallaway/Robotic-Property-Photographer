@@ -9,6 +9,7 @@
     "start": "node src/index.js",
     "render": "node bin/render.js",
     "test": "node tests/cli-test.cjs",
+    "test:job-parser": "node tests/job-parser.cjs",
     "test:cardinal": "node tests/cardinal.js",
     "test:nadir": "node tests/nadir.js",
     "postinstall": "node scripts/copy-assets.cjs",

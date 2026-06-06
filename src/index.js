@@ -82,7 +82,7 @@ app.get('/health', (req, res) => {
  * {
  *   "centroid": { "lon": -122.45, "lat": 37.78 },
  *   "elevation": 100,
- *   "boundary": [[-122.451, 37.781], [-122.449, 37.781], [-122.449, 37.779], [-122.451, 37.779]],
+ *   "boundary": { "type": "Polygon", "coordinates": [[[-122.451, 37.781], [-122.449, 37.781], [-122.449, 37.779], [-122.451, 37.779], [-122.451, 37.781]]]},
  *   "acreage": 2.5,
  *   "roadName": "Main Street",
  *   "shotList": [0, 90, 180, 270]
@@ -177,7 +177,7 @@ app.post('/render', async (req, res) => {
  * 
  * Body:
  * {
- *   "jobs": [{ centroid, boundary, ... }, ...]
+ *   "jobs": [{ centroid, boundary: { type: 'Polygon', coordinates }, ... }, ...]
  * }
  */
 app.post('/render-batch', async (req, res) => {
