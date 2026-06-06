@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       job_json:
-        description: 'Property boundary JSON string'
+        description: 'Job JSON string (centroid: {lon,lat} | [lon,lat] | GeoJSON Point; boundary/geometry: GeoJSON Polygon)'
         required: true
         type: string
       resumeUrl:
