@@ -7,7 +7,7 @@
   "required": ["job_json"],
   "properties": {
     "job_json": {
-      "description": "JSON-encoded render job specification. Must be a valid JSON string that deserialises to either a single job object or a single-element array containing one job object. See job-payload.schema.json for the full schema of the parsed payload.",
+      "description": "JSON-encoded render job specification. Must be a valid JSON string that deserializes to either a single job object or a single-element array containing one job object. See job-payload.schema.json for the full schema of the parsed payload.",
       "type": "string",
       "contentMediaType": "application/json",
       "examples": [

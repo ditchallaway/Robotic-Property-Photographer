@@ -123,7 +123,7 @@
           "$ref": "#/definitions/geojson_polygon"
         },
         "elevation": {
-          "description": "Terrain elevation at the centroid in metres above sea level. Used for camera positioning.",
+          "description": "Terrain elevation at the centroid in meters above sea level. Used for camera positioning.",
           "type": "number"
         },
         "centroid_elevation": {
