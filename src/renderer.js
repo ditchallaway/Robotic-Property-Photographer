@@ -80,15 +80,46 @@ async function launchBrowser() {
 // Fixed internal port for the per-job Cesium asset server.
 // Safe to reuse because jobs run sequentially (conserve.md).
 const ASSET_SERVER_PORT = 9877;
+const SHOTS = Object.freeze([
+    { id: 'overhead', heading: 0,   pitch: -89.9, finalSSE: 1, rangeFactor: 2.0 },
+    { id: 'north',    heading: 0,   pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
+    { id: 'east',     heading: 90,  pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
+    { id: 'south',    heading: 180, pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
+    { id: 'west',     heading: 270, pitch: -35,   finalSSE: 4, rangeFactor: 2.5 }
+]);
+
+function resolveSnapshotMode(snapshotMode = process.env.SNAPSHOT_MODE) {
+    const normalizedMode = String(snapshotMode || '').trim().toLowerCase();
+
+    if (normalizedMode === 'overhead_only' || normalizedMode === 'overhead_north') {
+        return normalizedMode;
+    }
+
+    return 'all';
+}
+
+function getShotsForSnapshotMode(snapshotMode = process.env.SNAPSHOT_MODE) {
+    const mode = resolveSnapshotMode(snapshotMode);
+
+    if (mode === 'overhead_only') {
+        return SHOTS.slice(0, 1);
+    }
+
+    if (mode === 'overhead_north') {
+        return SHOTS.slice(0, 2);
+    }
+
+    return SHOTS;
+}
 
 async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
-    const { centroid, elevation, boundary, acreage } = job;
+    const { centroid, elevation, boundaryOuter, acreage } = job;
     
-    if (!centroid || !centroid.lon || !centroid.lat) {
-        throw new Error('Invalid centroid: requires { lon, lat }');
+    if (!centroid || !Number.isFinite(centroid.lon) || !Number.isFinite(centroid.lat)) {
+        throw new Error('Invalid centroid: requires { lon, lat } with finite numeric values');
     }
-    if (!boundary || !Array.isArray(boundary)) {
-        throw new Error('Invalid boundary: must be GeoJSON coordinate array');
+    if (!boundaryOuter || !Array.isArray(boundaryOuter)) {
+        throw new Error('Invalid boundary: requires polygon outer ring');
     }
 
     let browser;
@@ -206,13 +237,9 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
             //
             // Nadir is rendered FIRST to warm the tile cache — its top-down view
             // loads the property's core tiles which the cardinal shots also need.
-            const shots = [
-                { id: 'overhead', heading: 0,   pitch: -89.9, finalSSE: 1, rangeFactor: 2.0 },
-                { id: 'north',    heading: 0,   pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
-                { id: 'east',     heading: 90,  pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
-                { id: 'south',    heading: 180, pitch: -35,   finalSSE: 4, rangeFactor: 2.5 },
-                { id: 'west',     heading: 270, pitch: -35,   finalSSE: 4, rangeFactor: 2.5 }
-            ];
+            const snapshotMode = resolveSnapshotMode();
+            const shots = getShotsForSnapshotMode(snapshotMode);
+            console.log(`[Renderer] Snapshot mode: ${snapshotMode} (${shots.length} shot${shots.length === 1 ? '' : 's'})`);
 
             const results = [];
             let shotIndex = 0;
@@ -415,5 +442,7 @@ async function renderPropertyPhoto(job, onProgress = () => {}, options = {}) {
 module.exports = {
     renderPropertyPhoto,
     launchBrowser,
-    detectBlackFrame
+    detectBlackFrame,
+    resolveSnapshotMode,
+    getShotsForSnapshotMode
 };

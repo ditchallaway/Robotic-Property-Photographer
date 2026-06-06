@@ -1,8 +1,8 @@
 # Robotic Property Photographer
 
-Headless renderer that converts parcel boundary geometry into **5 PNG images** of the property — north, east, south, west, and overhead.
+Headless renderer that converts parcel boundary geometry into PNG images of the property. By default it renders **5 PNG images** — north, east, south, west, and overhead — and can also produce tiered subsets for overhead-only deliveries.
 
-This repo is a rendering engine focused on one job: **automate the creation of 5 property-boundary images per request**. 
+This repo is a rendering engine focused on one job: **automate the creation of tiered property-boundary image sets per request**. 
 
 Now transitioned to an **API-first architecture**, it provides a stateless microservice for high-fidelity property imagery.
 
@@ -14,9 +14,9 @@ Now transitioned to an **API-first architecture**, it provides a stateless micro
 
 ---
 
-## Output (fixed)
+## Output
 
-For every render request, the service returns **exactly 5 PNGs**:
+Default mode returns **5 PNGs**:
 
 | Shot | Camera Heading | Pitch |
 |------|---------------|-------|
@@ -24,7 +24,9 @@ For every render request, the service returns **exactly 5 PNGs**:
 | `east` | 90° | -24° (Oblique) |
 | `south` | 180° | -24° (Oblique) |
 | `west` | 270° | -24° (Oblique) |
-| `nadir` | Top-down | -90° (Overhead) |
+| `overhead` | Top-down | -90° (Overhead) |
+
+When `SNAPSHOT_MODE=overhead_only`, only the overhead image is generated. When `SNAPSHOT_MODE=overhead_north`, the overhead and north images are generated.
 
 Each PNG contains:
 - Base imagery (Cesium / Google Photorealistic 3D Tiles)
@@ -41,11 +43,20 @@ The renderer runs as an Express API server (default port `9876`).
 ```json
 {
   "centroid": { "lon": -116.4869, "lat": 48.3322 },
-  "boundary": [[-116.486, 48.331], ...],
+  "boundary": {
+    "type": "Polygon",
+    "coordinates": [
+      [[-116.486, 48.331], [-116.485, 48.331], [-116.485, 48.332], [-116.486, 48.332], [-116.486, 48.331]]
+    ]
+  },
   "customer_id": "cust_123",
   "order_id": "ord_456"
 }
 ```
+
+`centroid` is canonically `{ "lon": <number>, "lat": <number> }`. For backward compatibility, `[lon, lat]` arrays and GeoJSON Point objects (`{ "type": "Point", "coordinates": [lon, lat] }`) are also accepted and normalized.
+
+`boundary` is canonically a GeoJSON Polygon geometry object. Legacy payloads using `geometry` or a flat outer-ring `boundary` array are still accepted and normalized.
 
 **Response:**
 Returns a JSON object containing the 5 shots as base64-encoded PNG strings.

@@ -4,13 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       job_json:
-        description: 'Property boundary JSON string'
+        description: 'Job JSON string (centroid: {lon,lat} | [lon,lat] | GeoJSON Point; boundary/geometry: GeoJSON Polygon)'
         required: true
         type: string
       resumeUrl:
         description: 'Webhook URL automatically injected by n8n dispatchAndWait'
         required: false
         type: string
+      snapshot_mode:
+        description: 'Shot sequence to capture (overhead_only, overhead_north, all)'
+        required: false
+        default: 'all'
+        type: string
+  repository_dispatch:
 
 
 jobs:
@@ -27,7 +33,9 @@ jobs:
 
       - name: Run render job (no /app bind mount)
         env:
-          JOB_JSON: ${{ inputs.job_json }}
+          JOB_JSON: ${{ inputs.job_json || github.event.client_payload.job_json }}
+          RESUME_URL: ${{ inputs.resumeUrl || github.event.client_payload.resumeUrl }}
+          SNAPSHOT_MODE: ${{ inputs.snapshot_mode || github.event.client_payload.snapshot_mode || 'all' }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           AZURE_MAPS_KEY: ${{ secrets.AZURE_MAPS_KEY }}
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
@@ -36,13 +44,14 @@ jobs:
           set -euo pipefail
           mkdir -p output
 
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "$JOB_JSON" ]; then
+          if [ -n "$JOB_JSON" ]; then
             echo "$JOB_JSON" > /tmp/target-job.json
           else
             cp "${{ github.workspace }}/tests/fixtures/test-job.json" /tmp/target-job.json
           fi
 
           docker run --rm \
+            -e SNAPSHOT_MODE \
             -e GOOGLE_API_KEY \
             -e AZURE_MAPS_KEY \
             -e CESIUM_ION_TOKEN \
@@ -53,13 +62,36 @@ jobs:
             node bin/render.js /tmp/target-job.json --output /app/output/property.png
 
       - name: Verify expected outputs
+        env:
+          SNAPSHOT_MODE: ${{ inputs.snapshot_mode || github.event.client_payload.snapshot_mode || 'all' }}
         run: |
           set -euo pipefail
-          test -f output/property_north.png
-          test -f output/property_east.png
-          test -f output/property_south.png
-          test -f output/property_west.png
-          test -f output/property_overhead.png
+
+          case "${SNAPSHOT_MODE:-all}" in
+            overhead_only)
+              expected_shots=(overhead)
+              ;;
+            overhead_north)
+              expected_shots=(overhead north)
+              ;;
+            *)
+              expected_shots=(overhead north east south west)
+              ;;
+          esac
+
+          for shot in "${expected_shots[@]}"; do
+            test -f "output/property_${shot}.png"
+          done
+
+          primary_count=$(find output -maxdepth 1 -type f \( \
+            -name 'property_overhead.png' -o \
+            -name 'property_north.png' -o \
+            -name 'property_east.png' -o \
+            -name 'property_south.png' -o \
+            -name 'property_west.png' \
+          \) | wc -l | tr -d ' ')
+          test "$primary_count" -eq "${#expected_shots[@]}"
+
           ls -lah output/
 
       - name: Upload artifacts
@@ -69,8 +101,10 @@ jobs:
           path: output/*.png
 
       - name: Notify Webhook Callback
-        if: ${{ inputs.resumeUrl != '' }}
+        if: ${{ (inputs.resumeUrl || github.event.client_payload.resumeUrl) != '' }}
+        env:
+          RESUME_URL: ${{ inputs.resumeUrl || github.event.client_payload.resumeUrl }}
         run: |
           curl -X POST -H "Content-Type: application/json" \
             -d "{\"run_id\": \"${{ github.run_id }}\"}" \
-            "${{ inputs.resumeUrl }}"
+            "$RESUME_URL"

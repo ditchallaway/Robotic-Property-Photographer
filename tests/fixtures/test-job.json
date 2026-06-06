@@ -9,7 +9,7 @@
     "customer_id": "cust_12345",
     "order_id": "order_12345",
     "is_test": true,
-    "geometry": {
+    "boundary": {
       "type": "Polygon",
       "coordinates": [
         [
