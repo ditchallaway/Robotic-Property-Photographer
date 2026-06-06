@@ -54,6 +54,8 @@ The renderer runs as an Express API server (default port `9876`).
 }
 ```
 
+`centroid` is canonically `{ "lon": <number>, "lat": <number> }`. For backward compatibility, `[lon, lat]` arrays and GeoJSON Point objects (`{ "type": "Point", "coordinates": [lon, lat] }`) are also accepted and normalized.
+
 `boundary` is canonically a GeoJSON Polygon geometry object. Legacy payloads using `geometry` or a flat outer-ring `boundary` array are still accepted and normalized.
 
 **Response:**
