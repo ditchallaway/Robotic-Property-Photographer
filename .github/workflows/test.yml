@@ -12,9 +12,9 @@ on:
         required: false
         type: string
       snapshot_mode:
-        description: 'Shot sequence to capture (overhead_only, overhead_north, all)'
+        description: 'Shot sequence to capture (single, double, full)'
         required: false
-        default: 'all'
+        default: 'full'
         type: string
   repository_dispatch:
 
@@ -35,7 +35,7 @@ jobs:
         env:
           JOB_JSON: ${{ inputs.job_json || github.event.client_payload.job_json }}
           RESUME_URL: ${{ inputs.resumeUrl || github.event.client_payload.resumeUrl }}
-          SNAPSHOT_MODE: ${{ inputs.snapshot_mode || github.event.client_payload.snapshot_mode || 'all' }}
+          SNAPSHOT_MODE: ${{ inputs.snapshot_mode || github.event.client_payload.snapshot_mode || 'full' }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           AZURE_MAPS_KEY: ${{ secrets.AZURE_MAPS_KEY }}
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
@@ -63,15 +63,15 @@ jobs:
 
       - name: Verify expected outputs
         env:
-          SNAPSHOT_MODE: ${{ inputs.snapshot_mode || github.event.client_payload.snapshot_mode || 'all' }}
+          SNAPSHOT_MODE: ${{ inputs.snapshot_mode || github.event.client_payload.snapshot_mode || 'full' }}
         run: |
           set -euo pipefail
 
-          case "${SNAPSHOT_MODE:-all}" in
-            overhead_only)
+          case "${SNAPSHOT_MODE:-full}" in
+            single)
               expected_shots=(overhead)
               ;;
-            overhead_north)
+            double)
               expected_shots=(overhead north)
               ;;
             *)
